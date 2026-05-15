@@ -300,7 +300,10 @@ function DetailPanel({ initiative }: { initiative: Initiative }) {
             fontSize: 13,
             color: "var(--ink)",
             cursor: "pointer",
+            transition: "background-color 150ms",
           }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
         >
           Edit
         </button>
@@ -435,7 +438,12 @@ function DetailPanel({ initiative }: { initiative: Initiative }) {
                   fontWeight: 500,
                   color: "var(--olive-mid)",
                   flexShrink: 0,
+                  padding: "4px 8px",
+                  borderRadius: 6,
+                  transition: "background-color 150ms",
                 }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
               >
                 Insert
               </button>
@@ -450,13 +458,17 @@ function DetailPanel({ initiative }: { initiative: Initiative }) {
             gap: 6,
             background: "none",
             border: "none",
-            padding: "8px 0 0 0",
+            padding: "8px 8px 0 8px",
             cursor: "pointer",
             fontSize: 13,
             fontWeight: 500,
             color: "var(--olive-mid)",
             textAlign: "left",
+            borderRadius: 6,
+            transition: "background-color 150ms",
           }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
         >
           <Plus size={13} />
           Add evidence item
@@ -477,12 +489,16 @@ function DetailPanel({ initiative }: { initiative: Initiative }) {
           style={{
             background: "none",
             border: "none",
-            padding: 0,
+            padding: "4px 8px",
             cursor: "pointer",
             fontSize: 13,
             fontWeight: 500,
             color: "var(--olive-mid)",
+            borderRadius: 6,
+            transition: "background-color 150ms",
           }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
         >
           View all {initiative.matchedCount} →
         </button>
@@ -601,7 +617,10 @@ export default function InitiativesPage() {
             color: "#FFFFFF",
             cursor: "pointer",
             flexShrink: 0,
+            transition: "background-color 150ms",
           }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#A8421A" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#C4511A" }}
         >
           <Plus size={15} style={{ flexShrink: 0 }} />
           New initiative
@@ -647,7 +666,11 @@ export default function InitiativesPage() {
               fontWeight: 500,
               color: "var(--olive-mid)",
               textAlign: "left",
+              borderRadius: 8,
+              transition: "background-color 150ms",
             }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.5)" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
           >
             <Plus size={13} />
             New initiative

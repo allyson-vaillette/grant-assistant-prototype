@@ -203,6 +203,8 @@ function NavItem({
         textAlign: "left",
         transition: "background-color 150ms",
       }}
+      onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+      onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
     >
       {/* Completion indicator */}
       {section.completion === "done" ? (
@@ -353,6 +355,7 @@ function AIPanel({ activeSection }: { activeSection: Section }) {
                 fontWeight: isActive ? 600 : 400,
                 color: isActive ? "var(--olive-dark)" : "var(--ink-secondary)",
                 transition: "color 150ms",
+                borderRadius: 4,
               }}
             >
               {label}
@@ -444,7 +447,10 @@ function AIPanel({ activeSection }: { activeSection: Section }) {
                       fontWeight: 600,
                       color: "#FFFFFF",
                       cursor: "pointer",
+                      transition: "background-color 150ms",
                     }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#2D4A18" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--olive-dark)" }}
                   >
                     Insert
                   </button>
@@ -461,7 +467,10 @@ function AIPanel({ activeSection }: { activeSection: Section }) {
                       fontSize: 12,
                       color: "var(--ink-secondary)",
                       cursor: "pointer",
+                      transition: "background-color 150ms",
                     }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
                   >
                     <RotateCcw size={11} />
                     Regenerate
@@ -515,8 +524,12 @@ function AIPanel({ activeSection }: { activeSection: Section }) {
                           fontSize: 12,
                           fontWeight: 600,
                           color: "var(--olive-mid)",
-                          padding: 0,
+                          padding: "3px 6px",
+                          borderRadius: 5,
+                          transition: "background-color 150ms",
                         }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#EBF2E2" }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
                       >
                         Insert
                       </button>
@@ -607,7 +620,10 @@ function AIPanel({ activeSection }: { activeSection: Section }) {
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0,
+              transition: "background-color 150ms",
             }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#2D4A18" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--olive-dark)" }}
           >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
               <path d="M2 5h6M6 2.5L8.5 5 6 7.5" stroke="#fff" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
@@ -708,8 +724,14 @@ export default function ProposalEditorPage() {
 
         {/* Right: actions */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button type="button" style={outlineBtn}>Share</button>
-          <button type="button" style={outlineBtn}>Submit for review</button>
+          <button type="button" style={outlineBtn}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+          >Share</button>
+          <button type="button" style={outlineBtn}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+          >Submit for review</button>
           <button
             type="button"
             style={{
@@ -721,7 +743,10 @@ export default function ProposalEditorPage() {
               fontWeight: 600,
               color: "#FFFFFF",
               cursor: "pointer",
+              transition: "background-color 150ms",
             }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#A8421A" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#C4511A" }}
           >
             Save draft
           </button>
@@ -742,25 +767,37 @@ export default function ProposalEditorPage() {
         }}
       >
         {[Bold, Italic, Underline].map((Icon, i) => (
-          <button key={i} type="button" style={toolbarBtn}>
+          <button key={i} type="button" style={toolbarBtn}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+          >
             <Icon size={13} color="var(--ink-secondary)" />
           </button>
         ))}
         <div style={{ width: 1, height: 16, backgroundColor: "var(--border-color)", margin: "0 4px" }} />
         {["H1", "H2"].map((t) => (
-          <button key={t} type="button" style={{ ...toolbarBtn, fontSize: 12, fontWeight: 600, color: "var(--ink-secondary)" }}>
+          <button key={t} type="button" style={{ ...toolbarBtn, fontSize: 12, fontWeight: 600, color: "var(--ink-secondary)" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+          >
             {t}
           </button>
         ))}
         <div style={{ width: 1, height: 16, backgroundColor: "var(--border-color)", margin: "0 4px" }} />
         {[List, ListOrdered].map((Icon, i) => (
-          <button key={i} type="button" style={toolbarBtn}>
+          <button key={i} type="button" style={toolbarBtn}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+          >
             <Icon size={13} color="var(--ink-secondary)" />
           </button>
         ))}
         <div style={{ width: 1, height: 16, backgroundColor: "var(--border-color)", margin: "0 4px" }} />
         {[Link, AlignLeft].map((Icon, i) => (
-          <button key={i} type="button" style={toolbarBtn}>
+          <button key={i} type="button" style={toolbarBtn}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+          >
             <Icon size={13} color="var(--ink-secondary)" />
           </button>
         ))}
@@ -837,7 +874,11 @@ export default function ProposalEditorPage() {
                 color: "var(--olive-mid)",
                 fontWeight: 500,
                 textAlign: "left",
+                borderRadius: 8,
+                transition: "background-color 150ms",
               }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
             >
               <Plus size={13} />
               Add section
@@ -914,6 +955,7 @@ const outlineBtn: React.CSSProperties = {
   fontSize: 13,
   color: "var(--ink)",
   cursor: "pointer",
+  transition: "background-color 150ms",
 }
 
 const toolbarBtn: React.CSSProperties = {
@@ -926,4 +968,5 @@ const toolbarBtn: React.CSSProperties = {
   border: "none",
   backgroundColor: "transparent",
   cursor: "pointer",
+  transition: "background-color 150ms",
 }

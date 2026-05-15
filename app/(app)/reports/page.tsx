@@ -349,7 +349,10 @@ function DetailPanel({ report }: { report: Report }) {
               fontSize: 13,
               color: "var(--ink)",
               cursor: "pointer",
+              transition: "background-color 150ms",
             }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
           >
             Edit
           </button>
@@ -474,7 +477,10 @@ function DetailPanel({ report }: { report: Report }) {
               fontWeight: 500,
               color: "#FFFFFF",
               cursor: "pointer",
+              transition: "background-color 150ms",
             }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#2D4A18" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--olive-dark)" }}
           >
             Write report
           </button>
@@ -484,15 +490,17 @@ function DetailPanel({ report }: { report: Report }) {
               display: "flex",
               alignItems: "center",
               gap: 7,
-              padding: "9px 18px",
+              padding: "10px 16px",
               borderRadius: "var(--radius-button)",
-              background: "linear-gradient(135deg, #3D6120, #C4511A)",
+              background: "linear-gradient(135deg, #3D6120 0%, #6B9140 100%)",
               border: "none",
               fontSize: 13,
               fontWeight: 500,
               color: "#FFFFFF",
               cursor: "pointer",
             }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "linear-gradient(135deg, #2D4A18 0%, #5A7A30 100%)" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "linear-gradient(135deg, #3D6120 0%, #6B9140 100%)" }}
           >
             <Sparkles size={13} color="#FFFFFF" />
             Generate draft with AI
@@ -598,7 +606,10 @@ function DetailPanel({ report }: { report: Report }) {
             justifyContent: "center",
             gap: 8,
             marginBottom: 8,
+            transition: "background-color 150ms",
           }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#2D4A18" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--olive-dark)" }}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
             <rect x="2" y="6" width="10" height="7" rx="1.5" stroke="rgba(255,255,255,0.7)" strokeWidth="1.2" fill="none" />
@@ -714,7 +725,10 @@ export default function ReportsPage() {
             color: "#FFFFFF",
             cursor: "pointer",
             flexShrink: 0,
+            transition: "background-color 150ms",
           }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#A8421A" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#C4511A" }}
         >
           <Plus size={15} style={{ flexShrink: 0 }} />
           New report

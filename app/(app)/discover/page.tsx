@@ -639,7 +639,10 @@ function DetailPanel({
             border: "none",
             cursor: "pointer",
             marginBottom: 8,
+            transition: "background-color 150ms",
           }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#A8421A" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#C4511A" }}
         >
           <Plus size={15} color="#FFFFFF" style={{ flexShrink: 0 }} />
           <span style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF", lineHeight: "18px" }}>
@@ -1048,7 +1051,10 @@ export default function OpportunitiesPage() {
               fontSize: 13,
               color: "var(--ink)",
               cursor: "pointer",
+              transition: "background-color 150ms",
             }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#FFFFFF" }}
           >
             <span>Sort: Relevance</span>
             <ChevronDown size={12} color="var(--ink-tertiary)" />

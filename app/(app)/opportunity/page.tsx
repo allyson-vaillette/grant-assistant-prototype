@@ -175,7 +175,10 @@ function ProposalsTab() {
                       fontWeight: 400,
                       color: "var(--ink)",
                       cursor: "pointer",
+                      transition: "background-color 150ms",
                     }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface)" }}
                   >
                     Open in editor
                   </button>
@@ -191,7 +194,10 @@ function ProposalsTab() {
                       backgroundColor: "transparent",
                       border: "1px solid var(--border-color)",
                       cursor: "pointer",
+                      transition: "background-color 150ms",
                     }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
                   >
                     <Copy size={13} color="var(--ink-secondary)" />
                   </button>
@@ -209,13 +215,17 @@ function ProposalsTab() {
               gap: 6,
               background: "none",
               border: "none",
-              padding: "4px 0",
+              padding: "4px 8px",
               fontSize: 13,
               fontWeight: 500,
               color: "var(--olive-mid)",
               cursor: "pointer",
               textAlign: "left",
+              borderRadius: 6,
+              transition: "background-color 150ms",
             }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
           >
             <Plus size={13} />
             New proposal
@@ -474,13 +484,18 @@ function TasksTab() {
           gap: 6,
           background: "none",
           border: "none",
-          padding: "12px 0 0 0",
+          padding: "8px 8px",
+          marginTop: 4,
           fontSize: 13,
           fontWeight: 500,
           color: "var(--olive-mid)",
           cursor: "pointer",
           textAlign: "left",
+          borderRadius: 6,
+          transition: "background-color 150ms",
         }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
       >
         <Plus size={13} />
         Add task
@@ -712,7 +727,10 @@ export default function OpportunityDetailPage() {
               fontWeight: 500,
               color: "#FFFFFF",
               cursor: "pointer",
+              transition: "background-color 150ms",
             }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#A8421A" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#C4511A" }}
           >
             <Plus size={15} style={{ flexShrink: 0 }} />
             New proposal
@@ -736,7 +754,10 @@ export default function OpportunityDetailPage() {
                 fontWeight: 400,
                 color: "var(--ink)",
                 cursor: "pointer",
+                transition: "background-color 150ms",
               }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
             >
               <Plus size={13} style={{ flexShrink: 0 }} />
               {label}

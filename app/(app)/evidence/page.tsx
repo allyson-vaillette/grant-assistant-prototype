@@ -313,7 +313,10 @@ function DetailPanel({ item }: { item: EvidenceItem }) {
                 fontSize: 13,
                 color: "var(--ink)",
                 cursor: "pointer",
+                transition: "background-color 150ms",
               }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
             >
               Edit
             </button>
@@ -327,8 +330,12 @@ function DetailPanel({ item }: { item: EvidenceItem }) {
               fontSize: 13,
               fontWeight: 500,
               color: "#C0302A",
-              padding: 0,
+              padding: "4px 8px",
+              borderRadius: 6,
+              transition: "background-color 150ms",
             }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#FEEAEA" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
           >
             Delete
           </button>
@@ -559,7 +566,10 @@ export default function EvidencePage() {
             color: "#FFFFFF",
             cursor: "pointer",
             flexShrink: 0,
+            transition: "background-color 150ms",
           }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#A8421A" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#C4511A" }}
         >
           <Plus size={15} style={{ flexShrink: 0 }} />
           New evidence item

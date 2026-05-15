@@ -460,6 +460,8 @@ export default function HomePage() {
             type="button"
             style={styles.terracottaBtn}
             onClick={() => {}}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#A8421A" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#C4511A" }}
           >
             <Plus size={13} style={{ flexShrink: 0 }} />
             New engagement
@@ -616,6 +618,8 @@ export default function HomePage() {
               type="button"
               onClick={() => router.push("/opportunity")}
               style={{ ...styles.terracottaBtn, padding: "7px 16px", fontSize: 13 }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#A8421A" }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#C4511A" }}
             >
               <Plus size={13} style={{ flexShrink: 0 }} />
               New opportunity
@@ -819,5 +823,6 @@ const styles = {
     color: "#FFFFFF",
     cursor: "pointer",
     lineHeight: "16px",
+    transition: "background-color 150ms",
   },
 } as const
