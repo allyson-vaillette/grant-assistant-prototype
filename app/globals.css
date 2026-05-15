@@ -2,26 +2,88 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ─────────────────────────────────────────────
+   GA 2.0 Design Tokens
+   Single source of truth — mirrors the Design Tokens artboard in Paper.
+   ───────────────────────────────────────────── */
 
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* ── Backgrounds ── */
+    --canvas:       #FAF8F4;   /* warm cream — app bg */
+    --surface:      #FFFFFF;   /* cards, panels, nav */
+    --subtle:       #F3F0EA;   /* hover rows, zebra, tinted sections */
+    --border-color: rgba(60, 50, 20, 0.09);
+
+    /* ── Olive — primary brand ── */
+    --olive-dark:   #3D6120;   /* primary buttons, active nav, icons */
+    --olive-mid:    #5A8A35;   /* secondary elements */
+    --olive-pale:   #EBF2E2;   /* AI wells, active nav chip bg, tinted sections */
+
+    /* ── Amber — warning / in-progress / lapsed ── */
+    --amber:        #C47A10;
+    --amber-light:  #FEF3DC;
+
+    /* ── Ink — text hierarchy ── */
+    --ink:          #2A2618;   /* primary text */
+    --ink-secondary:#6B6355;   /* secondary text, inactive nav */
+    --ink-tertiary: #A09888;   /* placeholder, disabled */
+
+    /* ── Slate — muted UI elements ── */
+    --slate:        #8A8070;
+    --slate-light:  #EEECEA;
+
+    /* ── Blue — submitted / links ── */
+    --blue:         #2D62B8;
+    --blue-light:   #E8F0FB;
+
+    /* ── Gradient — display text clip only ── */
+    --gradient-brand: linear-gradient(90deg, #3D6120, #7A9A30);
+
+    /* ── Radius ── */
+    --radius-pill:      20px;
+    --radius-card:      12px;
+    --radius-button:    8px;
+    --radius-input:     9px;
+    --radius-icon-tile: 7px;
+
+    /* ────────────────────────────────────────────
+       shadcn/ui compatibility (HSL channel values)
+       Tailwind config references these as hsl(var(--*))
+       ──────────────────────────────────────────── */
+    --background:              40 60% 97%;   /* canvas */
+    --foreground:              47 27% 13%;   /* ink */
+    --card:                    0 0% 100%;    /* surface */
+    --card-foreground:         47 27% 13%;
+    --popover:                 0 0% 100%;
+    --popover-foreground:      47 27% 13%;
+    --primary:                 93 50% 25%;   /* olive-dark */
+    --primary-foreground:      0 0% 100%;
+    --secondary:               93 36% 92%;   /* olive-pale */
+    --secondary-foreground:    93 50% 25%;
+    --muted:                   38 31% 94%;   /* subtle */
+    --muted-foreground:        38 12% 38%;   /* ink-secondary */
+    --accent:                  93 36% 92%;   /* olive-pale */
+    --accent-foreground:       93 50% 25%;
+    --destructive:             0 72% 51%;
+    --destructive-foreground:  0 0% 100%;
+    --border:                  38 20% 89%;
+    --input:                   38 20% 89%;
+    --ring:                    93 50% 25%;   /* olive-dark focus ring */
+    --radius:                  0.5rem;       /* 8px — button radius */
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
+@layer base {
+  * {
+    @apply border-border;
+  }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  body {
+    background-color: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-inter), -apple-system, "SF Pro Display", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
