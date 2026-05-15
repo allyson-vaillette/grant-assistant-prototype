@@ -573,7 +573,7 @@ export default function InitiativesPage() {
             Initiatives
           </h1>
           <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)" }}>
-            Your organization's program areas. Initiatives drive opportunity matching and proposal content.
+            Your organization&apos;s program areas. Initiatives drive opportunity matching and proposal content.
           </p>
         </div>
         <button

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { ChevronDown, ExternalLink, SlidersHorizontal } from "lucide-react"
+import { ChevronDown, ExternalLink } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 

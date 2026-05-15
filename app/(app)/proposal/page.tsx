@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from "react"
+import React, { useState, useRef } from "react"
 import { Bold, Italic, Underline, Link, List, ListOrdered, AlignLeft, Plus, RotateCcw } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -628,7 +628,7 @@ const sectionLabelStyle: React.CSSProperties = {
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function ProposalEditorPage() {
-  const [sections, setSections] = useState(INITIAL_SECTIONS)
+  const sections = INITIAL_SECTIONS
   const [activeId, setActiveId] = useState<SectionId>("need-statement")
   const scrollRef = useRef<HTMLDivElement>(null)
 
