@@ -1,7 +1,8 @@
 "use client"
 
 import React, { useState, useRef } from "react"
-import { Bold, Italic, Underline, Link, List, ListOrdered, AlignLeft, Plus, RotateCcw } from "lucide-react"
+import NextLink from "next/link"
+import { Bold, Italic, Underline, Link, List, ListOrdered, AlignLeft, Plus, RotateCcw, ChevronLeft } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -655,8 +656,25 @@ export default function ProposalEditorPage() {
           borderBottom: "1px solid var(--border-color)",
         }}
       >
-        {/* Center: title + status */}
+        {/* Left: back + title + status */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <NextLink
+            href="/opportunity"
+            style={{
+              width: 26,
+              height: 26,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: "var(--radius-icon-tile)",
+              border: "1px solid var(--border-color)",
+              backgroundColor: "var(--surface)",
+              textDecoration: "none",
+              flexShrink: 0,
+            }}
+          >
+            <ChevronLeft size={13} color="var(--ink-secondary)" />
+          </NextLink>
           <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>
             Equitable Futures — Draft 1
           </span>

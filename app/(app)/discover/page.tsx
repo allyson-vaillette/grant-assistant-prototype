@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { useRouter } from "next/navigation"
 import { ChevronDown, ExternalLink } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -358,7 +359,7 @@ function OpportunityCard({
 
 // ── Track This Popover ─────────────────────────────────────────────────────
 
-function TrackPopover({ onCancel }: { onCancel: () => void }) {
+function TrackPopover({ onCancel, onSelect }: { onCancel: () => void; onSelect: () => void }) {
   return (
     <div
       style={{
@@ -385,6 +386,7 @@ function TrackPopover({ onCancel }: { onCancel: () => void }) {
         {ENGAGEMENTS.map((eng) => (
           <div
             key={eng.id}
+            onClick={onSelect}
             style={{
               display: "flex",
               alignItems: "center",
@@ -453,11 +455,13 @@ function DetailPanel({
   showPopover,
   onTrackClick,
   onCancelPopover,
+  onSelectEngagement,
 }: {
   opp: Opportunity
   showPopover: boolean
   onTrackClick: () => void
   onCancelPopover: () => void
+  onSelectEngagement: () => void
 }) {
   return (
     <div
@@ -600,7 +604,7 @@ function DetailPanel({
           padding: "14px 20px",
         }}
       >
-        {showPopover && <TrackPopover onCancel={onCancelPopover} />}
+        {showPopover && <TrackPopover onCancel={onCancelPopover} onSelect={onSelectEngagement} />}
 
         <button
           type="button"
@@ -952,6 +956,7 @@ const DEFAULT_FILTERS: FilterState = {
 }
 
 export default function DiscoverPage() {
+  const router = useRouter()
   const [selectedId, setSelectedId] = useState("petco-love")
   const [showPopover, setShowPopover] = useState(false)
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS)
@@ -961,6 +966,11 @@ export default function DiscoverPage() {
   function handleCardClick(id: string) {
     setSelectedId(id)
     setShowPopover(false)
+  }
+
+  function handleSelectEngagement() {
+    setShowPopover(false)
+    router.push("/opportunity")
   }
 
   function handleClearFilters() {
@@ -1057,6 +1067,7 @@ export default function DiscoverPage() {
         showPopover={showPopover}
         onTrackClick={() => setShowPopover((v) => !v)}
         onCancelPopover={() => setShowPopover(false)}
+        onSelectEngagement={handleSelectEngagement}
       />
     </div>
   )

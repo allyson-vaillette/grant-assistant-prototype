@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 
 const NAV_ITEMS = [
   { label: "Discover",    href: "/discover"    },
-  { label: "Home",        href: "/home"         },
+  { label: "Home",        href: "/"            },
   { label: "Initiatives", href: "/initiatives"  },
   { label: "Evidence",    href: "/evidence"     },
   { label: "Reports",     href: "/reports"      },
@@ -46,7 +46,10 @@ export function TopNav() {
       {/* Primary navigation */}
       <nav className="flex-1 flex items-center justify-center gap-0.5">
         {NAV_ITEMS.map(({ label, href }) => {
-          const isActive = pathname === href || pathname.startsWith(href + "/")
+          const isActive =
+        href === "/"
+          ? pathname === "/" || pathname === "/home" || pathname.startsWith("/home/")
+          : pathname === href || pathname.startsWith(href + "/")
           return (
             <Link
               key={href}

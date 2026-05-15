@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Search } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -314,6 +315,7 @@ function NoteBubbleIcon() {
 // ── Main page ──────────────────────────────────────────────────────────────
 
 export default function HomePage() {
+  const router = useRouter()
   const [selectedId, setSelectedId] = useState<string>("ford")
   const selected = ENGAGEMENTS.find((e) => e.id === selectedId) ?? ENGAGEMENTS[0]
   const oppCount = selected.opportunities.length
@@ -467,7 +469,7 @@ export default function HomePage() {
           <div className="flex items-center" style={{ gap: 8 }}>
             <button type="button" style={styles.outlineBtn}>Add note</button>
             <button type="button" style={styles.outlineBtn}>View funder</button>
-            <button type="button" style={{ ...styles.amberBtn, padding: "7px 16px", fontSize: 13 }}>
+            <button type="button" onClick={() => router.push("/opportunity")} style={{ ...styles.amberBtn, padding: "7px 16px", fontSize: 13 }}>
               New opportunity
             </button>
           </div>
@@ -487,6 +489,7 @@ export default function HomePage() {
               <div
                 key={opp.id}
                 className="flex items-start justify-between"
+                onClick={() => router.push("/opportunity")}
                 style={{
                   borderRadius: 12,
                   padding: "14px 16px",
@@ -494,6 +497,7 @@ export default function HomePage() {
                   border: "1px solid #3C321417",
                   boxShadow: "0px 1px 3px #1C18400A",
                   gap: 16,
+                  cursor: "pointer",
                 }}
               >
                 {/* Left: name + status + meta */}

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ChevronLeft, ChevronRight, Copy, FileText } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -84,6 +85,7 @@ const PROPOSAL_STATUS_STYLE: Record<Proposal["status"], { bg: string; color: str
 // ── Tab content ────────────────────────────────────────────────────────────
 
 function ProposalsTab() {
+  const router = useRouter()
   const [tasks, setTasks] = useState(TASKS)
 
   function toggleDone(id: string) {
@@ -163,6 +165,7 @@ function ProposalsTab() {
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button
                     type="button"
+                    onClick={() => router.push("/proposal")}
                     style={{
                       padding: "7px 16px",
                       borderRadius: "var(--radius-button)",
@@ -199,6 +202,7 @@ function ProposalsTab() {
 
           <button
             type="button"
+            onClick={() => router.push("/proposal")}
             style={{
               background: "none",
               border: "none",
@@ -521,6 +525,7 @@ const TABS: { id: TabId; label: string }[] = [
 ]
 
 export default function OpportunityDetailPage() {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<TabId>("proposals")
 
   return (
@@ -539,8 +544,8 @@ export default function OpportunityDetailPage() {
           backgroundColor: "var(--surface)",
         }}
       >
-        <button
-          type="button"
+        <Link
+          href="/home"
           style={{
             width: 22,
             height: 22,
@@ -551,15 +556,18 @@ export default function OpportunityDetailPage() {
             border: "1px solid var(--border-color)",
             backgroundColor: "var(--surface)",
             cursor: "pointer",
+            textDecoration: "none",
           }}
         >
           <ChevronLeft size={12} color="var(--ink-secondary)" />
-        </button>
+        </Link>
         <Link href="/home" style={{ fontSize: 13, color: "var(--ink-secondary)", textDecoration: "none" }}>
           Home
         </Link>
         <span style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>/</span>
-        <span style={{ fontSize: 13, color: "var(--ink-secondary)" }}>Ford Foundation</span>
+        <Link href="/home" style={{ fontSize: 13, color: "var(--ink-secondary)", textDecoration: "none" }}>
+          Ford Foundation
+        </Link>
         <span style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>/</span>
         <span style={{ fontSize: 13, color: "var(--ink)", fontWeight: 500 }}>
           Equitable Futures Grant 2026
@@ -683,6 +691,7 @@ export default function OpportunityDetailPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
           <button
             type="button"
+            onClick={() => router.push("/proposal")}
             style={{
               padding: "8px 18px",
               borderRadius: "var(--radius-button)",
