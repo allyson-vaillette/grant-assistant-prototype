@@ -2,12 +2,13 @@
 
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Search } from "lucide-react"
+import { Search, Plus } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type EngagementStatus = "Active" | "Lapsed"
 type OpportunityStatus = "Active" | "Submitted" | "Tracking"
+type ViewMode = "list" | "kanban" | "calendar"
 
 interface MetaItem {
   label: string
@@ -312,34 +313,157 @@ function NoteBubbleIcon() {
   )
 }
 
+// ── View Toggle ────────────────────────────────────────────────────────────
+
+function ViewToggle({ view, onChange }: { view: ViewMode; onChange: (v: ViewMode) => void }) {
+  const options: { id: ViewMode; label: string }[] = [
+    { id: "list",     label: "List"     },
+    { id: "kanban",   label: "Kanban"   },
+    { id: "calendar", label: "Calendar" },
+  ]
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        borderRadius: 8,
+        border: "1px solid #3C321417",
+        overflow: "hidden",
+        backgroundColor: "#FFFFFF",
+        flexShrink: 0,
+      }}
+    >
+      {options.map((opt) => {
+        const isActive = view === opt.id
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onChange(opt.id)}
+            style={{
+              padding: "5px 12px",
+              fontSize: 12,
+              fontWeight: isActive ? 600 : 400,
+              color: isActive ? "#3D6120" : "#A09888",
+              backgroundColor: isActive ? "#EBF2E2" : "transparent",
+              border: "none",
+              borderRight: opt.id !== "calendar" ? "1px solid #3C321417" : "none",
+              cursor: "pointer",
+              transition: "background-color 150ms, color 150ms",
+            }}
+          >
+            {opt.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Coming soon placeholder ────────────────────────────────────────────────
+
+function ComingSoon({ label }: { label: string }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        flex: 1,
+        gap: 8,
+        padding: 40,
+      }}
+    >
+      <span style={{ fontSize: 14, fontWeight: 500, color: "#A09888" }}>{label} view</span>
+      <span style={{ fontSize: 13, color: "#C8BFB4" }}>Coming soon</span>
+    </div>
+  )
+}
+
 // ── Main page ──────────────────────────────────────────────────────────────
 
 export default function HomePage() {
   const router = useRouter()
   const [selectedId, setSelectedId] = useState<string>("ford")
+  const [viewMode, setViewMode] = useState<ViewMode>("list")
   const selected = ENGAGEMENTS.find((e) => e.id === selectedId) ?? ENGAGEMENTS[0]
   const oppCount = selected.opportunities.length
 
   return (
-    <div className="flex flex-1 overflow-hidden">
+    <div className="flex flex-1" style={{ overflow: "hidden", minHeight: 0 }}>
 
       {/* ── LEFT PANE ── */}
       <aside
-        className="flex flex-col overflow-hidden"
         style={{
           width: 268,
           flexShrink: 0,
           backgroundColor: "#F3F0EA",
           borderRight: "1px solid #3C321417",
+          display: "flex",
+          flexDirection: "column",
+          position: "sticky",
+          top: 44,
+          height: "calc(100vh - 44px)",
+          overflowY: "auto",
         }}
       >
+        {/* Today stat chips */}
+        <div
+          style={{
+            padding: "12px 12px 8px 12px",
+            flexShrink: 0,
+            borderBottom: "1px solid #3C321417",
+          }}
+        >
+          <span style={{ ...styles.sectionLabel, display: "block", marginBottom: 8 }}>Today</span>
+          <div style={{ display: "flex", gap: 6 }}>
+            <div
+              style={{
+                flex: 1,
+                borderRadius: 8,
+                padding: "8px 10px",
+                backgroundColor: "#FFFFFF",
+                border: "1px solid #3C321417",
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+              }}
+            >
+              <span style={{ fontSize: 18, fontWeight: 700, color: "#C4511A", lineHeight: "22px" }}>3</span>
+              <span style={{ fontSize: 11, color: "#A09888", lineHeight: "14px" }}>tasks due today</span>
+            </div>
+            <div
+              style={{
+                flex: 1,
+                borderRadius: 8,
+                padding: "8px 10px",
+                backgroundColor: "#FFFFFF",
+                border: "1px solid #3C321417",
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+              }}
+            >
+              <span style={{ fontSize: 18, fontWeight: 700, color: "#3D6120", lineHeight: "22px" }}>2</span>
+              <span style={{ fontSize: 11, color: "#A09888", lineHeight: "14px" }}>deadlines in 7 days</span>
+            </div>
+          </div>
+        </div>
+
         {/* Header row */}
         <div
           className="flex items-center justify-between"
-          style={{ padding: "14px 16px 10px 16px", flexShrink: 0 }}
+          style={{ padding: "12px 16px 8px 16px", flexShrink: 0 }}
         >
           <span style={styles.sectionLabel}>Engagements</span>
-          <button type="button" style={styles.amberBtn}>New</button>
+          <button
+            type="button"
+            style={styles.terracottaBtn}
+            onClick={() => {}}
+          >
+            <Plus size={13} style={{ flexShrink: 0 }} />
+            New engagement
+          </button>
         </div>
 
         {/* Search */}
@@ -390,6 +514,12 @@ export default function HomePage() {
                   textAlign: "left",
                   transition: "background-color 150ms, box-shadow 150ms",
                 }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#EBE7DF"
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"
+                }}
               >
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 500, color: "#2A2618", lineHeight: "16px" }}>
@@ -422,8 +552,8 @@ export default function HomePage() {
 
       {/* ── RIGHT PANE ── */}
       <div
-        className="flex-1 flex flex-col overflow-hidden"
-        style={{ backgroundColor: "#FAF8F4" }}
+        className="flex-1 flex flex-col"
+        style={{ backgroundColor: "#FFFFFF", overflow: "hidden", minHeight: 0 }}
       >
         {/* Right header */}
         <div
@@ -467,146 +597,190 @@ export default function HomePage() {
 
           {/* Action buttons */}
           <div className="flex items-center" style={{ gap: 8 }}>
-            <button type="button" style={styles.outlineBtn}>Add note</button>
-            <button type="button" style={styles.outlineBtn}>View funder</button>
-            <button type="button" onClick={() => router.push("/opportunity")} style={{ ...styles.amberBtn, padding: "7px 16px", fontSize: 13 }}>
+            <button
+              type="button"
+              style={styles.outlineBtn}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#F3F0EA")}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#FFFFFF")}
+            >
+              <Plus size={13} style={{ flexShrink: 0 }} />
+              Add note
+            </button>
+            <button type="button" style={styles.outlineBtn}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#F3F0EA")}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#FFFFFF")}
+            >
+              View funder
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/opportunity")}
+              style={{ ...styles.terracottaBtn, padding: "7px 16px", fontSize: 13 }}
+            >
+              <Plus size={13} style={{ flexShrink: 0 }} />
               New opportunity
             </button>
           </div>
         </div>
 
-        {/* Scrollable content */}
+        {/* View toggle + content */}
         <div
-          className="flex-1 overflow-y-auto"
-          style={{ display: "flex", flexDirection: "column", padding: "20px 24px", gap: 16 }}
+          style={{
+            padding: "14px 24px 10px 24px",
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
         >
-          {/* ── Opportunities ── */}
           <span style={styles.sectionLabel}>Opportunities</span>
+          <ViewToggle view={viewMode} onChange={setViewMode} />
+        </div>
 
-          {selected.opportunities.map((opp) => {
-            const badge = OPP_BADGE[opp.status]
-            return (
-              <div
-                key={opp.id}
-                className="flex items-start justify-between"
-                onClick={() => router.push("/opportunity")}
-                style={{
-                  borderRadius: 12,
-                  padding: "14px 16px",
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #3C321417",
-                  boxShadow: "0px 1px 3px #1C18400A",
-                  gap: 16,
-                  cursor: "pointer",
-                }}
-              >
-                {/* Left: name + status + meta */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <div className="flex items-center" style={{ gap: 10 }}>
-                    <span
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 500,
-                        letterSpacing: "-0.01em",
-                        color: "#2A2618",
-                        lineHeight: "18px",
-                      }}
-                    >
-                      {opp.name}
-                    </span>
-                    <span
-                      style={{
-                        flexShrink: 0,
-                        borderRadius: 20,
-                        padding: "3px 9px",
-                        backgroundColor: badge.bg,
-                        fontSize: 10,
-                        fontWeight: 500,
-                        color: badge.color,
-                        letterSpacing: "0.03em",
-                        lineHeight: "12px",
-                      }}
-                    >
-                      {opp.status}
-                    </span>
-                  </div>
-                  {/* Meta items with dot separators */}
-                  <div className="flex items-center" style={{ gap: 6 }}>
-                    {opp.meta.map((item, i) => (
-                      <React.Fragment key={item.label}>
-                        {i > 0 && (
-                          <span style={{ fontSize: 12, color: "#6B6355", lineHeight: "16px" }}>·</span>
-                        )}
-                        <span
-                          style={{
-                            fontSize: 12,
-                            color: item.highlighted ? "#C47A10" : "#6B6355",
-                            lineHeight: "16px",
-                          }}
-                        >
-                          {item.label}
-                        </span>
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Right: amount */}
-                <span
+        {/* Scrollable content */}
+        {viewMode === "list" ? (
+          <div
+            className="flex-1 overflow-y-auto"
+            style={{ display: "flex", flexDirection: "column", padding: "0 24px 20px 24px", gap: 16 }}
+          >
+            {selected.opportunities.map((opp) => {
+              const badge = OPP_BADGE[opp.status]
+              return (
+                <div
+                  key={opp.id}
+                  className="flex items-start justify-between"
+                  onClick={() => router.push("/opportunity")}
                   style={{
-                    flexShrink: 0,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    color: "#3D6120",
-                    lineHeight: "16px",
-                    marginTop: 2,
+                    borderRadius: 12,
+                    padding: "14px 16px",
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid #3C321417",
+                    boxShadow: "0px 1px 3px #1C18400A",
+                    gap: 16,
+                    cursor: "pointer",
+                    transition: "box-shadow 150ms, border-color 150ms",
+                  }}
+                  onMouseEnter={(e) => {
+                    const el = e.currentTarget as HTMLDivElement
+                    el.style.boxShadow = "0px 2px 8px #1C184014"
+                    el.style.borderColor = "rgba(90,138,53,0.25)"
+                  }}
+                  onMouseLeave={(e) => {
+                    const el = e.currentTarget as HTMLDivElement
+                    el.style.boxShadow = "0px 1px 3px #1C18400A"
+                    el.style.borderColor = "#3C321417"
                   }}
                 >
-                  {opp.amount}
-                </span>
-              </div>
-            )
-          })}
+                  {/* Left: name + status + meta */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div className="flex items-center" style={{ gap: 10 }}>
+                      <span
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 500,
+                          letterSpacing: "-0.01em",
+                          color: "#2A2618",
+                          lineHeight: "18px",
+                        }}
+                      >
+                        {opp.name}
+                      </span>
+                      <span
+                        style={{
+                          flexShrink: 0,
+                          borderRadius: 20,
+                          padding: "3px 9px",
+                          backgroundColor: badge.bg,
+                          fontSize: 10,
+                          fontWeight: 500,
+                          color: badge.color,
+                          letterSpacing: "0.03em",
+                          lineHeight: "12px",
+                        }}
+                      >
+                        {opp.status}
+                      </span>
+                    </div>
+                    {/* Meta items with dot separators */}
+                    <div className="flex items-center" style={{ gap: 6 }}>
+                      {opp.meta.map((item, i) => (
+                        <React.Fragment key={item.label}>
+                          {i > 0 && (
+                            <span style={{ fontSize: 12, color: "#6B6355", lineHeight: "16px" }}>·</span>
+                          )}
+                          <span
+                            style={{
+                              fontSize: 12,
+                              color: item.highlighted ? "#C47A10" : "#6B6355",
+                              lineHeight: "16px",
+                            }}
+                          >
+                            {item.label}
+                          </span>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
 
-          {/* ── Notes ── */}
-          <span style={{ ...styles.sectionLabel, marginTop: 4 }}>Notes</span>
+                  {/* Right: amount */}
+                  <span
+                    style={{
+                      flexShrink: 0,
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: "#3D6120",
+                      lineHeight: "16px",
+                      marginTop: 2,
+                    }}
+                  >
+                    {opp.amount}
+                  </span>
+                </div>
+              )
+            })}
 
-          {selected.notes.map((note) => (
-            <div key={note.id} className="flex items-start" style={{ gap: 12 }}>
-              {/* Icon tile */}
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  flexShrink: 0,
-                  marginTop: 1,
-                  borderRadius: 7,
-                  backgroundColor: "#EBF2E2",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <NoteBubbleIcon />
+            {/* ── Notes ── */}
+            <span style={{ ...styles.sectionLabel, marginTop: 4 }}>Notes</span>
+
+            {selected.notes.map((note) => (
+              <div key={note.id} className="flex items-start" style={{ gap: 12 }}>
+                {/* Icon tile */}
+                <div
+                  style={{
+                    width: 28,
+                    height: 28,
+                    flexShrink: 0,
+                    marginTop: 1,
+                    borderRadius: 7,
+                    backgroundColor: "#EBF2E2",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <NoteBubbleIcon />
+                </div>
+                {/* Text + date */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <span style={{ fontSize: 13, fontWeight: 400, color: "#2A2618", lineHeight: "19px" }}>
+                    {note.text}
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 400, color: "#A09888", lineHeight: "14px" }}>
+                    {note.date}
+                  </span>
+                </div>
               </div>
-              {/* Text + date */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                <span style={{ fontSize: 13, fontWeight: 400, color: "#2A2618", lineHeight: "19px" }}>
-                  {note.text}
-                </span>
-                <span style={{ fontSize: 11, fontWeight: 400, color: "#A09888", lineHeight: "14px" }}>
-                  {note.date}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <ComingSoon label={viewMode === "kanban" ? "Kanban" : "Calendar"} />
+        )}
       </div>
     </div>
   )
 }
 
-// ── Shared style objects (reduces repetition) ──────────────────────────────
+// ── Shared style objects ──────────────────────────────────────────────────
 
 const styles = {
   sectionLabel: {
@@ -618,6 +792,9 @@ const styles = {
     lineHeight: "14px",
   },
   outlineBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
     borderRadius: 8,
     padding: "7px 14px",
     backgroundColor: "#FFFFFF",
@@ -627,11 +804,15 @@ const styles = {
     color: "#2A2618",
     cursor: "pointer",
     lineHeight: "16px",
+    transition: "background-color 150ms",
   },
-  amberBtn: {
+  terracottaBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
     borderRadius: 8,
     padding: "4px 10px",
-    backgroundColor: "#C47A10",
+    backgroundColor: "#C4511A",
     border: "none",
     fontSize: 12,
     fontWeight: 500,

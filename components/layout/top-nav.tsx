@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 
 const NAV_ITEMS = [
-  { label: "Discover",    href: "/discover"    },
-  { label: "Home",        href: "/"            },
-  { label: "Initiatives", href: "/initiatives"  },
-  { label: "Evidence",    href: "/evidence"     },
-  { label: "Reports",     href: "/reports"      },
+  { label: "Home",          href: "/home"        },
+  { label: "Opportunities", href: "/discover"    },
+  { label: "Initiatives",   href: "/initiatives" },
+  { label: "Evidence",      href: "/evidence"    },
+  { label: "Reports",       href: "/reports"     },
 ] as const
 
 export function TopNav() {
@@ -21,6 +21,9 @@ export function TopNav() {
       style={{
         backgroundColor: "var(--surface)",
         borderBottom: "1px solid var(--border-color)",
+        position: "sticky",
+        top: 0,
+        zIndex: 50,
       }}
     >
       {/* Brand mark */}
@@ -32,7 +35,6 @@ export function TopNav() {
             borderRadius: "var(--radius-icon-tile)",
           }}
         >
-          {/* Square icon tile — replace with SVG logo mark when available */}
           <span className="text-white text-[11px] font-semibold leading-none select-none">G</span>
         </div>
         <span
@@ -47,9 +49,9 @@ export function TopNav() {
       <nav className="flex-1 flex items-center justify-center gap-0.5">
         {NAV_ITEMS.map(({ label, href }) => {
           const isActive =
-        href === "/"
-          ? pathname === "/" || pathname === "/home" || pathname.startsWith("/home/")
-          : pathname === href || pathname.startsWith(href + "/")
+            href === "/home"
+              ? pathname === "/" || pathname === "/home" || pathname.startsWith("/home/")
+              : pathname === href || pathname.startsWith(href + "/")
           return (
             <Link
               key={href}

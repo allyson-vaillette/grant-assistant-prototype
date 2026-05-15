@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { Calendar, FileText, Trash2, Star } from "lucide-react"
+import { Calendar, FileText, Trash2, Sparkles, Plus } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -193,13 +193,19 @@ function ReportRow({
         margin: "0 8px",
         padding: "14px 14px",
         borderRadius: 10,
-        backgroundColor: isSelected ? "var(--surface)" : "transparent",
+        backgroundColor: isSelected ? "#FFFFFF" : "transparent",
         border: isSelected ? "1px solid var(--border-color)" : "1px solid transparent",
         borderLeft: isSelected ? "3px solid var(--olive-mid)" : "3px solid transparent",
         boxShadow: isSelected ? "0px 1px 4px rgba(28,24,64,0.06)" : "none",
         cursor: "pointer",
         textAlign: "left",
         transition: "background-color 150ms",
+      }}
+      onMouseEnter={(e) => {
+        if (!isSelected) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.5)"
+      }}
+      onMouseLeave={(e) => {
+        if (!isSelected) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"
       }}
     >
       {/* Title + days label */}
@@ -282,7 +288,7 @@ function DetailPanel({ report }: { report: Report }) {
         flex: 1,
         overflowY: "auto",
         padding: "28px 40px",
-        backgroundColor: "var(--surface)",
+        backgroundColor: "#FFFFFF",
         borderLeft: "1px solid var(--border-color)",
         display: "flex",
         flexDirection: "column",
@@ -480,7 +486,7 @@ function DetailPanel({ report }: { report: Report }) {
               gap: 7,
               padding: "9px 18px",
               borderRadius: "var(--radius-button)",
-              backgroundColor: "var(--amber)",
+              background: "linear-gradient(135deg, #3D6120, #C4511A)",
               border: "none",
               fontSize: 13,
               fontWeight: 500,
@@ -488,7 +494,7 @@ function DetailPanel({ report }: { report: Report }) {
               cursor: "pointer",
             }}
           >
-            <Star size={13} color="#FFFFFF" />
+            <Sparkles size={13} color="#FFFFFF" />
             Generate draft with AI
           </button>
         </div>
@@ -664,13 +670,13 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden">
+    <div className="flex flex-col flex-1" style={{ overflow: "hidden", minHeight: 0 }}>
       {/* Page header */}
       <div
         style={{
           flexShrink: 0,
           padding: "20px 32px",
-          backgroundColor: "var(--surface)",
+          backgroundColor: "#FFFFFF",
           borderBottom: "1px solid var(--border-color)",
           display: "flex",
           alignItems: "flex-start",
@@ -701,7 +707,7 @@ export default function ReportsPage() {
             gap: 6,
             padding: "8px 18px",
             borderRadius: "var(--radius-button)",
-            backgroundColor: "var(--amber)",
+            backgroundColor: "#C4511A",
             border: "none",
             fontSize: 14,
             fontWeight: 500,
@@ -710,18 +716,19 @@ export default function ReportsPage() {
             flexShrink: 0,
           }}
         >
-          + New report
+          <Plus size={15} style={{ flexShrink: 0 }} />
+          New report
         </button>
       </div>
 
       {/* Body */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1" style={{ overflow: "hidden", minHeight: 0 }}>
         {/* Left column */}
         <aside
           style={{
-            width: 366,
+            width: 268,
             flexShrink: 0,
-            backgroundColor: "var(--subtle)",
+            backgroundColor: "#F3F0EA",
             borderRight: "1px solid var(--border-color)",
             overflowY: "auto",
             display: "flex",
@@ -735,6 +742,7 @@ export default function ReportsPage() {
               padding: "14px 16px 10px 16px",
               display: "flex",
               gap: 6,
+              flexWrap: "wrap",
             }}
           >
             {FILTER_TABS.map((tab) => {

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronDown, ExternalLink } from "lucide-react"
+import { ChevronDown, ExternalLink, Plus } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -266,6 +266,20 @@ function OpportunityCard({
         textAlign: "left",
         transition: "border-color 150ms, box-shadow 150ms",
       }}
+      onMouseEnter={(e) => {
+        if (!isSelected) {
+          const el = e.currentTarget as HTMLButtonElement
+          el.style.boxShadow = "0px 2px 8px rgba(28,24,64,0.07)"
+          el.style.borderColor = "rgba(90,138,53,0.2)"
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isSelected) {
+          const el = e.currentTarget as HTMLButtonElement
+          el.style.boxShadow = "0px 1px 3px rgba(28,24,64,0.04)"
+          el.style.borderColor = "var(--border-color)"
+        }
+      }}
     >
       {/* Funder + status */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -471,7 +485,10 @@ function DetailPanel({
         display: "flex",
         flexDirection: "column",
         borderLeft: "1px solid var(--border-color)",
-        backgroundColor: "var(--surface)",
+        backgroundColor: "#F3F0EA",
+        position: "sticky",
+        top: 44,
+        height: "calc(100vh - 44px)",
         overflow: "hidden",
       }}
     >
@@ -501,7 +518,7 @@ function DetailPanel({
               fontWeight: 600,
               letterSpacing: "-0.025em",
               lineHeight: "22px",
-              background: "linear-gradient(135deg, var(--olive-dark), var(--olive-mid))",
+              background: "linear-gradient(90deg, #3D6120, #7A9A30)",
               WebkitBackgroundClip: "text",
               backgroundClip: "text",
               WebkitTextFillColor: "transparent",
@@ -595,13 +612,14 @@ function DetailPanel({
         </div>
       </div>
 
-      {/* Sticky footer: popover anchor + Track This */}
+      {/* Sticky footer: Track This */}
       <div
         style={{
           flexShrink: 0,
           position: "relative",
           borderTop: "1px solid var(--border-color)",
           padding: "14px 20px",
+          backgroundColor: "#F3F0EA",
         }}
       >
         {showPopover && <TrackPopover onCancel={onCancelPopover} onSelect={onSelectEngagement} />}
@@ -610,29 +628,23 @@ function DetailPanel({
           type="button"
           onClick={onTrackClick}
           style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
             width: "100%",
-            padding: "13px 16px",
+            height: 40,
             borderRadius: 10,
-            background: "linear-gradient(135deg, #C47A10, #A86009)",
+            backgroundColor: "#C4511A",
             border: "none",
             cursor: "pointer",
-            textAlign: "left",
             marginBottom: 8,
           }}
         >
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF", lineHeight: "18px" }}>
+          <Plus size={15} color="#FFFFFF" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF", lineHeight: "18px" }}>
             Track This
-          </div>
-          <div
-            style={{
-              fontSize: 12,
-              color: "rgba(255,255,255,0.75)",
-              lineHeight: "16px",
-              marginTop: 2,
-            }}
-          >
-            Add to your portfolio and start tracking this opportunity
-          </div>
+          </span>
         </button>
 
         <p
@@ -692,15 +704,18 @@ function FilterSidebar({
   return (
     <aside
       style={{
-        width: 240,
+        width: 268,
         flexShrink: 0,
-        backgroundColor: "var(--subtle)",
+        backgroundColor: "#F3F0EA",
         borderRight: "1px solid var(--border-color)",
-        overflowY: "auto",
         padding: "20px 16px",
         display: "flex",
         flexDirection: "column",
         gap: 20,
+        position: "sticky",
+        top: 44,
+        height: "calc(100vh - 44px)",
+        overflowY: "auto",
       }}
     >
       {/* Label */}
@@ -955,7 +970,7 @@ const DEFAULT_FILTERS: FilterState = {
   deadline: "next-6",
 }
 
-export default function DiscoverPage() {
+export default function OpportunitiesPage() {
   const router = useRouter()
   const [selectedId, setSelectedId] = useState("petco-love")
   const [showPopover, setShowPopover] = useState(false)
@@ -986,7 +1001,7 @@ export default function DiscoverPage() {
   }
 
   return (
-    <div className="flex flex-1 overflow-hidden" style={{ backgroundColor: "var(--canvas)" }}>
+    <div className="flex flex-1" style={{ overflow: "hidden", minHeight: 0, backgroundColor: "#FFFFFF" }}>
       {/* ── Filter Sidebar ── */}
       <FilterSidebar
         filters={filters}
@@ -1002,6 +1017,7 @@ export default function DiscoverPage() {
           flexDirection: "column",
           overflow: "hidden",
           borderRight: "1px solid var(--border-color)",
+          backgroundColor: "#FFFFFF",
         }}
       >
         {/* Results header */}
@@ -1012,7 +1028,7 @@ export default function DiscoverPage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            backgroundColor: "var(--surface)",
+            backgroundColor: "#FFFFFF",
             borderBottom: "1px solid var(--border-color)",
           }}
         >
@@ -1027,7 +1043,7 @@ export default function DiscoverPage() {
               gap: 6,
               borderRadius: "var(--radius-button)",
               padding: "6px 12px",
-              backgroundColor: "var(--surface)",
+              backgroundColor: "#FFFFFF",
               border: "1px solid var(--border-color)",
               fontSize: 13,
               color: "var(--ink)",

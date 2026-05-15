@@ -314,12 +314,13 @@ function AIPanel({ activeSection }: { activeSection: Section }) {
   return (
     <div
       style={{
-        width: 300,
+        width: 320,
         flexShrink: 0,
         borderLeft: "1px solid var(--border-color)",
-        backgroundColor: "var(--surface)",
+        backgroundColor: "#F3F0EA",
         display: "flex",
         flexDirection: "column",
+        height: "100%",
         overflow: "hidden",
       }}
     >
@@ -330,6 +331,7 @@ function AIPanel({ activeSection }: { activeSection: Section }) {
           display: "flex",
           borderBottom: "1px solid var(--border-color)",
           padding: "0 16px",
+          backgroundColor: "#F3F0EA",
         }}
       >
         {(["assistant", "funder"] as const).map((tab) => {
@@ -372,7 +374,7 @@ function AIPanel({ activeSection }: { activeSection: Section }) {
         })}
       </div>
 
-      {/* Body */}
+      {/* Scrollable body — flex-1 so input pins to bottom */}
       <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
         {aiTab === "assistant" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
@@ -399,6 +401,7 @@ function AIPanel({ activeSection }: { activeSection: Section }) {
                   borderRadius: "var(--radius-card)",
                   border: "1px solid var(--border-color)",
                   marginBottom: 16,
+                  backgroundColor: "#FFFFFF",
                 }}
               >
                 <p
@@ -559,12 +562,13 @@ function AIPanel({ activeSection }: { activeSection: Section }) {
         )}
       </div>
 
-      {/* Chat input */}
+      {/* Chat input — pinned to bottom */}
       <div
         style={{
           flexShrink: 0,
           borderTop: "1px solid var(--border-color)",
           padding: "10px 16px",
+          backgroundColor: "#F3F0EA",
         }}
       >
         <div
@@ -574,7 +578,7 @@ function AIPanel({ activeSection }: { activeSection: Section }) {
             gap: 8,
             padding: "9px 12px",
             borderRadius: "var(--radius-input)",
-            backgroundColor: "var(--canvas)",
+            backgroundColor: "#FFFFFF",
             border: "1px solid var(--border-color)",
           }}
         >
@@ -641,8 +645,11 @@ export default function ProposalEditorPage() {
     el?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
 
+  // Editor top bar: 44px, toolbar: 40px → three-column body = calc(100vh - 44px[nav] - 44px[topbar] - 40px[toolbar])
+  const bodyHeight = "calc(100vh - 44px - 44px - 40px)"
+
   return (
-    <div className="flex flex-col flex-1 overflow-hidden" style={{ backgroundColor: "var(--canvas)" }}>
+    <div className="flex flex-col flex-1" style={{ overflow: "hidden", minHeight: 0, backgroundColor: "#FFFFFF" }}>
       {/* Editor top bar */}
       <div
         style={{
@@ -652,7 +659,7 @@ export default function ProposalEditorPage() {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "0 20px",
-          backgroundColor: "var(--surface)",
+          backgroundColor: "#FFFFFF",
           borderBottom: "1px solid var(--border-color)",
         }}
       >
@@ -668,7 +675,7 @@ export default function ProposalEditorPage() {
               justifyContent: "center",
               borderRadius: "var(--radius-icon-tile)",
               border: "1px solid var(--border-color)",
-              backgroundColor: "var(--surface)",
+              backgroundColor: "#FFFFFF",
               textDecoration: "none",
               flexShrink: 0,
             }}
@@ -708,7 +715,7 @@ export default function ProposalEditorPage() {
             style={{
               padding: "7px 16px",
               borderRadius: "var(--radius-button)",
-              backgroundColor: "var(--amber)",
+              backgroundColor: "#C4511A",
               border: "none",
               fontSize: 13,
               fontWeight: 600,
@@ -730,7 +737,7 @@ export default function ProposalEditorPage() {
           gap: 2,
           padding: "0 20px",
           height: 40,
-          backgroundColor: "var(--surface)",
+          backgroundColor: "#FFFFFF",
           borderBottom: "1px solid var(--border-color)",
         }}
       >
@@ -759,19 +766,20 @@ export default function ProposalEditorPage() {
         ))}
       </div>
 
-      {/* Three-column body */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* Three-column body — only writing surface scrolls */}
+      <div style={{ display: "flex", height: bodyHeight, overflow: "hidden" }}>
 
         {/* Left: section navigator */}
         <aside
           style={{
-            width: 220,
+            width: 268,
             flexShrink: 0,
-            backgroundColor: "var(--surface)",
+            backgroundColor: "#F3F0EA",
             borderRight: "1px solid var(--border-color)",
             overflowY: "auto",
             display: "flex",
             flexDirection: "column",
+            height: "100%",
           }}
         >
           {/* SECTIONS header */}
@@ -818,6 +826,9 @@ export default function ProposalEditorPage() {
             <button
               type="button"
               style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
                 background: "none",
                 border: "none",
                 padding: "8px 12px",
@@ -828,18 +839,20 @@ export default function ProposalEditorPage() {
                 textAlign: "left",
               }}
             >
-              + Add section
+              <Plus size={13} />
+              Add section
             </button>
           </div>
         </aside>
 
-        {/* Center: continuous document */}
+        {/* Center: writing surface — ONLY this scrolls */}
         <div
           ref={scrollRef}
           style={{
             flex: 1,
             overflowY: "auto",
-            backgroundColor: "var(--canvas)",
+            backgroundColor: "#FFFFFF",
+            height: "100%",
           }}
         >
           <div style={{ maxWidth: 720, margin: "0 auto", padding: "40px 40px 80px 40px" }}>
@@ -851,7 +864,11 @@ export default function ProposalEditorPage() {
                   fontSize: 26,
                   fontWeight: 700,
                   letterSpacing: "-0.03em",
-                  color: "var(--ink)",
+                  background: "linear-gradient(90deg, #3D6120, #7A9A30)",
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  color: "transparent",
                 }}
               >
                 Equitable Futures Grant 2026

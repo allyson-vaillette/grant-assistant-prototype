@@ -6,9 +6,9 @@ export default function AppLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col min-h-screen bg-canvas">
+    <div className="flex flex-col h-screen bg-canvas" style={{ overflow: "hidden" }}>
       <TopNav />
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col" style={{ overflow: "hidden", minHeight: 0 }}>
         {children}
       </main>
     </div>

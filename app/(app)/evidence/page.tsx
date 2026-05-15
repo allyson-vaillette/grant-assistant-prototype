@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { Search } from "lucide-react"
+import { Search, Plus } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -17,7 +17,7 @@ interface UsageEntry {
 interface EvidenceItem {
   id: string
   title: string
-  usageCount: number | null  // null = "Not yet used"
+  usageCount: number | null
   source: string
   sourceDate: string
   sourceType: SourceType
@@ -193,13 +193,19 @@ function EvidenceRow({
         margin: "0 8px",
         padding: "12px 14px",
         borderRadius: 10,
-        backgroundColor: isSelected ? "var(--surface)" : "transparent",
+        backgroundColor: isSelected ? "#FFFFFF" : "transparent",
         border: isSelected ? "1px solid var(--border-color)" : "1px solid transparent",
         borderLeft: isSelected ? "3px solid var(--olive-mid)" : "3px solid transparent",
         boxShadow: isSelected ? "0px 1px 4px rgba(28,24,64,0.06)" : "none",
         cursor: "pointer",
         textAlign: "left",
         transition: "background-color 150ms",
+      }}
+      onMouseEnter={(e) => {
+        if (!isSelected) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.5)"
+      }}
+      onMouseLeave={(e) => {
+        if (!isSelected) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"
       }}
     >
       {/* Title + usage */}
@@ -261,7 +267,7 @@ function DetailPanel({ item }: { item: EvidenceItem }) {
         flex: 1,
         overflowY: "auto",
         padding: "28px 40px",
-        backgroundColor: "var(--surface)",
+        backgroundColor: "#FFFFFF",
         borderLeft: "1px solid var(--border-color)",
         display: "flex",
         flexDirection: "column",
@@ -509,13 +515,13 @@ export default function EvidencePage() {
     filtered.find((i) => i.id === selectedId) ?? filtered[0] ?? EVIDENCE_ITEMS[0]
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden">
+    <div className="flex flex-col flex-1" style={{ overflow: "hidden", minHeight: 0 }}>
       {/* Page header */}
       <div
         style={{
           flexShrink: 0,
           padding: "20px 32px",
-          backgroundColor: "var(--surface)",
+          backgroundColor: "#FFFFFF",
           borderBottom: "1px solid var(--border-color)",
           display: "flex",
           alignItems: "flex-start",
@@ -546,7 +552,7 @@ export default function EvidencePage() {
             gap: 6,
             padding: "8px 18px",
             borderRadius: "var(--radius-button)",
-            backgroundColor: "var(--amber)",
+            backgroundColor: "#C4511A",
             border: "none",
             fontSize: 14,
             fontWeight: 500,
@@ -555,18 +561,19 @@ export default function EvidencePage() {
             flexShrink: 0,
           }}
         >
-          + New evidence item
+          <Plus size={15} style={{ flexShrink: 0 }} />
+          New evidence item
         </button>
       </div>
 
       {/* Body */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1" style={{ overflow: "hidden", minHeight: 0 }}>
         {/* Left column */}
         <aside
           style={{
-            width: 306,
+            width: 268,
             flexShrink: 0,
-            backgroundColor: "var(--subtle)",
+            backgroundColor: "#F3F0EA",
             borderRight: "1px solid var(--border-color)",
             overflowY: "auto",
             display: "flex",
@@ -582,7 +589,7 @@ export default function EvidencePage() {
                 gap: 8,
                 padding: "8px 12px",
                 borderRadius: "var(--radius-input)",
-                backgroundColor: "var(--surface)",
+                backgroundColor: "#FFFFFF",
                 border: "1px solid var(--border-color)",
               }}
             >
@@ -614,7 +621,6 @@ export default function EvidencePage() {
               gap: 6,
             }}
           >
-            {/* All pill */}
             <button
               type="button"
               onClick={clearFilters}

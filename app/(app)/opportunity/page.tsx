@@ -3,7 +3,7 @@
 import React, { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, ChevronRight, Copy, FileText } from "lucide-react"
+import { ChevronLeft, ChevronRight, Copy, FileText, Plus } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -204,6 +204,9 @@ function ProposalsTab() {
             type="button"
             onClick={() => router.push("/proposal")}
             style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
               background: "none",
               border: "none",
               padding: "4px 0",
@@ -214,7 +217,8 @@ function ProposalsTab() {
               textAlign: "left",
             }}
           >
-            + New proposal
+            <Plus size={13} />
+            New proposal
           </button>
         </div>
       </div>
@@ -465,6 +469,9 @@ function TasksTab() {
       <button
         type="button"
         style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
           background: "none",
           border: "none",
           padding: "12px 0 0 0",
@@ -475,7 +482,8 @@ function TasksTab() {
           textAlign: "left",
         }}
       >
-        + Add task
+        <Plus size={13} />
+        Add task
       </button>
     </div>
   )
@@ -531,7 +539,7 @@ export default function OpportunityDetailPage() {
   return (
     <div
       className="flex-1 overflow-y-auto"
-      style={{ backgroundColor: "var(--canvas)" }}
+      style={{ backgroundColor: "#FFFFFF" }}
     >
       {/* Breadcrumb */}
       <div
@@ -541,7 +549,7 @@ export default function OpportunityDetailPage() {
           gap: 8,
           padding: "12px 32px",
           borderBottom: "1px solid var(--border-color)",
-          backgroundColor: "var(--surface)",
+          backgroundColor: "#FFFFFF",
         }}
       >
         <Link
@@ -554,7 +562,7 @@ export default function OpportunityDetailPage() {
             justifyContent: "center",
             borderRadius: "var(--radius-icon-tile)",
             border: "1px solid var(--border-color)",
-            backgroundColor: "var(--surface)",
+            backgroundColor: "#FFFFFF",
             cursor: "pointer",
             textDecoration: "none",
           }}
@@ -578,7 +586,7 @@ export default function OpportunityDetailPage() {
       <div
         style={{
           padding: "24px 32px 0 32px",
-          backgroundColor: "var(--surface)",
+          backgroundColor: "#FFFFFF",
           borderBottom: "1px solid var(--border-color)",
         }}
       >
@@ -598,7 +606,7 @@ export default function OpportunityDetailPage() {
               fontWeight: 700,
               letterSpacing: "-0.03em",
               lineHeight: "34px",
-              background: "linear-gradient(135deg, var(--olive-dark), var(--olive-mid))",
+              background: "linear-gradient(90deg, #3D6120, #7A9A30)",
               WebkitBackgroundClip: "text",
               backgroundClip: "text",
               WebkitTextFillColor: "transparent",
@@ -693,9 +701,12 @@ export default function OpportunityDetailPage() {
             type="button"
             onClick={() => router.push("/proposal")}
             style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
               padding: "8px 18px",
               borderRadius: "var(--radius-button)",
-              backgroundColor: "var(--amber)",
+              backgroundColor: "#C4511A",
               border: "none",
               fontSize: 14,
               fontWeight: 500,
@@ -703,13 +714,20 @@ export default function OpportunityDetailPage() {
               cursor: "pointer",
             }}
           >
+            <Plus size={15} style={{ flexShrink: 0 }} />
             New proposal
           </button>
-          {["Add task", "Add note"].map((label) => (
+          {[
+            { label: "Add task", icon: true },
+            { label: "Add note", icon: true },
+          ].map(({ label }) => (
             <button
               key={label}
               type="button"
               style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
                 padding: "7px 14px",
                 borderRadius: "var(--radius-button)",
                 backgroundColor: "transparent",
@@ -720,6 +738,7 @@ export default function OpportunityDetailPage() {
                 cursor: "pointer",
               }}
             >
+              <Plus size={13} style={{ flexShrink: 0 }} />
               {label}
             </button>
           ))}
