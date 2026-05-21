@@ -1,13 +1,13 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useRef, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Plus } from "lucide-react"
+import { Search, Plus, X, ExternalLink, Pencil } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type EngagementStatus = "Active" | "Lapsed"
-type OpportunityStage = "Active" | "Submitted" | "Tracking"
+type OpportunityStage = "Active" | "Submitted" | "Tracking" | "Awarded"
 
 interface Opportunity {
   id: string
@@ -22,6 +22,7 @@ interface Note {
   id: string
   text: string
   date: string
+  author: string
 }
 
 interface Engagement {
@@ -41,9 +42,78 @@ interface Engagement {
   }
 }
 
-// ── Data ──────────────────────────────────────────────────────────────────
+interface FunderProfile {
+  type: string
+  website: string
+  focusAreas: string[]
+  geography: string
+  fundingRange: string
+  description: string
+}
 
-const ENGAGEMENTS: Engagement[] = [
+interface NewOppData {
+  name: string
+  deadline?: string
+  amount?: string
+  stage: OpportunityStage
+}
+
+// ── Funder profiles ────────────────────────────────────────────────────────
+
+const FUNDERS: Record<string, FunderProfile> = {
+  ford: {
+    type: "Private foundation",
+    website: "https://www.fordfoundation.org",
+    focusAreas: ["Social Justice", "Economic Equity", "Housing", "Arts & Culture"],
+    geography: "National (U.S.) + International",
+    fundingRange: "$25,000 – $500,000",
+    description: "The Ford Foundation supports visionary leaders and organizations on the frontlines of social change worldwide, working toward greater economic and social equity.",
+  },
+  kresge: {
+    type: "Private foundation",
+    website: "https://kresge.org",
+    focusAreas: ["Housing", "Climate", "Education", "Health", "Arts"],
+    geography: "National (U.S.)",
+    fundingRange: "$50,000 – $300,000",
+    description: "The Kresge Foundation works to expand equity and opportunity in cities across America, with a focus on low-income residents in underserved urban communities.",
+  },
+  casey: {
+    type: "Private foundation",
+    website: "https://www.aecf.org",
+    focusAreas: ["Child Welfare", "Youth Development", "Community Development", "Data & Research"],
+    geography: "National (U.S.)",
+    fundingRange: "$25,000 – $150,000",
+    description: "The Annie E. Casey Foundation fosters public policies, human-service reforms, and community supports that meet the needs of vulnerable children and families.",
+  },
+  rwj: {
+    type: "Private foundation",
+    website: "https://www.rwjf.org",
+    focusAreas: ["Health Equity", "Public Health", "Community Health", "Mental Health"],
+    geography: "National (U.S.)",
+    fundingRange: "$50,000 – $250,000",
+    description: "The Robert Wood Johnson Foundation works to build a Culture of Health, enabling everyone in America to live longer, healthier lives regardless of who they are or where they live.",
+  },
+  kellogg: {
+    type: "Private foundation",
+    website: "https://www.wkkf.org",
+    focusAreas: ["Food Systems", "Early Childhood", "Education", "Civic Engagement"],
+    geography: "National (U.S.) + International",
+    fundingRange: "$30,000 – $200,000",
+    description: "The W.K. Kellogg Foundation supports children, families, and communities as they strengthen and create conditions that propel vulnerable children to achieve success.",
+  },
+  macarthur: {
+    type: "Private foundation",
+    website: "https://www.macfound.org",
+    focusAreas: ["Criminal Justice", "Climate", "Nuclear Risk", "Journalism", "Arts"],
+    geography: "National (U.S.) + International",
+    fundingRange: "$100,000 – $15,000,000",
+    description: "The MacArthur Foundation supports creative people, effective institutions, and influential networks building a more just, verdant, and peaceful world.",
+  },
+}
+
+// ── Initial data ───────────────────────────────────────────────────────────
+
+const INITIAL_ENGAGEMENTS: Engagement[] = [
   {
     id: "ford",
     name: "Ford Foundation",
@@ -80,11 +150,13 @@ const ENGAGEMENTS: Engagement[] = [
         id: "ford-note-1",
         text: "Called program officer Dana Reeves on Apr 12. She mentioned they're prioritizing urban orgs this cycle.",
         date: "Apr 12, 2026",
+        author: "Taylor S.",
       },
       {
         id: "ford-note-2",
         text: "LOI feedback was positive. Strong narrative around community voice resonated.",
         date: "Mar 18, 2026",
+        author: "Taylor S.",
       },
     ],
     stats: {
@@ -124,6 +196,7 @@ const ENGAGEMENTS: Engagement[] = [
         id: "kresge-note-1",
         text: "Met with program team at conference. Strong interest in our foster care data.",
         date: "Mar 5, 2026",
+        author: "Taylor S.",
       },
     ],
     stats: { inPursuit: "$90,000", awaiting: "$0", awardedLifetime: "$0", openTasks: 1 },
@@ -148,6 +221,7 @@ const ENGAGEMENTS: Engagement[] = [
         id: "casey-note-1",
         text: "Previous cycle application scored well on community impact section.",
         date: "Feb 2, 2026",
+        author: "Taylor S.",
       },
     ],
     stats: { inPursuit: "$0", awaiting: "$45,000", awardedLifetime: "$45,000", openTasks: 0 },
@@ -196,6 +270,7 @@ const ENGAGEMENTS: Engagement[] = [
         id: "rwj-note-1",
         text: "Program officer confirmed eligibility for Health Equity track.",
         date: "Apr 3, 2026",
+        author: "Taylor S.",
       },
     ],
     stats: { inPursuit: "$120,000", awaiting: "$80,000", awardedLifetime: "$80,000", openTasks: 1 },
@@ -228,6 +303,7 @@ const ENGAGEMENTS: Engagement[] = [
         id: "kellogg-note-1",
         text: "Strong alignment with WKKF's 2026 priority areas in education.",
         date: "Apr 8, 2026",
+        author: "Taylor S.",
       },
     ],
     stats: { inPursuit: "$70,000", awaiting: "$95,000", awardedLifetime: "$95,000", openTasks: 0 },
@@ -253,6 +329,7 @@ const ENGAGEMENTS: Engagement[] = [
         id: "macarthur-note-1",
         text: "Attended 100&Change webinar. Strong fit with our systems-change framing.",
         date: "Mar 28, 2026",
+        author: "Taylor S.",
       },
     ],
     stats: { inPursuit: "$100,000", awaiting: "$0", awardedLifetime: "$0", openTasks: 2 },
@@ -265,12 +342,14 @@ const STAGE_DOT: Record<OpportunityStage, string> = {
   Active:    "#6B819E",
   Submitted: "#AD9DAE",
   Tracking:  "#A6B3C5",
+  Awarded:   "#4A7A5E",
 }
 
 const STAGE_BADGE: Record<OpportunityStage, { bg: string; color: string }> = {
   Active:    { bg: "#EBF0F5", color: "#4A6080" },
   Submitted: { bg: "#F2EDF3", color: "#7A5F7E" },
   Tracking:  { bg: "#F5F5F6", color: "#8A8A99" },
+  Awarded:   { bg: "#EBF5EF", color: "#2E6B47" },
 }
 
 const ENG_BADGE: Record<EngagementStatus, { bg: string; color: string }> = {
@@ -278,7 +357,7 @@ const ENG_BADGE: Record<EngagementStatus, { bg: string; color: string }> = {
   Lapsed: { bg: "#FEF3DC", color: "#C47A10" },
 }
 
-// ── Note icon ──────────────────────────────────────────────────────────────
+// ── Note bubble icon ───────────────────────────────────────────────────────
 
 function NoteBubble() {
   return (
@@ -291,21 +370,654 @@ function NoteBubble() {
   )
 }
 
+// ── NoteEditor — shared by Add Note and Edit Note ─────────────────────────
+
+function NoteEditor({
+  initialText = "",
+  placeholder = "Add a note...",
+  saveLabel,
+  onSave,
+  onCancel,
+}: {
+  initialText?: string
+  placeholder?: string
+  saveLabel: string
+  onSave: (text: string) => void
+  onCancel: () => void
+}) {
+  const [text, setText] = useState(initialText)
+  const ref = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    ref.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onCancel()
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [onCancel])
+
+  return (
+    <div>
+      <textarea
+        ref={ref}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={placeholder}
+        rows={3}
+        style={{
+          width: "100%",
+          padding: "9px 12px",
+          borderRadius: 8,
+          border: "1px solid var(--border-default)",
+          backgroundColor: "var(--surface-white)",
+          fontSize: 13,
+          color: "var(--ink)",
+          outline: "none",
+          resize: "none" as const,
+          lineHeight: "19px",
+          boxSizing: "border-box" as const,
+          fontFamily: "inherit",
+        }}
+      />
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+        <button
+          type="button"
+          onClick={() => { if (text.trim()) onSave(text.trim()) }}
+          style={{
+            padding: "5px 14px",
+            borderRadius: 7,
+            border: "none",
+            backgroundColor: "var(--slate-primary)",
+            fontSize: 12,
+            fontWeight: 500,
+            color: "#FFFFFF",
+            cursor: "pointer",
+            transition: "background-color 150ms",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
+        >
+          {saveLabel}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          style={{
+            background: "none",
+            border: "none",
+            fontSize: 12,
+            color: "var(--ink-secondary)",
+            cursor: "pointer",
+            padding: "5px 0",
+          }}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Funder side panel ──────────────────────────────────────────────────────
+
+function FunderPanel({
+  open,
+  onClose,
+  engagement,
+  funder,
+  onSelectEngagement,
+}: {
+  open: boolean
+  onClose: () => void
+  engagement: Engagement
+  funder: FunderProfile | undefined
+  onSelectEngagement: (id: string) => void
+}) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && open) onClose()
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [open, onClose])
+
+  const activeOppCount = engagement.opportunities.filter(
+    (o) => o.stage === "Active" || o.stage === "Submitted"
+  ).length
+  const mostRecentNote = engagement.notes[0]
+  const engBadge = ENG_BADGE[engagement.status]
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          backgroundColor: "rgba(42,42,42,0.35)",
+          zIndex: 150,
+          opacity: open ? 1 : 0,
+          pointerEvents: open ? "auto" : "none",
+          transition: "opacity 250ms ease-out",
+        }}
+        onClick={onClose}
+      />
+      {/* Panel */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: 420,
+          backgroundColor: "#FFFFFF",
+          zIndex: 151,
+          transform: `translateX(${open ? "0" : "100%"})`,
+          transition: "transform 250ms ease-out",
+          display: "flex",
+          flexDirection: "column",
+          boxShadow: "-8px 0 32px rgba(28,24,64,0.12)",
+          overflow: "hidden",
+        }}
+      >
+        {/* Panel header */}
+        <div
+          style={{
+            flexShrink: 0,
+            padding: "20px 20px 16px",
+            borderBottom: "1px solid var(--border-default)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 22,
+                fontWeight: 500,
+                letterSpacing: "-0.02em",
+                color: "var(--ink)",
+                fontFamily: "var(--font-lora)",
+                lineHeight: "28px",
+                flex: 1,
+                paddingRight: 12,
+              }}
+            >
+              {engagement.name}
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                width: 28,
+                height: 28,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 6,
+                border: "1px solid var(--border-default)",
+                backgroundColor: "transparent",
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              <X size={14} color="var(--ink-secondary)" />
+            </button>
+          </div>
+          {funder && (
+            <span
+              style={{
+                display: "inline-block",
+                borderRadius: 20,
+                padding: "3px 10px",
+                fontSize: 11,
+                fontWeight: 500,
+                backgroundColor: "var(--canvas)",
+                border: "1px solid var(--border-default)",
+                color: "var(--ink-secondary)",
+              }}
+            >
+              {funder.type}
+            </span>
+          )}
+          {funder && (
+            <div style={{ marginTop: 8 }}>
+              <a
+                href={funder.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  fontSize: 12,
+                  color: "var(--slate-primary)",
+                  textDecoration: "none",
+                }}
+              >
+                {funder.website}
+                <ExternalLink size={11} style={{ flexShrink: 0 }} />
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* Scrollable body */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
+          {funder && (
+            <>
+              <FunderDetailRow label="Focus areas">
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                  {funder.focusAreas.map((area) => (
+                    <span
+                      key={area}
+                      style={{
+                        borderRadius: 20,
+                        padding: "2px 9px",
+                        fontSize: 11,
+                        fontWeight: 500,
+                        backgroundColor: "var(--canvas)",
+                        border: "1px solid var(--border-default)",
+                        color: "var(--ink-secondary)",
+                      }}
+                    >
+                      {area}
+                    </span>
+                  ))}
+                </div>
+              </FunderDetailRow>
+              <FunderDetailRow label="Geography">
+                <span style={{ fontSize: 13, color: "var(--ink)" }}>{funder.geography}</span>
+              </FunderDetailRow>
+              <FunderDetailRow label="Funding range">
+                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{funder.fundingRange}</span>
+              </FunderDetailRow>
+              <FunderDetailRow label="About">
+                <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "19px" }}>
+                  {funder.description}
+                </p>
+              </FunderDetailRow>
+              <div style={{ height: 1, backgroundColor: "var(--border-default)", margin: "4px 0 20px" }} />
+            </>
+          )}
+
+          {/* History section */}
+          <p style={{ ...sectionLabel, marginBottom: 14 }}>Your history with this funder</p>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+            <div style={{ borderRadius: 10, padding: "12px 14px", backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)" }}>
+              <p style={{ margin: "0 0 3px", fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+                Total awarded
+              </p>
+              <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.02em" }}>
+                {engagement.stats.awardedLifetime}
+              </p>
+            </div>
+            <div style={{ borderRadius: 10, padding: "12px 14px", backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)" }}>
+              <p style={{ margin: "0 0 3px", fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+                Active opportunities
+              </p>
+              <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.02em" }}>
+                {activeOppCount}
+              </p>
+            </div>
+          </div>
+
+          {mostRecentNote && (
+            <div
+              style={{
+                marginBottom: 16,
+                padding: "12px 14px",
+                borderRadius: 10,
+                backgroundColor: "var(--canvas)",
+                border: "1px solid var(--border-default)",
+              }}
+            >
+              <p style={{ margin: "0 0 3px", fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+                Most recent contact
+              </p>
+              <p style={{ margin: "0 0 5px", fontSize: 11, color: "var(--ink-tertiary)" }}>{mostRecentNote.date}</p>
+              <p style={{ margin: 0, fontSize: 13, color: "var(--ink)", lineHeight: "18px" }}>
+                {mostRecentNote.text.length > 100
+                  ? `${mostRecentNote.text.slice(0, 100)}…`
+                  : mostRecentNote.text}
+              </p>
+            </div>
+          )}
+
+          <p style={{ ...sectionLabel, marginBottom: 10 }}>Engagements</p>
+          <div style={{ borderRadius: 10, border: "1px solid var(--border-default)", overflow: "hidden" }}>
+            <button
+              type="button"
+              onClick={() => {
+                onSelectEngagement(engagement.id)
+                onClose()
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                width: "100%",
+                padding: "12px 16px",
+                border: "none",
+                backgroundColor: "transparent",
+                cursor: "pointer",
+                textAlign: "left",
+                transition: "background-color 150ms",
+                gap: 10,
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {engagement.name}
+                </span>
+                <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
+                  {engagement.stats.awardedLifetime} · {engagement.opportunities.length} {engagement.opportunities.length === 1 ? "opportunity" : "opportunities"}
+                </span>
+              </div>
+              <span
+                style={{
+                  flexShrink: 0,
+                  borderRadius: 20,
+                  padding: "2px 9px",
+                  fontSize: 11,
+                  fontWeight: 500,
+                  backgroundColor: engBadge.bg,
+                  color: engBadge.color,
+                }}
+              >
+                {engagement.status}
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function FunderDetailRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <p style={{ margin: "0 0 5px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+        {label}
+      </p>
+      {children}
+    </div>
+  )
+}
+
+// ── New Opportunity Modal ──────────────────────────────────────────────────
+
+function NewOpportunityModal({
+  open,
+  onClose,
+  onCreate,
+}: {
+  open: boolean
+  onClose: () => void
+  onCreate: (data: NewOppData) => void
+}) {
+  const [name, setName] = useState("")
+  const [deadline, setDeadline] = useState("")
+  const [amountStr, setAmountStr] = useState("")
+  const [stage, setStage] = useState<OpportunityStage>("Tracking")
+
+  const resetAndClose = useCallback(() => {
+    setName("")
+    setDeadline("")
+    setAmountStr("")
+    setStage("Tracking")
+    onClose()
+  }, [onClose])
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && open) resetAndClose()
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [open, resetAndClose])
+
+  function handleAmountChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setAmountStr(e.target.value.replace(/[^0-9]/g, ""))
+  }
+
+  function handleAmountBlur() {
+    const n = parseInt(amountStr, 10)
+    if (!isNaN(n) && n > 0) setAmountStr(`$${n.toLocaleString()}`)
+  }
+
+  function handleAmountFocus() {
+    setAmountStr(amountStr.replace(/[^0-9]/g, ""))
+  }
+
+  function handleCreate() {
+    if (!name.trim()) return
+    const rawAmount = amountStr.replace(/[^0-9]/g, "")
+    onCreate({ name: name.trim(), deadline: deadline || undefined, amount: rawAmount || undefined, stage })
+    setName("")
+    setDeadline("")
+    setAmountStr("")
+    setStage("Tracking")
+  }
+
+  if (!open) return null
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        backgroundColor: "rgba(42,42,42,0.35)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 200,
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) resetAndClose() }}
+    >
+      <div
+        style={{
+          width: 480,
+          backgroundColor: "#FFFFFF",
+          borderRadius: 14,
+          boxShadow: "0 16px 48px rgba(42,42,42,0.18)",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 0", flexShrink: 0 }}>
+          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: "var(--ink)", fontFamily: "var(--font-lora)" }}>
+            New opportunity
+          </h2>
+          <button
+            type="button"
+            onClick={resetAndClose}
+            style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "transparent", cursor: "pointer" }}
+          >
+            <X size={14} color="var(--ink-secondary)" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: "20px 24px 0", flex: 1 }}>
+          <div style={{ marginBottom: 18 }}>
+            <label style={modalLabelStyle}>Opportunity name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleCreate() }}
+              placeholder="e.g. Community Resilience Fund 2026"
+              style={modalInputStyle}
+              autoFocus
+            />
+          </div>
+
+          <div style={{ marginBottom: 18 }}>
+            <label style={modalLabelStyle}>
+              Deadline
+              <span style={{ fontWeight: 400, color: "var(--ink-tertiary)", marginLeft: 4 }}>(optional)</span>
+            </label>
+            <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} style={modalInputStyle} />
+          </div>
+
+          <div style={{ marginBottom: 18 }}>
+            <label style={modalLabelStyle}>
+              Amount
+              <span style={{ fontWeight: 400, color: "var(--ink-tertiary)", marginLeft: 4 }}>(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={amountStr}
+              onChange={handleAmountChange}
+              onBlur={handleAmountBlur}
+              onFocus={handleAmountFocus}
+              placeholder="e.g. 75000"
+              style={modalInputStyle}
+            />
+          </div>
+
+          <div style={{ marginBottom: 24 }}>
+            <label style={modalLabelStyle}>Stage</label>
+            <div style={{ display: "flex", borderRadius: 9, border: "1px solid var(--border-default)", overflow: "hidden" }}>
+              {(["Tracking", "Active", "Submitted", "Awarded"] as OpportunityStage[]).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setStage(s)}
+                  style={{
+                    flex: 1,
+                    padding: "8px 0",
+                    border: "none",
+                    backgroundColor: stage === s ? "var(--slate-primary)" : "var(--canvas)",
+                    color: stage === s ? "#FFFFFF" : "var(--ink-secondary)",
+                    fontSize: 12,
+                    fontWeight: stage === s ? 600 : 400,
+                    cursor: "pointer",
+                    transition: "background-color 150ms, color 150ms",
+                  }}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px 20px", borderTop: "1px solid var(--border-default)", flexShrink: 0 }}>
+          <GhostButton onClick={resetAndClose}>Cancel</GhostButton>
+          <SlateButton onClick={handleCreate}>Create opportunity</SlateButton>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function PortfolioPage() {
   const router = useRouter()
+  const [engagements, setEngagements] = useState<Engagement[]>(INITIAL_ENGAGEMENTS)
   const [selectedId, setSelectedId] = useState("ford")
   const [search, setSearch] = useState("")
+  const [showAddNote, setShowAddNote] = useState(false)
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
+  const [hoveredNoteId, setHoveredNoteId] = useState<string | null>(null)
+  const [showFunderPanel, setShowFunderPanel] = useState(false)
+  const [showNewOpportunityModal, setShowNewOpportunityModal] = useState(false)
 
-  const selected = ENGAGEMENTS.find((e) => e.id === selectedId) ?? ENGAGEMENTS[0]
-  const filtered = ENGAGEMENTS.filter((e) =>
+  const selected = engagements.find((e) => e.id === selectedId) ?? engagements[0]
+  const filtered = engagements.filter((e) =>
     e.name.toLowerCase().includes(search.toLowerCase())
   )
   const oppCount = selected.opportunities.length
+  const funder = FUNDERS[selectedId]
+
+  // Reset note UI when switching engagements
+  useEffect(() => {
+    setShowAddNote(false)
+    setEditingNoteId(null)
+    setShowFunderPanel(false)
+  }, [selectedId])
+
+  function handleAddNote(text: string) {
+    const now = new Date()
+    const dateStr = now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    const newNote: Note = { id: `note-${Date.now()}`, text, date: dateStr, author: "Taylor S." }
+    setEngagements((prev) =>
+      prev.map((e) => e.id === selectedId ? { ...e, notes: [newNote, ...e.notes] } : e)
+    )
+    setShowAddNote(false)
+  }
+
+  function handleEditNote(noteId: string, text: string) {
+    const now = new Date()
+    const dateStr = now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    setEngagements((prev) =>
+      prev.map((e) =>
+        e.id === selectedId
+          ? { ...e, notes: e.notes.map((n) => n.id === noteId ? { ...n, text, date: dateStr } : n) }
+          : e
+      )
+    )
+    setEditingNoteId(null)
+  }
+
+  function handleAddOpportunity(data: NewOppData) {
+    const rawAmount = (data.amount ?? "").replace(/[^0-9]/g, "")
+    const amountDisplay = rawAmount ? `$${parseInt(rawAmount, 10).toLocaleString()}` : "—"
+    let deadlineDisplay: string | undefined
+    if (data.deadline) {
+      const [year, month, day] = data.deadline.split("-").map(Number)
+      const d = new Date(year, month - 1, day)
+      deadlineDisplay = `Due ${d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+    }
+    const newOpp: Opportunity = {
+      id: `opp-${Date.now()}`,
+      name: data.name,
+      stage: data.stage,
+      amount: amountDisplay,
+      deadline: deadlineDisplay,
+      sub: "No proposals yet",
+    }
+    setEngagements((prev) =>
+      prev.map((e) => e.id === selectedId ? { ...e, opportunities: [newOpp, ...e.opportunities] } : e)
+    )
+    setShowNewOpportunityModal(false)
+  }
+
+  const handleCancelAddNote = useCallback(() => setShowAddNote(false), [])
+  const handleCancelEditNote = useCallback(() => setEditingNoteId(null), [])
+  const handleCloseFunderPanel = useCallback(() => setShowFunderPanel(false), [])
 
   return (
     <div className="flex flex-1" style={{ overflow: "hidden", minHeight: 0 }}>
+
+      {/* Funder panel — always in DOM for smooth slide animation */}
+      <FunderPanel
+        open={showFunderPanel}
+        onClose={handleCloseFunderPanel}
+        engagement={selected}
+        funder={funder}
+        onSelectEngagement={(id) => setSelectedId(id)}
+      />
+
+      {/* New opportunity modal */}
+      <NewOpportunityModal
+        open={showNewOpportunityModal}
+        onClose={() => setShowNewOpportunityModal(false)}
+        onCreate={handleAddOpportunity}
+      />
 
       {/* ── Left pane ── */}
       <aside
@@ -467,7 +1179,6 @@ export default function PortfolioPage() {
             backgroundColor: "var(--surface-white)",
           }}
         >
-          {/* Funder name */}
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
             <h1
               style={{
@@ -483,9 +1194,20 @@ export default function PortfolioPage() {
               {selected.name}
             </h1>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <GhostButton onClick={() => {}}>View funder</GhostButton>
-              <GhostButton onClick={() => {}}>Add note</GhostButton>
-              <SlateButton onClick={() => router.push("/opportunity")}>
+              <GhostButton onClick={() => setShowFunderPanel(true)}>View funder</GhostButton>
+              <GhostButton
+                onClick={() => {
+                  if (showAddNote) {
+                    setShowAddNote(false)
+                  } else {
+                    setEditingNoteId(null)
+                    setShowAddNote(true)
+                  }
+                }}
+              >
+                Add note
+              </GhostButton>
+              <SlateButton onClick={() => setShowNewOpportunityModal(true)}>
                 <Plus size={13} style={{ flexShrink: 0 }} />
                 New opportunity
               </SlateButton>
@@ -599,38 +1321,104 @@ export default function PortfolioPage() {
 
           {/* Notes */}
           <p style={sectionLabel}>Notes</p>
+
+          {/* Inline add note form */}
+          <div
+            style={{
+              overflow: "hidden",
+              maxHeight: showAddNote ? "200px" : "0px",
+              transition: "max-height 200ms ease-out",
+              marginBottom: showAddNote ? 12 : 0,
+            }}
+          >
+            <div
+              style={{
+                padding: "14px 16px",
+                borderRadius: 10,
+                backgroundColor: "var(--surface-white)",
+                border: "1px solid var(--border-default)",
+              }}
+            >
+              <NoteEditor
+                placeholder="Add a note..."
+                saveLabel="Save note"
+                onSave={handleAddNote}
+                onCancel={handleCancelAddNote}
+              />
+            </div>
+          </div>
+
+          {/* Note list */}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {selected.notes.map((note) => (
               <div
                 key={note.id}
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 12,
-                  padding: "14px 16px",
-                  borderRadius: 10,
-                  backgroundColor: "var(--canvas)",
-                  border: "1px solid var(--border-default)",
-                }}
+                style={{ position: "relative" }}
+                onMouseEnter={() => setHoveredNoteId(note.id)}
+                onMouseLeave={() => setHoveredNoteId(null)}
               >
-                <div
-                  style={{
-                    width: 28,
-                    height: 28,
-                    flexShrink: 0,
-                    borderRadius: 7,
-                    backgroundColor: "var(--slate-tint)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <NoteBubble />
-                </div>
-                <div>
-                  <p style={{ margin: "0 0 4px", fontSize: 13, color: "var(--ink)", lineHeight: "19px" }}>{note.text}</p>
-                  <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>{note.date}</span>
-                </div>
+                {editingNoteId === note.id ? (
+                  <div
+                    style={{
+                      padding: "14px 16px",
+                      borderRadius: 10,
+                      backgroundColor: "var(--surface-white)",
+                      border: "1px solid var(--border-default)",
+                    }}
+                  >
+                    <NoteEditor
+                      initialText={note.text}
+                      saveLabel="Save"
+                      onSave={(text) => handleEditNote(note.id, text)}
+                      onCancel={handleCancelEditNote}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => {
+                      setShowAddNote(false)
+                      setEditingNoteId(note.id)
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 12,
+                      padding: "14px 16px",
+                      borderRadius: 10,
+                      backgroundColor: "var(--canvas)",
+                      border: "1px solid var(--border-default)",
+                      cursor: "text",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        flexShrink: 0,
+                        borderRadius: 7,
+                        backgroundColor: "var(--slate-tint)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <NoteBubble />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: "0 0 4px", fontSize: 13, color: "var(--ink)", lineHeight: "19px" }}>
+                        {note.text}
+                      </p>
+                      <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
+                        {note.date} · {note.author}
+                      </span>
+                    </div>
+                    {hoveredNoteId === note.id && (
+                      <div style={{ flexShrink: 0, opacity: 0.5, marginTop: 2 }}>
+                        <Pencil size={12} color="var(--ink-tertiary)" />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -712,6 +1500,8 @@ function MiniStat({ label, value, sub }: { label: string; value: string; sub?: s
   )
 }
 
+// ── Style constants ────────────────────────────────────────────────────────
+
 const sectionLabel: React.CSSProperties = {
   fontSize: 10,
   fontWeight: 600,
@@ -719,4 +1509,25 @@ const sectionLabel: React.CSSProperties = {
   textTransform: "uppercase",
   color: "var(--ink-tertiary)",
   margin: "0 0 12px 0",
+}
+
+const modalLabelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: 13,
+  fontWeight: 500,
+  color: "var(--ink)",
+  marginBottom: 6,
+}
+
+const modalInputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "9px 12px",
+  borderRadius: 9,
+  border: "1px solid var(--border-default)",
+  backgroundColor: "var(--surface-white)",
+  fontSize: 13,
+  color: "var(--ink)",
+  outline: "none",
+  boxSizing: "border-box" as const,
+  fontFamily: "inherit",
 }

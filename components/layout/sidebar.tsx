@@ -18,7 +18,7 @@ import { NewProposalModal } from "@/components/proposals/NewProposalModal"
 
 const MAIN_NAV = [
   { label: "Home",      href: "/home",      icon: Home        },
-  { label: "Portfolio", href: "/portfolio", icon: LayoutList  },
+  { label: "Engagements", href: "/portfolio", icon: LayoutList  },
   { label: "Discover",  href: "/discover",  icon: Telescope   },
 ] as const
 
