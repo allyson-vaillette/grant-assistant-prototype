@@ -11,8 +11,10 @@ import {
   Database,
   Settings,
   Sparkles,
+  FileText,
 } from "lucide-react"
 import { useState } from "react"
+import { NewProposalModal } from "@/components/proposals/NewProposalModal"
 
 const MAIN_NAV = [
   { label: "Home",      href: "/home",      icon: Home        },
@@ -141,6 +143,9 @@ export function Sidebar() {
           )
         })}
 
+        {/* New Proposal button */}
+        <NewProposalButton />
+
         {/* WORKSPACE group */}
         <span
           style={{
@@ -243,7 +248,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* User */}
+      {/* User footer */}
       <div
         style={{
           flexShrink: 0,
@@ -274,5 +279,50 @@ export function Sidebar() {
         </div>
       </div>
     </aside>
+  )
+}
+
+// ── New Proposal button with modal ─────────────────────────────────────────
+
+function NewProposalButton() {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          width: "100%",
+          padding: "8px 10px",
+          margin: "8px 0 2px",
+          borderRadius: 8,
+          border: "1px solid rgba(255,255,255,0.22)",
+          backgroundColor: "rgba(255,255,255,0.1)",
+          cursor: "pointer",
+          textAlign: "left",
+          transition: "background-color 150ms, border-color 150ms",
+        }}
+        onMouseEnter={(e) => {
+          ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.17)"
+        }}
+        onMouseLeave={(e) => {
+          ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.1)"
+        }}
+      >
+        <FileText size={16} style={{ flexShrink: 0, color: "rgba(255,255,255,0.75)" }} />
+        <span style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.9)", lineHeight: "16px" }}>
+          New proposal
+        </span>
+      </button>
+      <NewProposalModal
+        open={open}
+        onClose={() => setOpen(false)}
+        opportunityName="New Proposal"
+      />
+    </>
   )
 }
