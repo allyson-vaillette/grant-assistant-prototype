@@ -235,14 +235,12 @@ function OpportunityCard({
   isNotRelevant,
   onClick,
   onNotRelevant,
-  onTrackThis,
 }: {
   opp: Opportunity
   isSelected: boolean
   isNotRelevant: boolean
   onClick: () => void
   onNotRelevant: () => void
-  onTrackThis: () => void
 }) {
   // Use state for hover so the flag always resets on mouse-off, regardless of
   // whether isSelected changes between enter and leave.
@@ -271,7 +269,7 @@ function OpportunityCard({
           ? "1.5px solid rgba(90,138,53,0.3)"
           : isHovered
           ? "1px solid rgba(90,138,53,0.2)"
-          : "1px solid var(--border-color)",
+          : "1px solid var(--border-default)",
         borderLeft: isSelected
           ? "3px solid var(--slate-secondary)"
           : "3px solid transparent",
@@ -281,7 +279,7 @@ function OpportunityCard({
             : "0px 1px 3px rgba(28,24,64,0.04)",
         cursor: "pointer",
         textAlign: "left",
-        transition: "border-color 150ms, box-shadow 150ms",
+        transition: "border-color 150ms ease-in-out, box-shadow 150ms ease-in-out",
       }}
     >
       {/* Funder + status */}
@@ -371,32 +369,8 @@ function OpportunityCard({
         </div>
       </div>
 
-      {/* Card actions: Track this + Not relevant */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
-        {/* Track this button */}
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onTrackThis() }}
-          style={{
-            background: "white",
-            border: "1px solid var(--border-color)",
-            borderRadius: "var(--radius-button)",
-            padding: "4px 10px",
-            fontSize: 12,
-            fontWeight: 500,
-            color: "var(--ink)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            transition: "background-color 150ms",
-          }}
-        >
-          <Plus size={11} />
-          <span>Track this</span>
-        </button>
-
-        {/* Not relevant button */}
+      {/* Not relevant */}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onNotRelevant() }}
@@ -950,17 +924,17 @@ function DetailPanel({
             width: "100%",
             height: 40,
             borderRadius: 10,
-            backgroundColor: "var(--slate-primary)",
-            border: "none",
+            backgroundColor: "white",
+            border: "1.5px solid #4A6080",
             cursor: "pointer",
             marginBottom: 8,
             transition: "background-color 150ms",
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#EBF0F5" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "white" }}
         >
-          <Plus size={15} color="#FFFFFF" style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF", lineHeight: "18px" }}>
+          <Plus size={15} color="#4A6080" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#4A6080", lineHeight: "18px" }}>
             Track This
           </span>
         </button>
@@ -1026,26 +1000,26 @@ function FilterSidebar({
   return (
     <aside
       style={{
-        // Width transitions between collapsed strip and full panel
+        // Width transitions between collapsed strip and full panel.
+        // overflow: hidden always so content clips cleanly during the animation.
         width: collapsed ? 40 : 268,
         flexShrink: 0,
         backgroundColor: "var(--canvas)",
-        borderRight: "1px solid var(--border-color)",
+        borderRight: "1px solid var(--border-default)",
         display: "flex",
         flexDirection: "column",
         position: "sticky",
         top: 44,
         height: "calc(100vh - 44px)",
-        overflowY: collapsed ? "hidden" : "auto",
-        overflowX: "hidden",
+        overflow: "hidden",
         transition: "width 200ms ease-in-out",
       }}
     >
       {/*
         Inner container is always 268px wide so the content doesn't reflow
-        as the aside clips it during the transition.
+        as the aside clips it during the transition. Vertical scroll lives here.
       */}
-      <div style={{ width: 268, minWidth: 268, display: "flex", flexDirection: "column", flex: 1 }}>
+      <div style={{ width: 268, minWidth: 268, height: "100%", overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column" }}>
 
         {/* Sidebar header: Filters label + collapse toggle */}
         <div
@@ -1533,10 +1507,6 @@ export default function OpportunitiesPage() {
                   isNotRelevant={notRelevantIds.has(opp.id)}
                   onClick={() => handleCardClick(opp.id)}
                   onNotRelevant={() => setNotRelevantModalFor(opp.id)}
-                  onTrackThis={() => {
-                    handleCardClick(opp.id)
-                    setShowPopover(true)
-                  }}
                 />
               </div>
             )
