@@ -1,8 +1,8 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronDown, ExternalLink, Plus } from "lucide-react"
+import { ChevronDown, ExternalLink, Plus, ThumbsDown } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -157,9 +157,9 @@ const ENGAGEMENTS = [
 // ── Style constants ────────────────────────────────────────────────────────
 
 const STATUS_STYLE: Record<StatusType, { bg: string; color: string }> = {
-  "Applications open":       { bg: "var(--olive-pale)", color: "var(--olive-dark)" },
-  "Letters of inquiry open": { bg: "var(--amber-light)", color: "var(--amber)" },
-  "Rolling deadline":        { bg: "var(--slate-light)", color: "var(--slate)" },
+  "Applications open":       { bg: "var(--evergreen-tint)", color: "var(--evergreen)" },
+  "Letters of inquiry open": { bg: "var(--amber-light)",    color: "var(--amber)"     },
+  "Rolling deadline":        { bg: "var(--slate-tint)",     color: "var(--slate-secondary)" },
 }
 
 // ── Icon components ────────────────────────────────────────────────────────
@@ -167,8 +167,8 @@ const STATUS_STYLE: Record<StatusType, { bg: string; color: string }> = {
 function CheckCircle() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden style={{ flexShrink: 0, marginTop: 2 }}>
-      <circle cx="7" cy="7" r="6.5" fill="var(--olive-pale)" stroke="var(--olive-mid)" strokeWidth="0.75" />
-      <path d="M4.5 7.2l1.7 1.7 3.3-3.3" stroke="var(--olive-mid)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="7" cy="7" r="6.5" fill="var(--slate-tint)" stroke="var(--slate-secondary)" strokeWidth="0.75" />
+      <path d="M4.5 7.2l1.7 1.7 3.3-3.3" stroke="var(--slate-secondary)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -191,8 +191,8 @@ function CheckboxIcon({ checked }: { checked: boolean }) {
         height: 14,
         borderRadius: 3,
         flexShrink: 0,
-        backgroundColor: checked ? "var(--olive-dark)" : "transparent",
-        border: `1.5px solid ${checked ? "var(--olive-dark)" : "var(--ink-tertiary)"}`,
+        backgroundColor: checked ? "var(--slate-primary)" : "transparent",
+        border: `1.5px solid ${checked ? "var(--slate-primary)" : "var(--ink-tertiary)"}`,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -218,7 +218,7 @@ function MatchDots({ filled }: { filled: number }) {
             width: 8,
             height: 8,
             borderRadius: "50%",
-            backgroundColor: i < filled ? "var(--olive-mid)" : "var(--slate-light)",
+            backgroundColor: i < filled ? "var(--slate-secondary)" : "var(--slate-light)",
             transition: "background-color 150ms",
           }}
         />
@@ -233,14 +233,16 @@ function OpportunityCard({
   opp,
   isSelected,
   onClick,
+  onHide,
 }: {
   opp: Opportunity
   isSelected: boolean
   onClick: () => void
+  onHide: () => void
 }) {
   const statusStyle = STATUS_STYLE[opp.status]
   const matchColor =
-    opp.matchStrength === "Partial match" ? "var(--slate)" : "var(--olive-mid)"
+    opp.matchStrength === "Partial match" ? "var(--slate)" : "var(--slate-secondary)"
   const showMatchLabel = opp.matchStrength === "Strong match"
 
   return (
@@ -258,7 +260,7 @@ function OpportunityCard({
         border: isSelected
           ? `1.5px solid rgba(90,138,53,0.3)`
           : "1px solid var(--border-color)",
-        borderLeft: isSelected ? "3px solid var(--olive-mid)" : "3px solid transparent",
+        borderLeft: isSelected ? "3px solid var(--slate-secondary)" : "3px solid transparent",
         boxShadow: isSelected
           ? "0px 2px 8px rgba(28,24,64,0.07)"
           : "0px 1px 3px rgba(28,24,64,0.04)",
@@ -330,7 +332,7 @@ function OpportunityCard({
                   fontWeight: 600,
                   letterSpacing: "0.06em",
                   textTransform: "uppercase",
-                  color: "var(--olive-mid)",
+                  color: "var(--slate-secondary)",
                   lineHeight: "12px",
                 }}
               >
@@ -343,10 +345,10 @@ function OpportunityCard({
                 style={{
                   borderRadius: "var(--radius-pill)",
                   padding: "3px 9px",
-                  backgroundColor: "var(--olive-pale)",
+                  backgroundColor: "var(--slate-tint)",
                   fontSize: 11,
                   fontWeight: 500,
-                  color: "var(--olive-dark)",
+                  color: "var(--slate-primary)",
                   lineHeight: "14px",
                 }}
               >
@@ -366,6 +368,41 @@ function OpportunityCard({
         >
           {opp.matchLabel}
         </div>
+      </div>
+
+      {/* Hide action */}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onHide() }}
+          title="Hide this opportunity"
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: "2px 4px",
+            borderRadius: 5,
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            color: "var(--ink-tertiary)",
+            fontSize: 11,
+            transition: "color 150ms, background-color 150ms",
+          }}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            el.style.color = "#C0302A"
+            el.style.backgroundColor = "#FEEAEA"
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            el.style.color = "var(--ink-tertiary)"
+            el.style.backgroundColor = "transparent"
+          }}
+        >
+          <ThumbsDown size={11} />
+          <span>Not relevant</span>
+        </button>
       </div>
     </button>
   )
@@ -417,10 +454,10 @@ function TrackPopover({ onCancel, onSelect }: { onCancel: () => void; onSelect: 
                 style={{
                   borderRadius: "var(--radius-pill)",
                   padding: "2px 8px",
-                  backgroundColor: "var(--olive-pale)",
+                  backgroundColor: "var(--slate-tint)",
                   fontSize: 11,
                   fontWeight: 600,
-                  color: "var(--olive-dark)",
+                  color: "var(--slate-primary)",
                 }}
               >
                 New
@@ -437,7 +474,7 @@ function TrackPopover({ onCancel, onSelect }: { onCancel: () => void; onSelect: 
             cursor: "pointer",
             fontSize: 13,
             fontWeight: 500,
-            color: "var(--olive-mid)",
+            color: "var(--slate-secondary)",
           }}
         >
           + Create new engagement
@@ -458,6 +495,108 @@ function TrackPopover({ onCancel, onSelect }: { onCancel: () => void; onSelect: 
       >
         Cancel
       </button>
+    </div>
+  )
+}
+
+// ── Hide Modal ─────────────────────────────────────────────────────────────
+
+function HideModal({ grantName, onCancel, onConfirm }: { grantName: string; onCancel: () => void; onConfirm: () => void }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        backgroundColor: "rgba(28,24,64,0.35)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 50,
+      }}
+      onClick={onCancel}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          backgroundColor: "#FFFFFF",
+          borderRadius: 14,
+          padding: "24px 28px",
+          width: 360,
+          boxShadow: "0px 16px 48px rgba(28,24,64,0.18)",
+        }}
+      >
+        <h3 style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+          Hide this opportunity?
+        </h3>
+        <p style={{ margin: "0 0 20px", fontSize: 13, color: "var(--ink-secondary)", lineHeight: "19px" }}>
+          <strong style={{ color: "var(--ink)", fontWeight: 500 }}>{grantName}</strong> won&apos;t appear in your Discover feed.
+        </p>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "var(--radius-button)",
+              border: "1px solid var(--border-color)",
+              backgroundColor: "transparent",
+              fontSize: 13,
+              color: "var(--ink)",
+              cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "var(--radius-button)",
+              border: "none",
+              backgroundColor: "#C0302A",
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#FFFFFF",
+              cursor: "pointer",
+            }}
+          >
+            Hide opportunity
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Toast ───────────────────────────────────────────────────────────────────
+
+function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 3000)
+    return () => clearTimeout(t)
+  }, [onDismiss])
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        bottom: 28,
+        left: "50%",
+        transform: "translateX(-50%)",
+        backgroundColor: "var(--ink)",
+        color: "#FFFFFF",
+        borderRadius: 10,
+        padding: "10px 20px",
+        fontSize: 13,
+        fontWeight: 500,
+        boxShadow: "0px 6px 20px rgba(28,24,64,0.22)",
+        zIndex: 60,
+        whiteSpace: "nowrap",
+        pointerEvents: "none",
+      }}
+    >
+      {message}
     </div>
   )
 }
@@ -485,7 +624,7 @@ function DetailPanel({
         display: "flex",
         flexDirection: "column",
         borderLeft: "1px solid var(--border-color)",
-        backgroundColor: "#F3F0EA",
+        backgroundColor: "var(--canvas)",
         position: "sticky",
         top: 44,
         height: "calc(100vh - 44px)",
@@ -518,11 +657,8 @@ function DetailPanel({
               fontWeight: 600,
               letterSpacing: "-0.025em",
               lineHeight: "22px",
-              background: "linear-gradient(90deg, #3D6120, #7A9A30)",
-              WebkitBackgroundClip: "text",
-              backgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              color: "transparent",
+              color: "var(--ink)",
+              fontFamily: "var(--font-lora)",
             }}
           >
             {opp.grantName}
@@ -534,10 +670,10 @@ function DetailPanel({
                 style={{
                   borderRadius: "var(--radius-pill)",
                   padding: "4px 10px",
-                  backgroundColor: "var(--olive-pale)",
+                  backgroundColor: "var(--slate-tint)",
                   fontSize: 12,
                   fontWeight: 500,
-                  color: "var(--olive-dark)",
+                  color: "var(--slate-primary)",
                   lineHeight: "16px",
                 }}
               >
@@ -601,7 +737,7 @@ function DetailPanel({
                     color:
                       init.match === "Partial match"
                         ? "var(--slate)"
-                        : "var(--olive-mid)",
+                        : "var(--slate-secondary)",
                   }}
                 >
                   {init.match}
@@ -619,7 +755,7 @@ function DetailPanel({
           position: "relative",
           borderTop: "1px solid var(--border-color)",
           padding: "14px 20px",
-          backgroundColor: "#F3F0EA",
+          backgroundColor: "var(--canvas)",
         }}
       >
         {showPopover && <TrackPopover onCancel={onCancelPopover} onSelect={onSelectEngagement} />}
@@ -635,14 +771,14 @@ function DetailPanel({
             width: "100%",
             height: 40,
             borderRadius: 10,
-            backgroundColor: "#C4511A",
+            backgroundColor: "var(--slate-primary)",
             border: "none",
             cursor: "pointer",
             marginBottom: 8,
             transition: "background-color 150ms",
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#A8421A" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#C4511A" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
         >
           <Plus size={15} color="#FFFFFF" style={{ flexShrink: 0 }} />
           <span style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF", lineHeight: "18px" }}>
@@ -709,7 +845,7 @@ function FilterSidebar({
       style={{
         width: 268,
         flexShrink: 0,
-        backgroundColor: "#F3F0EA",
+        backgroundColor: "var(--canvas)",
         borderRight: "1px solid var(--border-color)",
         padding: "20px 16px",
         display: "flex",
@@ -843,7 +979,7 @@ function FilterSidebar({
                   width: "75%",
                   height: "100%",
                   borderRadius: 2,
-                  backgroundColor: "var(--olive-dark)",
+                  backgroundColor: "var(--slate-primary)",
                 }}
               />
               <div
@@ -854,7 +990,7 @@ function FilterSidebar({
                   width: 12,
                   height: 12,
                   borderRadius: "50%",
-                  backgroundColor: "var(--olive-dark)",
+                  backgroundColor: "var(--slate-primary)",
                   border: "2px solid var(--surface)",
                   boxShadow: "0 1px 3px rgba(28,24,64,0.15)",
                 }}
@@ -884,7 +1020,7 @@ function FilterSidebar({
                   borderRadius: "var(--radius-pill)",
                   padding: "6px 14px",
                   border: isActive ? "none" : "1px solid var(--border-color)",
-                  backgroundColor: isActive ? "var(--olive-dark)" : "transparent",
+                  backgroundColor: isActive ? "var(--slate-primary)" : "transparent",
                   fontSize: 12,
                   fontWeight: isActive ? 500 : 400,
                   color: isActive ? "#FFFFFF" : "var(--ink)",
@@ -910,7 +1046,7 @@ function FilterSidebar({
           padding: 0,
           cursor: "pointer",
           fontSize: 13,
-          color: "var(--olive-mid)",
+          color: "var(--slate-secondary)",
           textAlign: "left",
           marginTop: "auto",
         }}
@@ -978,8 +1114,15 @@ export default function OpportunitiesPage() {
   const [selectedId, setSelectedId] = useState("petco-love")
   const [showPopover, setShowPopover] = useState(false)
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS)
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
+  const [hideModalFor, setHideModalFor] = useState<string | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
 
-  const selected = OPPORTUNITIES.find((o) => o.id === selectedId) ?? OPPORTUNITIES[0]
+  const visibleOpps = OPPORTUNITIES.filter((o) => !hiddenIds.has(o.id))
+  const selected =
+    visibleOpps.find((o) => o.id === selectedId) ??
+    visibleOpps[0] ??
+    OPPORTUNITIES[0]
 
   function handleCardClick(id: string) {
     setSelectedId(id)
@@ -988,7 +1131,18 @@ export default function OpportunitiesPage() {
 
   function handleSelectEngagement() {
     setShowPopover(false)
+    setToast("Added to portfolio")
     router.push("/opportunity")
+  }
+
+  function handleHideConfirm() {
+    if (!hideModalFor) return
+    setHiddenIds((prev) => new Set(Array.from(prev).concat(hideModalFor)))
+    if (selectedId === hideModalFor) {
+      const next = visibleOpps.find((o) => o.id !== hideModalFor)
+      if (next) setSelectedId(next.id)
+    }
+    setHideModalFor(null)
   }
 
   function handleClearFilters() {
@@ -1053,7 +1207,7 @@ export default function OpportunitiesPage() {
               cursor: "pointer",
               transition: "background-color 150ms",
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#FFFFFF" }}
           >
             <span>Sort: Relevance</span>
@@ -1072,12 +1226,13 @@ export default function OpportunitiesPage() {
             gap: 10,
           }}
         >
-          {OPPORTUNITIES.map((opp) => (
+          {visibleOpps.map((opp) => (
             <OpportunityCard
               key={opp.id}
               opp={opp}
               isSelected={opp.id === selectedId}
               onClick={() => handleCardClick(opp.id)}
+              onHide={() => setHideModalFor(opp.id)}
             />
           ))}
         </div>
@@ -1091,6 +1246,21 @@ export default function OpportunitiesPage() {
         onCancelPopover={() => setShowPopover(false)}
         onSelectEngagement={handleSelectEngagement}
       />
+
+      {/* ── Hide Modal ── */}
+      {hideModalFor && (() => {
+        const opp = OPPORTUNITIES.find((o) => o.id === hideModalFor)
+        return opp ? (
+          <HideModal
+            grantName={opp.grantName}
+            onCancel={() => setHideModalFor(null)}
+            onConfirm={handleHideConfirm}
+          />
+        ) : null
+      })()}
+
+      {/* ── Toast ── */}
+      {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
     </div>
   )
 }

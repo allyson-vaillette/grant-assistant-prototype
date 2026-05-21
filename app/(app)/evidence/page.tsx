@@ -195,7 +195,7 @@ function EvidenceRow({
         borderRadius: 10,
         backgroundColor: isSelected ? "#FFFFFF" : "transparent",
         border: isSelected ? "1px solid var(--border-color)" : "1px solid transparent",
-        borderLeft: isSelected ? "3px solid var(--olive-mid)" : "3px solid transparent",
+        borderLeft: isSelected ? "3px solid var(--slate-primary)" : "3px solid transparent",
         boxShadow: isSelected ? "0px 1px 4px rgba(28,24,64,0.06)" : "none",
         cursor: "pointer",
         textAlign: "left",
@@ -225,7 +225,7 @@ function EvidenceRow({
           style={{
             flexShrink: 0,
             fontSize: 11,
-            color: item.usageCount === null ? "var(--ink-tertiary)" : "var(--olive-mid)",
+            color: item.usageCount === null ? "var(--ink-tertiary)" : "var(--slate-secondary)",
             fontWeight: 500,
             whiteSpace: "nowrap",
             lineHeight: "18px",
@@ -246,10 +246,10 @@ function EvidenceRow({
           alignSelf: "flex-start",
           borderRadius: "var(--radius-pill)",
           padding: "2px 9px",
-          backgroundColor: "var(--subtle)",
-          border: "1px solid var(--border-color)",
+          backgroundColor: "var(--slate-tint)",
+          border: "1px solid var(--slate-light)",
           fontSize: 11,
-          color: "var(--ink-secondary)",
+          color: "var(--slate-secondary)",
         }}
       >
         {item.initiative}
@@ -294,11 +294,11 @@ function DetailPanel({ item }: { item: EvidenceItem }) {
               style={{
                 borderRadius: "var(--radius-pill)",
                 padding: "4px 12px",
-                backgroundColor: "var(--olive-pale)",
-                border: "1px solid rgba(90,138,53,0.2)",
+                backgroundColor: "var(--slate-tint)",
+                border: "1px solid rgba(74,96,128,0.2)",
                 fontSize: 13,
                 fontWeight: 500,
-                color: "var(--olive-dark)",
+                color: "var(--slate-primary)",
               }}
             >
               {item.initiative}
@@ -383,7 +383,7 @@ function DetailPanel({ item }: { item: EvidenceItem }) {
           style={{
             borderRadius: "var(--radius-pill)",
             padding: "5px 14px",
-            backgroundColor: "var(--olive-dark)",
+            backgroundColor: "var(--slate-primary)",
             fontSize: 13,
             fontWeight: 500,
             color: "#FFFFFF",
@@ -447,8 +447,8 @@ function DetailPanel({ item }: { item: EvidenceItem }) {
           style={{
             padding: "14px 16px",
             borderRadius: "var(--radius-card)",
-            backgroundColor: "var(--olive-pale)",
-            border: "1px solid rgba(90,138,53,0.15)",
+            backgroundColor: "var(--slate-tint)",
+            border: "1px solid rgba(74,96,128,0.15)",
           }}
         >
           <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "19px" }}>
@@ -559,7 +559,7 @@ export default function EvidencePage() {
             gap: 6,
             padding: "8px 18px",
             borderRadius: "var(--radius-button)",
-            backgroundColor: "#C4511A",
+            backgroundColor: "var(--slate-primary)",
             border: "none",
             fontSize: 14,
             fontWeight: 500,
@@ -568,8 +568,8 @@ export default function EvidencePage() {
             flexShrink: 0,
             transition: "background-color 150ms",
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#A8421A" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#C4511A" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
         >
           <Plus size={15} style={{ flexShrink: 0 }} />
           New evidence item
@@ -641,7 +641,7 @@ export default function EvidencePage() {
                   ? "none"
                   : "1px solid var(--border-color)",
                 backgroundColor: activeInitiatives.size === 0 && query === ""
-                  ? "var(--olive-dark)"
+                  ? "var(--slate-primary)"
                   : "transparent",
                 fontSize: 12,
                 fontWeight: activeInitiatives.size === 0 && query === "" ? 600 : 400,
@@ -664,7 +664,7 @@ export default function EvidencePage() {
                     borderRadius: "var(--radius-pill)",
                     padding: "4px 12px",
                     border: isActive ? "none" : "1px solid var(--border-color)",
-                    backgroundColor: isActive ? "var(--olive-dark)" : "transparent",
+                    backgroundColor: isActive ? "var(--slate-primary)" : "transparent",
                     fontSize: 12,
                     fontWeight: isActive ? 600 : 400,
                     color: isActive ? "#FFFFFF" : "var(--ink-secondary)",

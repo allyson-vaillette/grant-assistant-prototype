@@ -3,74 +3,83 @@
 @tailwind utilities;
 
 /* ─────────────────────────────────────────────
-   GA 2.0 Design Tokens
+   GA 2.0 Design Tokens — Slate Blue system
    Single source of truth — mirrors the Design Tokens artboard in Paper.
    ───────────────────────────────────────────── */
 
 @layer base {
   :root {
-    /* ── Backgrounds ── */
-    --canvas:       #FAF8F4;   /* warm cream — app bg */
-    --surface:      #FFFFFF;   /* cards, panels, nav */
-    --subtle:       #F3F0EA;   /* hover rows, zebra, tinted sections */
-    --border-color: rgba(60, 50, 20, 0.09);
+    /* ── Surfaces ── */
+    --canvas:         #F9F6F1;   /* warm cream — app bg */
+    --surface-beige:  #F0E6D2;   /* secondary panels, tinted sections */
+    --surface-white:  #FFFFFF;   /* cards, detail panes */
+    --charcoal:       #2A2A2A;   /* strong text, shadow tinting */
 
-    /* ── Olive — primary brand ── */
-    --olive-dark:   #3D6120;   /* primary buttons, active nav, icons */
-    --olive-mid:    #5A8A35;   /* secondary elements */
-    --olive-pale:   #EBF2E2;   /* AI wells, active nav chip bg, tinted sections */
+    /* ── Primary accent — Slate Blue ── */
+    --slate-primary:   #4A6080;  /* CTA buttons, active nav, primary actions */
+    --slate-secondary: #6B819E;  /* secondary elements, links */
+    --slate-soft:      #A6B3C5;  /* muted UI, stage dots */
+    --slate-tint:      #EBF0F5;  /* icon bg, badge bg, hover fills */
+    --slate-light:     #E0E8F2;  /* light badge bg */
 
-    /* ── Amber — warning / in-progress / lapsed ── */
+    /* ── Supporting accents ── */
+    --evergreen:        #3C5E4C;  /* Awarded stage, success, positive stat */
+    --evergreen-tint:   #E0EDE6;  /* Awarded badge bg, success bg */
+    --terracotta:       #D19A66;  /* Reporting stage, warm accent */
+    --terracotta-tint:  #F5EAD8;  /* Reporting badge bg */
+    --plum-soft:        #AD9DAE;  /* Submitted stage only */
+    --plum-tint:        #F2EDF3;  /* Submitted badge bg */
+
+    /* ── Status / semantic ── */
     --amber:        #C47A10;
     --amber-light:  #FEF3DC;
+    --error:        #B91C1C;
+    --error-light:  #FDE8E8;
+
+    /* ── Borders ── */
+    --border-default: #E0DBE1;
 
     /* ── Ink — text hierarchy ── */
-    --ink:          #2A2618;   /* primary text */
-    --ink-secondary:#6B6355;   /* secondary text, inactive nav */
-    --ink-tertiary: #A09888;   /* placeholder, disabled */
+    --ink:           #2A2A2A;   /* primary text (charcoal) */
+    --ink-secondary: #6B819E;   /* secondary text — slate secondary */
+    --ink-tertiary:  #A6B3C5;   /* placeholder, disabled — slate soft */
 
-    /* ── Slate — muted UI elements ── */
-    --slate:        #8A8070;
-    --slate-light:  #EEECEA;
-
-    /* ── Blue — submitted / links ── */
-    --blue:         #2D62B8;
-    --blue-light:   #E8F0FB;
-
-    /* ── Gradient — display text clip only ── */
-    --gradient-brand: linear-gradient(90deg, #3D6120, #7A9A30);
+    /* ── AI Gradients — slate-to-plum identity signal ── */
+    --gradient-ai-hero:    linear-gradient(135deg, #1E2D45 0%, #2D4A6B 50%, #4A2F4C 100%);
+    --gradient-ai-wash:    linear-gradient(135deg, rgba(74,96,128,0.06) 0%, rgba(74,47,76,0.06) 100%);
+    --gradient-ai-sidebar: linear-gradient(135deg, #1E2D45 0%, #3A2E4A 100%);
+    --gradient-avatar:     linear-gradient(135deg, #4A6080, #AD9DAE);
 
     /* ── Radius ── */
-    --radius-pill:      20px;
-    --radius-card:      12px;
-    --radius-button:    8px;
-    --radius-input:     9px;
-    --radius-icon-tile: 7px;
+    --radius-pill:       20px;
+    --radius-card:       12px;
+    --radius-button:     8px;
+    --radius-input:      9px;
+    --radius-icon-tile:  7px;
 
     /* ────────────────────────────────────────────
        shadcn/ui compatibility (HSL channel values)
-       Tailwind config references these as hsl(var(--*))
        ──────────────────────────────────────────── */
-    --background:              40 60% 97%;   /* canvas */
-    --foreground:              47 27% 13%;   /* ink */
-    --card:                    0 0% 100%;    /* surface */
-    --card-foreground:         47 27% 13%;
+    --background:              38 38% 96%;   /* canvas */
+    --foreground:              0 0% 16%;     /* ink / charcoal */
+    --card:                    0 0% 100%;    /* surface-white */
+    --card-foreground:         0 0% 16%;
     --popover:                 0 0% 100%;
-    --popover-foreground:      47 27% 13%;
-    --primary:                 93 50% 25%;   /* olive-dark */
+    --popover-foreground:      0 0% 16%;
+    --primary:                 216 27% 40%;  /* slate-primary #4A6080 */
     --primary-foreground:      0 0% 100%;
-    --secondary:               93 36% 92%;   /* olive-pale */
-    --secondary-foreground:    93 50% 25%;
-    --muted:                   38 31% 94%;   /* subtle */
-    --muted-foreground:        38 12% 38%;   /* ink-secondary */
-    --accent:                  93 36% 92%;   /* olive-pale */
-    --accent-foreground:       93 50% 25%;
+    --secondary:               210 30% 93%;  /* slate-tint #EBF0F5 */
+    --secondary-foreground:    216 27% 40%;
+    --muted:                   210 20% 95%;
+    --muted-foreground:        213 20% 51%;  /* slate-secondary */
+    --accent:                  210 30% 93%;  /* slate-tint */
+    --accent-foreground:       216 27% 40%;
     --destructive:             0 72% 51%;
     --destructive-foreground:  0 0% 100%;
-    --border:                  38 20% 89%;
-    --input:                   38 20% 89%;
-    --ring:                    93 50% 25%;   /* olive-dark focus ring */
-    --radius:                  0.5rem;       /* 8px — button radius */
+    --border:                  290 5% 86%;   /* border-default #E0DBE1 */
+    --input:                   290 5% 86%;
+    --ring:                    216 27% 40%;  /* slate-primary */
+    --radius:                  0.5rem;
   }
 }
 
@@ -82,8 +91,13 @@
   body {
     background-color: var(--canvas);
     color: var(--ink);
-    font-family: var(--font-inter), -apple-system, "SF Pro Display", system-ui, sans-serif;
+    font-family: var(--font-inclusive-sans), var(--font-inter), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3,
+  .font-lora {
+    font-family: var(--font-lora), Georgia, "Times New Roman", serif;
   }
 }

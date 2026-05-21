@@ -1,10 +1,24 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Inter, Lora, Inclusive_Sans } from "next/font/google"
 import "./globals.css"
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: "swap",
+})
+
+const lora = Lora({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-lora",
+  display: "swap",
+})
+
+const inclusiveSans = Inclusive_Sans({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-inclusive-sans",
   display: "swap",
 })
 
@@ -20,7 +34,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${lora.variable} ${inclusiveSans.variable} font-sans antialiased`}>
         {children}
       </body>
     </html>

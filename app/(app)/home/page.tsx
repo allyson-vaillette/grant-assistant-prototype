@@ -2,827 +2,678 @@
 
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Plus } from "lucide-react"
+import { Plus, Telescope, FileText, Sparkles } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type EngagementStatus = "Active" | "Lapsed"
-type OpportunityStatus = "Active" | "Submitted" | "Tracking"
-type ViewMode = "list" | "kanban" | "calendar"
-
-interface MetaItem {
-  label: string
-  highlighted?: boolean
-}
-
-interface Opportunity {
+interface Task {
   id: string
   name: string
-  status: OpportunityStatus
-  amount: string
-  meta: MetaItem[]
+  engagement: string
+  opportunity: string
+  dueLabel: string
+  dueCategory: "today" | "week" | "twoweeks"
+  done: boolean
 }
 
-interface Note {
-  id: string
-  text: string
-  date: string
-}
-
-interface Engagement {
-  id: string
+interface Deadline {
   name: string
-  status: EngagementStatus
-  website: string
-  relationshipStatus: string
-  opportunities: Opportunity[]
-  notes: Note[]
+  funder: string
+  stage: string
+  daysLeft: number
+  dotColor: string
 }
 
-// ── Data ───────────────────────────────────────────────────────────────────
+// ── Mock data ──────────────────────────────────────────────────────────────
 
-const ENGAGEMENTS: Engagement[] = [
+const INITIAL_TASKS: Task[] = [
   {
-    id: "ford",
-    name: "Ford Foundation",
-    status: "Active",
-    website: "fordfoundation.org",
-    relationshipStatus: "Active relationship",
-    opportunities: [
-      {
-        id: "equitable-futures",
-        name: "Equitable Futures Grant 2026",
-        status: "Active",
-        amount: "$75,000",
-        meta: [
-          { label: "Due Jun 15, 2026" },
-          { label: "1 draft" },
-          { label: "3 tasks open", highlighted: true },
-        ],
-      },
-      {
-        id: "community-voice",
-        name: "Community Voice Initiative",
-        status: "Submitted",
-        amount: "$120,000",
-        meta: [
-          { label: "Submitted Mar 2, 2026" },
-          { label: "Final proposal" },
-        ],
-      },
-      {
-        id: "civic-engagement",
-        name: "Civic Engagement Seed Fund",
-        status: "Tracking",
-        amount: "$50,000",
-        meta: [
-          { label: "Deadline Sep 1, 2026" },
-          { label: "No proposals yet" },
-        ],
-      },
-    ],
-    notes: [
-      {
-        id: "ford-note-1",
-        text: "Called program officer Dana Reeves on Apr 12. She mentioned they're prioritizing urban orgs this cycle.",
-        date: "Apr 12, 2026",
-      },
-      {
-        id: "ford-note-2",
-        text: "LOI feedback was positive. Strong narrative around community voice resonated.",
-        date: "Mar 18, 2026",
-      },
-    ],
+    id: "t1",
+    name: "Complete narrative section",
+    engagement: "Ford Foundation",
+    opportunity: "Equitable Futures Grant",
+    dueLabel: "Due today",
+    dueCategory: "today",
+    done: false,
   },
   {
-    id: "kresge",
-    name: "Kresge Foundation",
-    status: "Active",
-    website: "kresge.org",
-    relationshipStatus: "Active relationship",
-    opportunities: [
-      {
-        id: "kresge-community",
-        name: "Community Development Grant",
-        status: "Active",
-        amount: "$60,000",
-        meta: [
-          { label: "Due Aug 1, 2026" },
-          { label: "1 draft" },
-        ],
-      },
-      {
-        id: "kresge-health",
-        name: "Health Equity Initiative",
-        status: "Tracking",
-        amount: "$90,000",
-        meta: [
-          { label: "Deadline Oct 15, 2026" },
-          { label: "No proposals yet" },
-        ],
-      },
-    ],
-    notes: [
-      {
-        id: "kresge-note-1",
-        text: "Met with program team at conference. Strong interest in our foster care data.",
-        date: "Mar 5, 2026",
-      },
-    ],
+    id: "t2",
+    name: "Get budget sign-off from finance",
+    engagement: "Ford Foundation",
+    opportunity: "Equitable Futures Grant",
+    dueLabel: "Due today",
+    dueCategory: "today",
+    done: false,
   },
   {
-    id: "casey",
-    name: "Annie E. Casey Foundation",
-    status: "Lapsed",
-    website: "aecf.org",
-    relationshipStatus: "Lapsed relationship",
-    opportunities: [
-      {
-        id: "casey-youth",
-        name: "Youth Services Grant",
-        status: "Submitted",
-        amount: "$45,000",
-        meta: [
-          { label: "Submitted Jan 15, 2026" },
-          { label: "Awaiting decision" },
-        ],
-      },
-    ],
-    notes: [
-      {
-        id: "casey-note-1",
-        text: "Previous cycle application scored well on community impact section.",
-        date: "Feb 2, 2026",
-      },
-    ],
+    id: "t3",
+    name: "Collect letters of support",
+    engagement: "Ford Foundation",
+    opportunity: "Equitable Futures Grant",
+    dueLabel: "Due Jun 1",
+    dueCategory: "week",
+    done: false,
   },
   {
-    id: "rwj",
-    name: "Robert Wood Johnson",
-    status: "Active",
-    website: "rwjf.org",
-    relationshipStatus: "Active relationship",
-    opportunities: [
-      {
-        id: "rwj-health",
-        name: "Health Equity 2026",
-        status: "Active",
-        amount: "$120,000",
-        meta: [
-          { label: "Due Jul 1, 2026" },
-          { label: "2 drafts" },
-          { label: "1 task open", highlighted: true },
-        ],
-      },
-      {
-        id: "rwj-community",
-        name: "Community Resilience Grant",
-        status: "Submitted",
-        amount: "$80,000",
-        meta: [
-          { label: "Submitted Feb 20, 2026" },
-          { label: "Final proposal" },
-        ],
-      },
-      {
-        id: "rwj-youth",
-        name: "Youth Wellness Initiative",
-        status: "Tracking",
-        amount: "$55,000",
-        meta: [
-          { label: "Deadline Nov 1, 2026" },
-          { label: "No proposals yet" },
-        ],
-      },
-      {
-        id: "rwj-rural",
-        name: "Rural Access Program",
-        status: "Tracking",
-        amount: "$40,000",
-        meta: [
-          { label: "Deadline Dec 15, 2026" },
-          { label: "No proposals yet" },
-        ],
-      },
-    ],
-    notes: [
-      {
-        id: "rwj-note-1",
-        text: "Program officer confirmed eligibility for Health Equity track.",
-        date: "Apr 3, 2026",
-      },
-      {
-        id: "rwj-note-2",
-        text: "Requested budget narrative template from grants portal.",
-        date: "Mar 22, 2026",
-      },
-    ],
+    id: "t4",
+    name: "Review draft with program director",
+    engagement: "Kresge Foundation",
+    opportunity: "Housing Equity Initiative",
+    dueLabel: "Due Jun 3",
+    dueCategory: "week",
+    done: false,
   },
   {
-    id: "kellogg",
-    name: "W.K. Kellogg Foundation",
-    status: "Active",
-    website: "wkkf.org",
-    relationshipStatus: "Active relationship",
-    opportunities: [
-      {
-        id: "kellogg-food",
-        name: "Food Security Grant",
-        status: "Active",
-        amount: "$70,000",
-        meta: [{ label: "Due Sep 30, 2026" }, { label: "1 draft" }],
-      },
-      {
-        id: "kellogg-early",
-        name: "Early Childhood Program",
-        status: "Submitted",
-        amount: "$95,000",
-        meta: [{ label: "Submitted Apr 1, 2026" }, { label: "Final proposal" }],
-      },
-    ],
-    notes: [
-      {
-        id: "kellogg-note-1",
-        text: "Strong alignment with WKKF's 2026 priority areas in education.",
-        date: "Apr 8, 2026",
-      },
-    ],
-  },
-  {
-    id: "macarthur",
-    name: "MacArthur Foundation",
-    status: "Active",
-    website: "macfound.org",
-    relationshipStatus: "Active relationship",
-    opportunities: [
-      {
-        id: "macarthur-100",
-        name: "100&Change Proposal Support",
-        status: "Active",
-        amount: "$100,000",
-        meta: [
-          { label: "Due Aug 15, 2026" },
-          { label: "1 draft" },
-          { label: "2 tasks open", highlighted: true },
-        ],
-      },
-    ],
-    notes: [
-      {
-        id: "macarthur-note-1",
-        text: "Attended 100&Change webinar. Strong fit with our systems-change framing.",
-        date: "Mar 28, 2026",
-      },
-    ],
+    id: "t5",
+    name: "Upload Q1 outcomes data",
+    engagement: "W.K. Kellogg",
+    opportunity: "Community Resilience",
+    dueLabel: "Due Jun 10",
+    dueCategory: "twoweeks",
+    done: false,
   },
 ]
 
-// ── Badge configs ──────────────────────────────────────────────────────────
+const DEADLINES: Deadline[] = [
+  { name: "Equitable Futures Grant 2026",    funder: "Ford Foundation",     stage: "Active",    daysLeft: 6,  dotColor: "#6B819E" },
+  { name: "Housing Equity Initiative",       funder: "Kresge Foundation",   stage: "Active",    daysLeft: 9,  dotColor: "#6B819E" },
+  { name: "Community Resilience Interim Report", funder: "W.K. Kellogg",   stage: "Reporting", daysLeft: 12, dotColor: "#D19A66" },
+  { name: "Civic Engagement Seed Fund",      funder: "Ford Foundation",     stage: "Tracking",  daysLeft: 14, dotColor: "#A6B3C5" },
+]
 
-const ENG_BADGE: Record<EngagementStatus, { bg: string; color: string }> = {
-  Active: { bg: "#EBF2E2", color: "#3D6120" },
-  Lapsed: { bg: "#FEF3DC", color: "#C47A10" },
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function getGreeting() {
+  const h = new Date().getHours()
+  if (h < 12) return "Good morning"
+  if (h < 17) return "Good afternoon"
+  return "Good evening"
 }
 
-const OPP_BADGE: Record<OpportunityStatus, { bg: string; color: string }> = {
-  Active:    { bg: "#EBF2E2", color: "#3D6120" },
-  Submitted: { bg: "#E8F0FB", color: "#2D62B8" },
-  Tracking:  { bg: "#EEECEA", color: "#8A8070" },
+function getSubline(dueTodayCount: number, allDone: boolean) {
+  if (allDone) return "All tasks cleared for today. Nice work."
+  if (dueTodayCount > 0) {
+    return `You've got ${dueTodayCount} task${dueTodayCount > 1 ? "s" : ""} due today and a deadline in 6 days. Let's make some progress.`
+  }
+  return "Nothing urgent today. A good day to get ahead."
 }
 
-// ── Small icon components ──────────────────────────────────────────────────
+function todayLabel() {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year:    "numeric",
+    month:   "long",
+    day:     "numeric",
+  }).toUpperCase()
+}
 
-function FunderIcon() {
+function dueBadgeStyle(cat: Task["dueCategory"]): React.CSSProperties {
+  if (cat === "today")    return { backgroundColor: "#FDE8E8", color: "#8B2020" }
+  if (cat === "week")     return { backgroundColor: "#FFF3E0", color: "#7A4A10" }
+  return { backgroundColor: "#E8ECF0", color: "#4A6080" }
+}
+
+function daysBadgeStyle(days: number): React.CSSProperties {
+  if (days <= 6)  return { backgroundColor: "#FDE8E8", color: "#8B2020" }
+  if (days <= 13) return { backgroundColor: "#FFF3E0", color: "#7A4A10" }
+  return { backgroundColor: "#E8ECF0", color: "#4A6080" }
+}
+
+// ── Spark line SVG ─────────────────────────────────────────────────────────
+
+function SparkLine() {
   return (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-      <rect x="1.5" y="4" width="9" height="6.5" rx="1" fill="#C47A10" opacity="0.3" />
-      <rect x="3.5" y="1.5" width="5" height="3" rx="0.75" fill="#C47A10" />
-      <rect x="4.75" y="6" width="2.5" height="4" rx="0.5" fill="#C47A10" />
-    </svg>
-  )
-}
-
-function NoteBubbleIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-      <path
-        d="M2.5 2A1.5 1.5 0 0 0 1 3.5v5A1.5 1.5 0 0 0 2.5 10H5v2.5L8 10h3.5A1.5 1.5 0 0 0 13 8.5v-5A1.5 1.5 0 0 0 11.5 2h-9Z"
-        fill="#5A8A35"
+    <svg width="60" height="24" viewBox="0 0 60 24" fill="none" aria-hidden>
+      <polyline
+        points="0,20 10,16 20,18 30,12 40,10 50,6 60,4"
+        stroke="#3C5E4C"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+        opacity="0.7"
       />
     </svg>
   )
 }
 
-// ── View Toggle ────────────────────────────────────────────────────────────
+// ── Checkbox ───────────────────────────────────────────────────────────────
 
-function ViewToggle({ view, onChange }: { view: ViewMode; onChange: (v: ViewMode) => void }) {
-  const options: { id: ViewMode; label: string }[] = [
-    { id: "list",     label: "List"     },
-    { id: "kanban",   label: "Kanban"   },
-    { id: "calendar", label: "Calendar" },
-  ]
+function TaskCheckbox({ done, onClick }: { done: boolean; onClick: () => void }) {
   return (
-    <div
+    <button
+      type="button"
+      onClick={onClick}
       style={{
-        display: "inline-flex",
-        borderRadius: 8,
-        border: "1px solid #3C321417",
-        overflow: "hidden",
-        backgroundColor: "#FFFFFF",
+        width: 18,
+        height: 18,
         flexShrink: 0,
-      }}
-    >
-      {options.map((opt) => {
-        const isActive = view === opt.id
-        return (
-          <button
-            key={opt.id}
-            type="button"
-            onClick={() => onChange(opt.id)}
-            style={{
-              padding: "5px 12px",
-              fontSize: 12,
-              fontWeight: isActive ? 600 : 400,
-              color: isActive ? "#3D6120" : "#A09888",
-              backgroundColor: isActive ? "#EBF2E2" : "transparent",
-              border: "none",
-              borderRight: opt.id !== "calendar" ? "1px solid #3C321417" : "none",
-              cursor: "pointer",
-              transition: "background-color 150ms, color 150ms",
-            }}
-          >
-            {opt.label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-// ── Coming soon placeholder ────────────────────────────────────────────────
-
-function ComingSoon({ label }: { label: string }) {
-  return (
-    <div
-      style={{
+        borderRadius: "50%",
+        border: done ? "1.5px solid var(--evergreen)" : "1.5px solid var(--ink-tertiary)",
+        backgroundColor: done ? "var(--evergreen)" : "transparent",
+        cursor: "pointer",
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        flex: 1,
-        gap: 8,
-        padding: 40,
+        transition: "background-color 150ms, border-color 150ms",
       }}
     >
-      <span style={{ fontSize: 14, fontWeight: 500, color: "#A09888" }}>{label} view</span>
-      <span style={{ fontSize: 13, color: "#C8BFB4" }}>Coming soon</span>
-    </div>
+      {done && (
+        <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+          <path d="M1.5 4.5l2 2L7.5 2" stroke="#fff" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </button>
   )
 }
 
-// ── Main page ──────────────────────────────────────────────────────────────
+// ── Page ───────────────────────────────────────────────────────────────────
 
-export default function HomePage() {
+export default function HomeDashboard() {
   const router = useRouter()
-  const [selectedId, setSelectedId] = useState<string>("ford")
-  const [viewMode, setViewMode] = useState<ViewMode>("list")
-  const selected = ENGAGEMENTS.find((e) => e.id === selectedId) ?? ENGAGEMENTS[0]
-  const oppCount = selected.opportunities.length
+  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS)
+  const [collapsing, setCollapsing] = useState<Set<string>>(new Set())
+
+  const dueTodayCount = tasks.filter((t) => t.dueCategory === "today" && !t.done).length
+  const allDone = tasks.every((t) => t.done)
+
+  function handleCheck(id: string) {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, done: true } : t))
+    )
+    setCollapsing((prev) => new Set(Array.from(prev).concat(id)))
+    setTimeout(() => {
+      setTasks((prev) => prev.filter((t) => t.id !== id))
+      setCollapsing((prev) => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }, 550)
+  }
 
   return (
-    <div className="flex flex-1" style={{ overflow: "hidden", minHeight: 0 }}>
+    <div
+      className="flex-1 overflow-y-auto"
+      style={{ backgroundColor: "var(--canvas)" }}
+    >
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: "32px 32px 64px 32px" }}>
 
-      {/* ── LEFT PANE ── */}
-      <aside
-        style={{
-          width: 268,
-          flexShrink: 0,
-          backgroundColor: "#F3F0EA",
-          borderRight: "1px solid #3C321417",
-          display: "flex",
-          flexDirection: "column",
-          position: "sticky",
-          top: 44,
-          height: "calc(100vh - 44px)",
-          overflowY: "auto",
-        }}
-      >
-        {/* Today stat chips */}
+        {/* ── Top bar ── */}
         <div
           style={{
-            padding: "12px 12px 8px 12px",
-            flexShrink: 0,
-            borderBottom: "1px solid #3C321417",
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            marginBottom: 28,
           }}
         >
-          <span style={{ ...styles.sectionLabel, display: "block", marginBottom: 8 }}>Today</span>
-          <div style={{ display: "flex", gap: 6 }}>
-            <div
+          <div>
+            <h1
               style={{
-                flex: 1,
-                borderRadius: 8,
-                padding: "8px 10px",
-                backgroundColor: "#FFFFFF",
-                border: "1px solid #3C321417",
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
+                margin: "0 0 6px 0",
+                fontSize: 28,
+                fontWeight: 500,
+                letterSpacing: "-0.02em",
+                lineHeight: "34px",
+                color: "var(--ink)",
+                fontFamily: "var(--font-lora)",
               }}
             >
-              <span style={{ fontSize: 18, fontWeight: 700, color: "#C4511A", lineHeight: "22px" }}>3</span>
-              <span style={{ fontSize: 11, color: "#A09888", lineHeight: "14px" }}>tasks due today</span>
-            </div>
-            <div
+              {getGreeting()}, Taylor.
+            </h1>
+            <p style={{ margin: "0 0 4px 0", fontSize: 14, color: "var(--ink-secondary)", lineHeight: "20px" }}>
+              {getSubline(dueTodayCount, allDone)}
+            </p>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 500, letterSpacing: "0.07em", color: "var(--ink-tertiary)" }}>
+              {todayLabel()}
+            </p>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+            <button
+              type="button"
+              onClick={() => router.push("/discover")}
               style={{
-                flex: 1,
-                borderRadius: 8,
-                padding: "8px 10px",
-                backgroundColor: "#FFFFFF",
-                border: "1px solid #3C321417",
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
+                padding: "8px 18px",
+                borderRadius: 20,
+                border: "1px solid var(--border-default)",
+                backgroundColor: "transparent",
+                fontSize: 13,
+                fontWeight: 500,
+                color: "var(--ink)",
+                cursor: "pointer",
+                transition: "background-color 150ms",
               }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-tint)" }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
             >
-              <span style={{ fontSize: 18, fontWeight: 700, color: "#3D6120", lineHeight: "22px" }}>2</span>
-              <span style={{ fontSize: 11, color: "#A09888", lineHeight: "14px" }}>deadlines in 7 days</span>
+              Find opportunities
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/portfolio")}
+              style={{
+                padding: "8px 18px",
+                borderRadius: 20,
+                backgroundColor: "var(--slate-primary)",
+                border: "none",
+                fontSize: 13,
+                fontWeight: 500,
+                color: "#FFFFFF",
+                cursor: "pointer",
+                transition: "background-color 150ms",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
+            >
+              New engagement
+            </button>
+          </div>
+        </div>
+
+        {/* ── Stat cards ── */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: 12,
+            marginBottom: 28,
+          }}
+        >
+          {/* Active engagements */}
+          <StatCard
+            label="Active engagements"
+            value="6"
+            sub="1 added this month"
+            subColor="var(--evergreen)"
+          />
+          {/* Proposals in progress */}
+          <StatCard
+            label="Proposals in progress"
+            value="4"
+            sub="2 due within 14 days"
+            subColor="#C47A10"
+          />
+          {/* Submitted */}
+          <StatCard
+            label="Submitted, awaiting decision"
+            value="3"
+            sub="Avg. 47 days waiting"
+            subColor="var(--ink-tertiary)"
+          />
+          {/* Awarded */}
+          <div
+            style={{
+              borderRadius: "var(--radius-card)",
+              backgroundColor: "var(--surface-white)",
+              border: "1px solid var(--border-default)",
+              padding: "16px 18px",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            <p style={labelStyle}>Awarded (rolling 12mo.)</p>
+            <p style={{ margin: "6px 0 4px", fontSize: 28, fontWeight: 700, color: "var(--ink)", lineHeight: "34px", letterSpacing: "-0.03em" }}>
+              $347k
+            </p>
+            <p style={{ margin: 0, fontSize: 12, color: "var(--evergreen)" }}>
+              vs $290k prior period
+            </p>
+            <div style={{ position: "absolute", bottom: 14, right: 14 }}>
+              <SparkLine />
             </div>
           </div>
         </div>
 
-        {/* Header row */}
-        <div
-          className="flex items-center justify-between"
-          style={{ padding: "12px 16px 8px 16px", flexShrink: 0 }}
-        >
-          <span style={styles.sectionLabel}>Engagements</span>
-          <button
-            type="button"
-            style={styles.terracottaBtn}
-            onClick={() => {}}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#A8421A" }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#C4511A" }}
-          >
-            <Plus size={13} style={{ flexShrink: 0 }} />
-            New engagement
-          </button>
-        </div>
+        {/* ── Main two-column area ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 28 }}>
 
-        {/* Search */}
-        <div style={{ padding: "0 12px 10px 12px", flexShrink: 0 }}>
+          {/* Tasks */}
           <div
-            className="flex items-center"
             style={{
-              borderRadius: 9,
-              padding: "7px 10px",
-              gap: 8,
-              backgroundColor: "#FFFFFF",
-              border: "1px solid #3C321417",
+              borderRadius: "var(--radius-card)",
+              backgroundColor: "var(--surface-white)",
+              border: "1px solid var(--border-default)",
+              overflow: "hidden",
             }}
           >
-            <Search size={14} color="#A09888" style={{ flexShrink: 0 }} />
-            <input
-              type="search"
-              placeholder="Search engagements..."
-              className="flex-1 bg-transparent outline-none border-none"
-              style={{ fontSize: 12, color: "#2A2618" }}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "14px 18px",
+                borderBottom: "1px solid var(--border-default)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>My tasks</span>
+                {tasks.length > 0 && (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 20,
+                      height: 20,
+                      borderRadius: "50%",
+                      backgroundColor: "var(--slate-tint)",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "var(--slate-primary)",
+                    }}
+                  >
+                    {tasks.length}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                style={{ background: "none", border: "none", fontSize: 12, color: "var(--slate-secondary)", cursor: "pointer", fontWeight: 500 }}
+                onClick={() => router.push("/opportunity")}
+              >
+                View all
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {tasks.length === 0 ? (
+                <div style={{ padding: "28px 18px", textAlign: "center" }}>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>All tasks cleared for today.</p>
+                </div>
+              ) : (
+                tasks.map((task) => {
+                  const isCollapsing = collapsing.has(task.id)
+                  return (
+                    <div
+                      key={task.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "11px 18px",
+                        borderBottom: "1px solid var(--border-default)",
+                        opacity: isCollapsing ? 0 : 1,
+                        maxHeight: isCollapsing ? 0 : 80,
+                        overflow: "hidden",
+                        transition: isCollapsing ? "opacity 0.35s ease, max-height 0.55s ease, padding 0.55s ease" : "none",
+                        paddingTop: isCollapsing ? 0 : 11,
+                        paddingBottom: isCollapsing ? 0 : 11,
+                      }}
+                    >
+                      <TaskCheckbox done={task.done} onClick={() => handleCheck(task.id)} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p
+                          style={{
+                            margin: "0 0 2px 0",
+                            fontSize: 13,
+                            fontWeight: 500,
+                            color: task.done ? "var(--ink-tertiary)" : "var(--ink)",
+                            textDecoration: task.done ? "line-through" : "none",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            transition: "color 150ms",
+                          }}
+                        >
+                          {task.name}
+                        </p>
+                        <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "14px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {task.engagement} · {task.opportunity}
+                        </p>
+                      </div>
+                      <span
+                        style={{
+                          flexShrink: 0,
+                          borderRadius: 6,
+                          padding: "2px 8px",
+                          fontSize: 11,
+                          fontWeight: 500,
+                          ...dueBadgeStyle(task.dueCategory),
+                        }}
+                      >
+                        {task.dueLabel}
+                      </span>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Upcoming deadlines */}
+          <div
+            style={{
+              borderRadius: "var(--radius-card)",
+              backgroundColor: "var(--surface-white)",
+              border: "1px solid var(--border-default)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "14px 18px",
+                borderBottom: "1px solid var(--border-default)",
+              }}
+            >
+              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>Upcoming deadlines</span>
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 20,
+                  height: 20,
+                  borderRadius: "50%",
+                  backgroundColor: "var(--slate-tint)",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "var(--slate-primary)",
+                }}
+              >
+                {DEADLINES.length}
+              </span>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {DEADLINES.map((dl, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "11px 18px",
+                    borderBottom: i < DEADLINES.length - 1 ? "1px solid var(--border-default)" : "none",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => router.push("/opportunity")}
+                >
+                  <div
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      backgroundColor: dl.dotColor,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: "0 0 2px 0", fontSize: 13, fontWeight: 500, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {dl.name}
+                    </p>
+                    <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "14px" }}>
+                      {dl.funder} · {dl.stage}
+                    </p>
+                  </div>
+                  <span
+                    style={{
+                      flexShrink: 0,
+                      borderRadius: 6,
+                      padding: "2px 8px",
+                      fontSize: 11,
+                      fontWeight: 500,
+                      ...daysBadgeStyle(dl.daysLeft),
+                    }}
+                  >
+                    {dl.daysLeft} days
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Quick actions ── */}
+        <div>
+          <p style={sectionLabelStyle}>Quick actions</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+            <QuickAction
+              icon={<Plus size={18} color="var(--slate-primary)" />}
+              iconBg="var(--slate-tint)"
+              label="New engagement"
+              sub="Start tracking a funder relationship"
+              onClick={() => router.push("/portfolio")}
+            />
+            <QuickAction
+              icon={<Telescope size={18} color="#2D5080" />}
+              iconBg="var(--slate-light)"
+              label="Find opportunities"
+              sub="Search funders and open grants"
+              onClick={() => router.push("/discover")}
+            />
+            <QuickAction
+              icon={<FileText size={18} color="#2A5040" />}
+              iconBg="var(--evergreen-tint)"
+              label="Write a proposal"
+              sub="Continue an in-progress draft"
+              onClick={() => router.push("/portfolio")}
+            />
+            <QuickAction
+              icon={<Sparkles size={18} color="#FFFFFF" />}
+              iconBg="var(--slate-primary)"
+              label="Ask Grant Assistant"
+              sub="Get help with any part of your work"
+              onClick={() => {}}
             />
           </div>
         </div>
 
-        {/* Engagement list */}
-        <div className="flex-1 overflow-y-auto" style={{ display: "flex", flexDirection: "column" }}>
-          {ENGAGEMENTS.map((eng) => {
-            const isSelected = eng.id === selectedId
-            const badge = ENG_BADGE[eng.status]
-            const count = eng.opportunities.length
-            return (
-              <button
-                key={eng.id}
-                type="button"
-                onClick={() => setSelectedId(eng.id)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  width: "calc(100% - 16px)",
-                  margin: "2px 8px",
-                  padding: "10px 12px",
-                  borderRadius: 9,
-                  backgroundColor: isSelected ? "#FFFFFF" : "transparent",
-                  border: isSelected ? "1px solid #3C321417" : "1px solid transparent",
-                  boxShadow: isSelected ? "0px 1px 4px #1C18400F" : "none",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  transition: "background-color 150ms, box-shadow 150ms",
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSelected) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#EBE7DF"
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: "#2A2618", lineHeight: "16px" }}>
-                    {eng.name}
-                  </div>
-                  <div style={{ fontSize: 11, marginTop: 2, color: "#A09888", lineHeight: "14px" }}>
-                    {count} {count === 1 ? "opportunity" : "opportunities"}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    flexShrink: 0,
-                    borderRadius: 20,
-                    padding: "3px 8px",
-                    backgroundColor: badge.bg,
-                    fontSize: 10,
-                    fontWeight: 500,
-                    color: badge.color,
-                    letterSpacing: "0.03em",
-                    lineHeight: "12px",
-                  }}
-                >
-                  {eng.status}
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      </aside>
-
-      {/* ── RIGHT PANE ── */}
-      <div
-        className="flex-1 flex flex-col"
-        style={{ backgroundColor: "#FFFFFF", overflow: "hidden", minHeight: 0 }}
-      >
-        {/* Right header */}
-        <div
-          className="flex items-center justify-between"
-          style={{
-            padding: "14px 24px",
-            flexShrink: 0,
-            backgroundColor: "#FFFFFF",
-            borderBottom: "1px solid #3C321417",
-          }}
-        >
-          {/* Title + meta */}
-          <div>
-            <h2
-              style={{
-                fontSize: 19,
-                fontWeight: 500,
-                letterSpacing: "-0.02em",
-                lineHeight: "24px",
-                margin: 0,
-                background: "linear-gradient(90deg, #3D6120, #7A9A30)",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                color: "transparent",
-              }}
-            >
-              {selected.name}
-            </h2>
-            <div className="flex items-center" style={{ gap: 6, marginTop: 5 }}>
-              <FunderIcon />
-              <span style={{ fontSize: 12, color: "#C47A10", lineHeight: "16px" }}>
-                {selected.website}
-              </span>
-              <span style={{ fontSize: 12, color: "#6B6355" }}>·</span>
-              <span style={{ fontSize: 12, color: "#5A8A35", lineHeight: "16px" }}>
-                {oppCount} {oppCount === 1 ? "opportunity" : "opportunities"} · {selected.relationshipStatus}
-              </span>
-            </div>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex items-center" style={{ gap: 8 }}>
-            <button
-              type="button"
-              style={styles.outlineBtn}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#F3F0EA")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#FFFFFF")}
-            >
-              <Plus size={13} style={{ flexShrink: 0 }} />
-              Add note
-            </button>
-            <button type="button" style={styles.outlineBtn}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#F3F0EA")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#FFFFFF")}
-            >
-              View funder
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push("/opportunity")}
-              style={{ ...styles.terracottaBtn, padding: "7px 16px", fontSize: 13 }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#A8421A" }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#C4511A" }}
-            >
-              <Plus size={13} style={{ flexShrink: 0 }} />
-              New opportunity
-            </button>
-          </div>
-        </div>
-
-        {/* View toggle + content */}
-        <div
-          style={{
-            padding: "14px 24px 10px 24px",
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <span style={styles.sectionLabel}>Opportunities</span>
-          <ViewToggle view={viewMode} onChange={setViewMode} />
-        </div>
-
-        {/* Scrollable content */}
-        {viewMode === "list" ? (
-          <div
-            className="flex-1 overflow-y-auto"
-            style={{ display: "flex", flexDirection: "column", padding: "0 24px 20px 24px", gap: 16 }}
-          >
-            {selected.opportunities.map((opp) => {
-              const badge = OPP_BADGE[opp.status]
-              return (
-                <div
-                  key={opp.id}
-                  className="flex items-start justify-between"
-                  onClick={() => router.push("/opportunity")}
-                  style={{
-                    borderRadius: 12,
-                    padding: "14px 16px",
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #3C321417",
-                    boxShadow: "0px 1px 3px #1C18400A",
-                    gap: 16,
-                    cursor: "pointer",
-                    transition: "box-shadow 150ms, border-color 150ms",
-                  }}
-                  onMouseEnter={(e) => {
-                    const el = e.currentTarget as HTMLDivElement
-                    el.style.boxShadow = "0px 2px 8px #1C184014"
-                    el.style.borderColor = "rgba(90,138,53,0.25)"
-                  }}
-                  onMouseLeave={(e) => {
-                    const el = e.currentTarget as HTMLDivElement
-                    el.style.boxShadow = "0px 1px 3px #1C18400A"
-                    el.style.borderColor = "#3C321417"
-                  }}
-                >
-                  {/* Left: name + status + meta */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <div className="flex items-center" style={{ gap: 10 }}>
-                      <span
-                        style={{
-                          fontSize: 14,
-                          fontWeight: 500,
-                          letterSpacing: "-0.01em",
-                          color: "#2A2618",
-                          lineHeight: "18px",
-                        }}
-                      >
-                        {opp.name}
-                      </span>
-                      <span
-                        style={{
-                          flexShrink: 0,
-                          borderRadius: 20,
-                          padding: "3px 9px",
-                          backgroundColor: badge.bg,
-                          fontSize: 10,
-                          fontWeight: 500,
-                          color: badge.color,
-                          letterSpacing: "0.03em",
-                          lineHeight: "12px",
-                        }}
-                      >
-                        {opp.status}
-                      </span>
-                    </div>
-                    {/* Meta items with dot separators */}
-                    <div className="flex items-center" style={{ gap: 6 }}>
-                      {opp.meta.map((item, i) => (
-                        <React.Fragment key={item.label}>
-                          {i > 0 && (
-                            <span style={{ fontSize: 12, color: "#6B6355", lineHeight: "16px" }}>·</span>
-                          )}
-                          <span
-                            style={{
-                              fontSize: 12,
-                              color: item.highlighted ? "#C47A10" : "#6B6355",
-                              lineHeight: "16px",
-                            }}
-                          >
-                            {item.label}
-                          </span>
-                        </React.Fragment>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Right: amount */}
-                  <span
-                    style={{
-                      flexShrink: 0,
-                      fontSize: 13,
-                      fontWeight: 500,
-                      color: "#3D6120",
-                      lineHeight: "16px",
-                      marginTop: 2,
-                    }}
-                  >
-                    {opp.amount}
-                  </span>
-                </div>
-              )
-            })}
-
-            {/* ── Notes ── */}
-            <span style={{ ...styles.sectionLabel, marginTop: 4 }}>Notes</span>
-
-            {selected.notes.map((note) => (
-              <div key={note.id} className="flex items-start" style={{ gap: 12 }}>
-                {/* Icon tile */}
-                <div
-                  style={{
-                    width: 28,
-                    height: 28,
-                    flexShrink: 0,
-                    marginTop: 1,
-                    borderRadius: 7,
-                    backgroundColor: "#EBF2E2",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <NoteBubbleIcon />
-                </div>
-                {/* Text + date */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                  <span style={{ fontSize: 13, fontWeight: 400, color: "#2A2618", lineHeight: "19px" }}>
-                    {note.text}
-                  </span>
-                  <span style={{ fontSize: 11, fontWeight: 400, color: "#A09888", lineHeight: "14px" }}>
-                    {note.date}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <ComingSoon label={viewMode === "kanban" ? "Kanban" : "Calendar"} />
-        )}
       </div>
     </div>
   )
 }
 
-// ── Shared style objects ──────────────────────────────────────────────────
+// ── Sub-components ─────────────────────────────────────────────────────────
 
-const styles = {
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: 500,
-    letterSpacing: "0.07em",
-    textTransform: "uppercase" as const,
-    color: "#A09888",
-    lineHeight: "14px",
-  },
-  outlineBtn: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 8,
-    padding: "7px 14px",
-    backgroundColor: "#FFFFFF",
-    border: "1px solid #3C32141F",
-    fontSize: 13,
-    fontWeight: 400,
-    color: "#2A2618",
-    cursor: "pointer",
-    lineHeight: "16px",
-    transition: "background-color 150ms",
-  },
-  terracottaBtn: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 8,
-    padding: "4px 10px",
-    backgroundColor: "#C4511A",
-    border: "none",
-    fontSize: 12,
-    fontWeight: 500,
-    color: "#FFFFFF",
-    cursor: "pointer",
-    lineHeight: "16px",
-    transition: "background-color 150ms",
-  },
-} as const
+function StatCard({ label, value, sub, subColor }: { label: string; value: string; sub: string; subColor: string }) {
+  return (
+    <div
+      style={{
+        borderRadius: "var(--radius-card)",
+        backgroundColor: "var(--surface-white)",
+        border: "1px solid var(--border-default)",
+        padding: "16px 18px",
+      }}
+    >
+      <p style={labelStyle}>{label}</p>
+      <p style={{ margin: "6px 0 4px", fontSize: 28, fontWeight: 700, color: "var(--ink)", lineHeight: "34px", letterSpacing: "-0.03em" }}>
+        {value}
+      </p>
+      <p style={{ margin: 0, fontSize: 12, color: subColor }}>
+        {sub}
+      </p>
+    </div>
+  )
+}
+
+function QuickAction({
+  icon,
+  iconBg,
+  label,
+  sub,
+  onClick,
+}: {
+  icon: React.ReactNode
+  iconBg: string
+  label: string
+  sub: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-start",
+        gap: 10,
+        padding: "16px",
+        borderRadius: "var(--radius-card)",
+        backgroundColor: "var(--surface-white)",
+        border: "1px solid var(--border-default)",
+        cursor: "pointer",
+        textAlign: "left",
+        transition: "border-color 150ms, box-shadow 150ms",
+      }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLButtonElement
+        el.style.borderColor = "rgba(74,96,128,0.3)"
+        el.style.boxShadow = "0 2px 8px rgba(42,42,42,0.07)"
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLButtonElement
+        el.style.borderColor = "var(--border-default)"
+        el.style.boxShadow = "none"
+      }}
+    >
+      <div
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 9,
+          backgroundColor: iconBg,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {icon}
+      </div>
+      <div>
+        <p style={{ margin: "0 0 3px 0", fontSize: 13, fontWeight: 600, color: "var(--ink)", lineHeight: "16px" }}>
+          {label}
+        </p>
+        <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "16px" }}>
+          {sub}
+        </p>
+      </div>
+    </button>
+  )
+}
+
+// ── Shared styles ──────────────────────────────────────────────────────────
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 500,
+  letterSpacing: "0.07em",
+  textTransform: "uppercase",
+  color: "var(--ink-tertiary)",
+  margin: 0,
+  lineHeight: "14px",
+}
+
+const sectionLabelStyle: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 500,
+  letterSpacing: "0.07em",
+  textTransform: "uppercase",
+  color: "var(--ink-tertiary)",
+  margin: "0 0 10px 0",
+}

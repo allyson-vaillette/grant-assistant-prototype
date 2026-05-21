@@ -162,7 +162,7 @@ const STATUS_STYLE: Record<ReportStatus, { bg: string; color: string }> = {
 const OPP_STATUS_STYLE: Record<OppStatus, { bg: string; color: string }> = {
   Submitted: { bg: "var(--blue-light)",  color: "var(--blue)"      },
   Tracking:  { bg: "var(--slate-light)", color: "var(--slate)"     },
-  Active:    { bg: "var(--olive-pale)",  color: "var(--olive-dark)" },
+  Active:    { bg: "var(--evergreen-tint)", color: "var(--evergreen)" },
 }
 
 const FILTER_TABS: FilterTab[] = ["All", "Draft", "Submitted", "Overdue"]
@@ -195,7 +195,7 @@ function ReportRow({
         borderRadius: 10,
         backgroundColor: isSelected ? "#FFFFFF" : "transparent",
         border: isSelected ? "1px solid var(--border-color)" : "1px solid transparent",
-        borderLeft: isSelected ? "3px solid var(--olive-mid)" : "3px solid transparent",
+        borderLeft: isSelected ? "3px solid var(--slate-primary)" : "3px solid transparent",
         boxShadow: isSelected ? "0px 1px 4px rgba(28,24,64,0.06)" : "none",
         cursor: "pointer",
         textAlign: "left",
@@ -433,7 +433,7 @@ function DetailPanel({ report }: { report: Report }) {
                   style={{
                     fontSize: 13,
                     fontWeight: 500,
-                    color: "var(--olive-dark)",
+                    color: "var(--evergreen)",
                     flexShrink: 0,
                     minWidth: 60,
                     textAlign: "right",
@@ -455,8 +455,8 @@ function DetailPanel({ report }: { report: Report }) {
           style={{
             padding: "14px 16px",
             borderRadius: "var(--radius-card)",
-            backgroundColor: "var(--olive-pale)",
-            border: "1px solid rgba(90,138,53,0.15)",
+            backgroundColor: "var(--slate-tint)",
+            border: "1px solid rgba(74,96,128,0.15)",
             marginBottom: 12,
           }}
         >
@@ -471,7 +471,7 @@ function DetailPanel({ report }: { report: Report }) {
             style={{
               padding: "9px 18px",
               borderRadius: "var(--radius-button)",
-              backgroundColor: "var(--olive-dark)",
+              backgroundColor: "var(--slate-primary)",
               border: "none",
               fontSize: 13,
               fontWeight: 500,
@@ -479,8 +479,8 @@ function DetailPanel({ report }: { report: Report }) {
               cursor: "pointer",
               transition: "background-color 150ms",
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#2D4A18" }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--olive-dark)" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
           >
             Write report
           </button>
@@ -492,15 +492,15 @@ function DetailPanel({ report }: { report: Report }) {
               gap: 7,
               padding: "10px 16px",
               borderRadius: "var(--radius-button)",
-              background: "linear-gradient(135deg, #3D6120 0%, #6B9140 100%)",
+              background: "linear-gradient(135deg, var(--slate-primary) 0%, var(--slate-secondary) 100%)",
               border: "none",
               fontSize: 13,
               fontWeight: 500,
               color: "#FFFFFF",
               cursor: "pointer",
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "linear-gradient(135deg, #2D4A18 0%, #5A7A30 100%)" }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "linear-gradient(135deg, #3D6120 0%, #6B9140 100%)" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "linear-gradient(135deg, #3A4F6A 0%, #58708A 100%)" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "linear-gradient(135deg, var(--slate-primary) 0%, var(--slate-secondary) 100%)" }}
           >
             <Sparkles size={13} color="#FFFFFF" />
             Generate draft with AI
@@ -569,7 +569,7 @@ function DetailPanel({ report }: { report: Report }) {
             cursor: "pointer",
             fontSize: 13,
             fontWeight: 500,
-            color: "var(--olive-mid)",
+            color: "var(--slate-secondary)",
           }}
         >
           + Upload file
@@ -595,7 +595,7 @@ function DetailPanel({ report }: { report: Report }) {
             width: "100%",
             padding: "12px 20px",
             borderRadius: "var(--radius-button)",
-            backgroundColor: "var(--olive-dark)",
+            backgroundColor: "var(--slate-primary)",
             border: "none",
             fontSize: 14,
             fontWeight: 600,
@@ -608,8 +608,8 @@ function DetailPanel({ report }: { report: Report }) {
             marginBottom: 8,
             transition: "background-color 150ms",
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#2D4A18" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--olive-dark)" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
             <rect x="2" y="6" width="10" height="7" rx="1.5" stroke="rgba(255,255,255,0.7)" strokeWidth="1.2" fill="none" />
@@ -718,7 +718,7 @@ export default function ReportsPage() {
             gap: 6,
             padding: "8px 18px",
             borderRadius: "var(--radius-button)",
-            backgroundColor: "#C4511A",
+            backgroundColor: "var(--slate-primary)",
             border: "none",
             fontSize: 14,
             fontWeight: 500,
@@ -727,8 +727,8 @@ export default function ReportsPage() {
             flexShrink: 0,
             transition: "background-color 150ms",
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#A8421A" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#C4511A" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
         >
           <Plus size={15} style={{ flexShrink: 0 }} />
           New report
@@ -774,7 +774,7 @@ export default function ReportsPage() {
                     backgroundColor: isActive
                       ? isOverdueTab
                         ? "#C0302A"
-                        : "var(--olive-dark)"
+                        : "var(--slate-primary)"
                       : "transparent",
                     fontSize: 12,
                     fontWeight: isActive ? 600 : 400,
