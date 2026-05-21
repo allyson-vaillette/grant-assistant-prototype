@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronDown, ExternalLink, Plus, ThumbsDown } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Plus, ThumbsDown, X } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -232,14 +232,22 @@ function MatchDots({ filled }: { filled: number }) {
 function OpportunityCard({
   opp,
   isSelected,
+  isNotRelevant,
   onClick,
-  onHide,
+  onNotRelevant,
+  onTrackThis,
 }: {
   opp: Opportunity
   isSelected: boolean
+  isNotRelevant: boolean
   onClick: () => void
-  onHide: () => void
+  onNotRelevant: () => void
+  onTrackThis: () => void
 }) {
+  // Use state for hover so the flag always resets on mouse-off, regardless of
+  // whether isSelected changes between enter and leave.
+  const [isHovered, setIsHovered] = useState(false)
+
   const statusStyle = STATUS_STYLE[opp.status]
   const matchColor =
     opp.matchStrength === "Partial match" ? "var(--slate)" : "var(--slate-secondary)"
@@ -249,6 +257,8 @@ function OpportunityCard({
     <button
       type="button"
       onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -258,29 +268,20 @@ function OpportunityCard({
         borderRadius: 12,
         backgroundColor: "var(--surface)",
         border: isSelected
-          ? `1.5px solid rgba(90,138,53,0.3)`
+          ? "1.5px solid rgba(90,138,53,0.3)"
+          : isHovered
+          ? "1px solid rgba(90,138,53,0.2)"
           : "1px solid var(--border-color)",
-        borderLeft: isSelected ? "3px solid var(--slate-secondary)" : "3px solid transparent",
-        boxShadow: isSelected
-          ? "0px 2px 8px rgba(28,24,64,0.07)"
-          : "0px 1px 3px rgba(28,24,64,0.04)",
+        borderLeft: isSelected
+          ? "3px solid var(--slate-secondary)"
+          : "3px solid transparent",
+        boxShadow:
+          isSelected || isHovered
+            ? "0px 2px 8px rgba(28,24,64,0.07)"
+            : "0px 1px 3px rgba(28,24,64,0.04)",
         cursor: "pointer",
         textAlign: "left",
         transition: "border-color 150ms, box-shadow 150ms",
-      }}
-      onMouseEnter={(e) => {
-        if (!isSelected) {
-          const el = e.currentTarget as HTMLButtonElement
-          el.style.boxShadow = "0px 2px 8px rgba(28,24,64,0.07)"
-          el.style.borderColor = "rgba(90,138,53,0.2)"
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isSelected) {
-          const el = e.currentTarget as HTMLButtonElement
-          el.style.boxShadow = "0px 1px 3px rgba(28,24,64,0.04)"
-          el.style.borderColor = "var(--border-color)"
-        }
       }}
     >
       {/* Funder + status */}
@@ -370,12 +371,36 @@ function OpportunityCard({
         </div>
       </div>
 
-      {/* Hide action */}
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+      {/* Card actions: Track this + Not relevant */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
+        {/* Track this button */}
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); onHide() }}
-          title="Hide this opportunity"
+          onClick={(e) => { e.stopPropagation(); onTrackThis() }}
+          style={{
+            background: "white",
+            border: "1px solid var(--border-color)",
+            borderRadius: "var(--radius-button)",
+            padding: "4px 10px",
+            fontSize: 12,
+            fontWeight: 500,
+            color: "var(--ink)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            transition: "background-color 150ms",
+          }}
+        >
+          <Plus size={11} />
+          <span>Track this</span>
+        </button>
+
+        {/* Not relevant button */}
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onNotRelevant() }}
+          title={isNotRelevant ? "Re-evaluate this opportunity" : "Mark as not relevant"}
           style={{
             background: "none",
             border: "none",
@@ -385,22 +410,28 @@ function OpportunityCard({
             display: "flex",
             alignItems: "center",
             gap: 4,
-            color: "var(--ink-tertiary)",
+            color: isNotRelevant ? "var(--plum-soft)" : "var(--ink-tertiary)",
             fontSize: 11,
             transition: "color 150ms, background-color 150ms",
           }}
           onMouseEnter={(e) => {
             const el = e.currentTarget as HTMLButtonElement
-            el.style.color = "#C0302A"
-            el.style.backgroundColor = "#FEEAEA"
+            if (!isNotRelevant) {
+              el.style.color = "#C0302A"
+              el.style.backgroundColor = "#FEEAEA"
+            }
           }}
           onMouseLeave={(e) => {
             const el = e.currentTarget as HTMLButtonElement
-            el.style.color = "var(--ink-tertiary)"
+            el.style.color = isNotRelevant ? "var(--plum-soft)" : "var(--ink-tertiary)"
             el.style.backgroundColor = "transparent"
           }}
         >
-          <ThumbsDown size={11} />
+          <ThumbsDown
+            size={11}
+            fill={isNotRelevant ? "var(--plum-soft)" : "none"}
+            color={isNotRelevant ? "var(--plum-soft)" : "currentColor"}
+          />
           <span>Not relevant</span>
         </button>
       </div>
@@ -499,9 +530,31 @@ function TrackPopover({ onCancel, onSelect }: { onCancel: () => void; onSelect: 
   )
 }
 
-// ── Hide Modal ─────────────────────────────────────────────────────────────
+// ── Not Relevant Modal ─────────────────────────────────────────────────────
 
-function HideModal({ grantName, onCancel, onConfirm }: { grantName: string; onCancel: () => void; onConfirm: () => void }) {
+const NOT_RELEVANT_REASONS = [
+  "Wrong location",
+  "No longer open",
+  "Invite only",
+  "Doesn't match our initiatives",
+  "Other",
+] as const
+
+type NotRelevantReason = (typeof NOT_RELEVANT_REASONS)[number]
+
+function NotRelevantModal({
+  onCancel,
+  onConfirm,
+}: {
+  onCancel: () => void
+  onConfirm: (reason: NotRelevantReason, otherText: string, removeFromList: boolean) => void
+}) {
+  const [selectedReason, setSelectedReason] = useState<NotRelevantReason | null>(null)
+  const [otherText, setOtherText] = useState("")
+  const [removeFromList, setRemoveFromList] = useState(true)
+
+  const canSubmit = selectedReason !== null
+
   return (
     <div
       style={{
@@ -521,16 +574,138 @@ function HideModal({ grantName, onCancel, onConfirm }: { grantName: string; onCa
           backgroundColor: "#FFFFFF",
           borderRadius: 14,
           padding: "24px 28px",
-          width: 360,
+          width: 420,
           boxShadow: "0px 16px 48px rgba(28,24,64,0.18)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
         }}
       >
-        <h3 style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
-          Hide this opportunity?
-        </h3>
-        <p style={{ margin: "0 0 20px", fontSize: 13, color: "var(--ink-secondary)", lineHeight: "19px" }}>
-          <strong style={{ color: "var(--ink)", fontWeight: 500 }}>{grantName}</strong> won&apos;t appear in your Discover feed.
-        </p>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div>
+            <h3 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+              Why isn&apos;t this a good fit?
+            </h3>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "18px" }}>
+              Your feedback helps us surface better matches.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 4,
+              borderRadius: 6,
+              color: "var(--ink-tertiary)",
+              display: "flex",
+              flexShrink: 0,
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Reason list */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {NOT_RELEVANT_REASONS.map((reason) => {
+            const isActive = selectedReason === reason
+            return (
+              <button
+                key={reason}
+                type="button"
+                onClick={() => setSelectedReason(reason)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: isActive ? "1.5px solid var(--slate-secondary)" : "1.5px solid transparent",
+                  backgroundColor: isActive ? "var(--slate-tint)" : "transparent",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "background-color 150ms, border-color 150ms",
+                }}
+              >
+                {/* Radio indicator */}
+                <div
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: "50%",
+                    border: isActive ? "none" : "1.5px solid var(--ink-tertiary)",
+                    backgroundColor: isActive ? "var(--slate-secondary)" : "transparent",
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "background-color 150ms",
+                  }}
+                >
+                  {isActive && (
+                    <div
+                      style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "#FFFFFF" }}
+                    />
+                  )}
+                </div>
+                <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{reason}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Optional "Other" text input */}
+        {selectedReason === "Other" && (
+          <input
+            type="text"
+            value={otherText}
+            onChange={(e) => setOtherText(e.target.value)}
+            placeholder="Tell us more (optional)"
+            style={{
+              width: "100%",
+              padding: "9px 12px",
+              borderRadius: 8,
+              border: "1px solid var(--border-color)",
+              fontSize: 13,
+              color: "var(--ink)",
+              backgroundColor: "var(--canvas)",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+        )}
+
+        {/* Divider */}
+        <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+
+        {/* Remove from list checkbox */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setRemoveFromList((v) => !v)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+            }}
+          >
+            <CheckboxIcon checked={removeFromList} />
+            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Remove from my list</span>
+          </button>
+          <p style={{ margin: "6px 0 0 24px", fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "16px" }}>
+            You can always find this opportunity again in Discover.
+          </p>
+        </div>
+
+        {/* Footer */}
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <button
             type="button"
@@ -549,19 +724,23 @@ function HideModal({ grantName, onCancel, onConfirm }: { grantName: string; onCa
           </button>
           <button
             type="button"
-            onClick={onConfirm}
+            onClick={() => {
+              if (selectedReason) onConfirm(selectedReason, otherText, removeFromList)
+            }}
+            disabled={!canSubmit}
             style={{
               padding: "8px 16px",
               borderRadius: "var(--radius-button)",
               border: "none",
-              backgroundColor: "#C0302A",
+              backgroundColor: canSubmit ? "var(--slate-primary)" : "var(--slate-tint)",
               fontSize: 13,
               fontWeight: 600,
-              color: "#FFFFFF",
-              cursor: "pointer",
+              color: canSubmit ? "#FFFFFF" : "var(--ink-tertiary)",
+              cursor: canSubmit ? "pointer" : "not-allowed",
+              transition: "background-color 150ms, color 150ms",
             }}
           >
-            Hide opportunity
+            Submit feedback
           </button>
         </div>
       </div>
@@ -807,10 +986,14 @@ function FilterSidebar({
   filters,
   onChange,
   onClear,
+  collapsed,
+  onToggleCollapse,
 }: {
   filters: FilterState
   onChange: (next: FilterState) => void
   onClear: () => void
+  collapsed: boolean
+  onToggleCollapse: () => void
 }) {
   const [openSections, setOpenSections] = useState({
     focusAreas: true,
@@ -843,216 +1026,275 @@ function FilterSidebar({
   return (
     <aside
       style={{
-        width: 268,
+        // Width transitions between collapsed strip and full panel
+        width: collapsed ? 40 : 268,
         flexShrink: 0,
         backgroundColor: "var(--canvas)",
         borderRight: "1px solid var(--border-color)",
-        padding: "20px 16px",
         display: "flex",
         flexDirection: "column",
-        gap: 20,
         position: "sticky",
         top: 44,
         height: "calc(100vh - 44px)",
-        overflowY: "auto",
+        overflowY: collapsed ? "hidden" : "auto",
+        overflowX: "hidden",
+        transition: "width 200ms ease-in-out",
       }}
     >
-      {/* Label */}
-      <span
-        style={{
-          fontSize: 10,
-          fontWeight: 600,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: "var(--ink-tertiary)",
-        }}
-      >
-        Filters
-      </span>
+      {/*
+        Inner container is always 268px wide so the content doesn't reflow
+        as the aside clips it during the transition.
+      */}
+      <div style={{ width: 268, minWidth: 268, display: "flex", flexDirection: "column", flex: 1 }}>
 
-      {/* Focus Areas */}
-      <div>
-        <button
-          type="button"
-          onClick={() => toggleSection("focusAreas")}
-          style={sectionToggleStyle}
+        {/* Sidebar header: Filters label + collapse toggle */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            padding: "20px 16px 12px 16px",
+            gap: 8,
+          }}
         >
-          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Focus Areas</span>
-          <ChevronDown
-            size={12}
-            color="var(--ink-tertiary)"
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            title={collapsed ? "Expand filters" : "Collapse filters"}
             style={{
-              transform: openSections.focusAreas ? "rotate(0deg)" : "rotate(-90deg)",
-              transition: "transform 150ms",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 4,
+              borderRadius: 6,
+              color: "var(--ink-tertiary)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              transition: "color 150ms, background-color 150ms",
             }}
-          />
-        </button>
-        {openSections.focusAreas && (
-          <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
-            {Object.entries(filters.focusAreas).map(([label, checked]) => (
-              <button
-                key={label}
-                type="button"
-                onClick={() => toggleFocus(label)}
-                style={checkRowStyle}
-              >
-                <CheckboxIcon checked={checked} />
-                <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{label}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLButtonElement
+              el.style.color = "var(--ink-secondary)"
+              el.style.backgroundColor = "var(--slate-tint)"
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLButtonElement
+              el.style.color = "var(--ink-tertiary)"
+              el.style.backgroundColor = "transparent"
+            }}
+          >
+            {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          </button>
 
-      <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "var(--ink-tertiary)",
+            }}
+          >
+            Filters
+          </span>
+        </div>
 
-      {/* Geography */}
-      <div>
-        <button
-          type="button"
-          onClick={() => toggleSection("geography")}
-          style={sectionToggleStyle}
+        {/* Filter content */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 20,
+            padding: "0 16px 20px 16px",
+            flex: 1,
+          }}
         >
-          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Geography</span>
-          <ChevronDown
-            size={12}
-            color="var(--ink-tertiary)"
-            style={{
-              transform: openSections.geography ? "rotate(0deg)" : "rotate(-90deg)",
-              transition: "transform 150ms",
-            }}
-          />
-        </button>
-        {openSections.geography && (
-          <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
-            {Object.entries(filters.geography).map(([label, checked]) => (
-              <button
-                key={label}
-                type="button"
-                onClick={() => toggleGeo(label)}
-                style={checkRowStyle}
-              >
-                <CheckboxIcon checked={checked} />
-                <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{label}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
-
-      {/* Funding Range */}
-      <div>
-        <button
-          type="button"
-          onClick={() => toggleSection("fundingRange")}
-          style={sectionToggleStyle}
-        >
-          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Funding Range</span>
-          <ChevronDown
-            size={12}
-            color="var(--ink-tertiary)"
-            style={{
-              transform: openSections.fundingRange ? "rotate(0deg)" : "rotate(-90deg)",
-              transition: "transform 150ms",
-            }}
-          />
-        </button>
-        {openSections.fundingRange && (
-          <div style={{ marginTop: 10 }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 6,
-              }}
+          {/* Focus Areas */}
+          <div>
+            <button
+              type="button"
+              onClick={() => toggleSection("focusAreas")}
+              style={sectionToggleStyle}
             >
-              <span style={{ fontSize: 12, color: "var(--slate)" }}>$25,000</span>
-              <span style={{ fontSize: 12, color: "var(--slate)" }}>$150,000</span>
-            </div>
-            <div style={{ position: "relative", height: 4, borderRadius: 2, backgroundColor: "var(--slate-light)" }}>
-              <div
+              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Focus Areas</span>
+              <ChevronDown
+                size={12}
+                color="var(--ink-tertiary)"
                 style={{
-                  position: "absolute",
-                  left: 0,
-                  width: "75%",
-                  height: "100%",
-                  borderRadius: 2,
-                  backgroundColor: "var(--slate-primary)",
+                  transform: openSections.focusAreas ? "rotate(0deg)" : "rotate(-90deg)",
+                  transition: "transform 150ms",
                 }}
               />
-              <div
+            </button>
+            {openSections.focusAreas && (
+              <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+                {Object.entries(filters.focusAreas).map(([label, checked]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => toggleFocus(label)}
+                    style={checkRowStyle}
+                  >
+                    <CheckboxIcon checked={checked} />
+                    <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+
+          {/* Geography */}
+          <div>
+            <button
+              type="button"
+              onClick={() => toggleSection("geography")}
+              style={sectionToggleStyle}
+            >
+              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Geography</span>
+              <ChevronDown
+                size={12}
+                color="var(--ink-tertiary)"
                 style={{
-                  position: "absolute",
-                  left: "calc(75% - 6px)",
-                  top: -4,
-                  width: 12,
-                  height: 12,
-                  borderRadius: "50%",
-                  backgroundColor: "var(--slate-primary)",
-                  border: "2px solid var(--surface)",
-                  boxShadow: "0 1px 3px rgba(28,24,64,0.15)",
+                  transform: openSections.geography ? "rotate(0deg)" : "rotate(-90deg)",
+                  transition: "transform 150ms",
                 }}
               />
+            </button>
+            {openSections.geography && (
+              <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+                {Object.entries(filters.geography).map(([label, checked]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => toggleGeo(label)}
+                    style={checkRowStyle}
+                  >
+                    <CheckboxIcon checked={checked} />
+                    <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+
+          {/* Funding Range */}
+          <div>
+            <button
+              type="button"
+              onClick={() => toggleSection("fundingRange")}
+              style={sectionToggleStyle}
+            >
+              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Funding Range</span>
+              <ChevronDown
+                size={12}
+                color="var(--ink-tertiary)"
+                style={{
+                  transform: openSections.fundingRange ? "rotate(0deg)" : "rotate(-90deg)",
+                  transition: "transform 150ms",
+                }}
+              />
+            </button>
+            {openSections.fundingRange && (
+              <div style={{ marginTop: 10 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 6,
+                  }}
+                >
+                  <span style={{ fontSize: 12, color: "var(--slate)" }}>$25,000</span>
+                  <span style={{ fontSize: 12, color: "var(--slate)" }}>$150,000</span>
+                </div>
+                <div style={{ position: "relative", height: 4, borderRadius: 2, backgroundColor: "var(--slate-light)" }}>
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      width: "75%",
+                      height: "100%",
+                      borderRadius: 2,
+                      backgroundColor: "var(--slate-primary)",
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: "calc(75% - 6px)",
+                      top: -4,
+                      width: 12,
+                      height: 12,
+                      borderRadius: "50%",
+                      backgroundColor: "var(--slate-primary)",
+                      border: "2px solid var(--surface)",
+                      boxShadow: "0 1px 3px rgba(28,24,64,0.15)",
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+
+          {/* Deadline */}
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", margin: "0 0 10px 0" }}>
+              Deadline
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {(["next-6", "next-12"] as const).map((val) => {
+                const isActive = filters.deadline === val
+                const label = val === "next-6" ? "Next 6 months" : "Next 12 months"
+                return (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setDeadline(val)}
+                    style={{
+                      borderRadius: "var(--radius-pill)",
+                      padding: "6px 14px",
+                      border: isActive ? "none" : "1px solid var(--border-color)",
+                      backgroundColor: isActive ? "var(--slate-primary)" : "transparent",
+                      fontSize: 12,
+                      fontWeight: isActive ? 500 : 400,
+                      color: isActive ? "#FFFFFF" : "var(--ink)",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      transition: "background-color 150ms, color 150ms",
+                    }}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
             </div>
           </div>
-        )}
-      </div>
 
-      <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
-
-      {/* Deadline */}
-      <div>
-        <p style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", margin: "0 0 10px 0" }}>
-          Deadline
-        </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {(["next-6", "next-12"] as const).map((val) => {
-            const isActive = filters.deadline === val
-            const label = val === "next-6" ? "Next 6 months" : "Next 12 months"
-            return (
-              <button
-                key={val}
-                type="button"
-                onClick={() => setDeadline(val)}
-                style={{
-                  borderRadius: "var(--radius-pill)",
-                  padding: "6px 14px",
-                  border: isActive ? "none" : "1px solid var(--border-color)",
-                  backgroundColor: isActive ? "var(--slate-primary)" : "transparent",
-                  fontSize: 12,
-                  fontWeight: isActive ? 500 : 400,
-                  color: isActive ? "#FFFFFF" : "var(--ink)",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  transition: "background-color 150ms, color 150ms",
-                }}
-              >
-                {label}
-              </button>
-            )
-          })}
+          {/* Clear filters */}
+          <button
+            type="button"
+            onClick={onClear}
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              fontSize: 13,
+              color: "var(--slate-secondary)",
+              textAlign: "left",
+              marginTop: "auto",
+            }}
+          >
+            Clear filters
+          </button>
         </div>
       </div>
-
-      {/* Clear filters */}
-      <button
-        type="button"
-        onClick={onClear}
-        style={{
-          background: "none",
-          border: "none",
-          padding: 0,
-          cursor: "pointer",
-          fontSize: 13,
-          color: "var(--slate-secondary)",
-          textAlign: "left",
-          marginTop: "auto",
-        }}
-      >
-        Clear filters
-      </button>
     </aside>
   )
 }
@@ -1115,8 +1357,25 @@ export default function OpportunitiesPage() {
   const [showPopover, setShowPopover] = useState(false)
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS)
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
-  const [hideModalFor, setHideModalFor] = useState<string | null>(null)
+  const [dismissingIds, setDismissingIds] = useState<Set<string>>(new Set())
+  const [notRelevantModalFor, setNotRelevantModalFor] = useState<string | null>(null)
+  const [notRelevantIds, setNotRelevantIds] = useState<Set<string>>(new Set())
   const [toast, setToast] = useState<string | null>(null)
+  // Default expanded; hydrate from localStorage after mount to avoid SSR mismatch.
+  const [filterCollapsed, setFilterCollapsed] = useState(false)
+
+  useEffect(() => {
+    const stored = localStorage.getItem("discover-filter-collapsed")
+    if (stored !== null) setFilterCollapsed(stored === "true")
+  }, [])
+
+  function handleToggleFilter() {
+    setFilterCollapsed((v) => {
+      const next = !v
+      localStorage.setItem("discover-filter-collapsed", String(next))
+      return next
+    })
+  }
 
   const visibleOpps = OPPORTUNITIES.filter((o) => !hiddenIds.has(o.id))
   const selected =
@@ -1135,14 +1394,35 @@ export default function OpportunitiesPage() {
     router.push("/opportunity")
   }
 
-  function handleHideConfirm() {
-    if (!hideModalFor) return
-    setHiddenIds((prev) => new Set(Array.from(prev).concat(hideModalFor)))
-    if (selectedId === hideModalFor) {
-      const next = visibleOpps.find((o) => o.id !== hideModalFor)
-      if (next) setSelectedId(next.id)
+  function handleNotRelevantConfirm(
+    _reason: NotRelevantReason,
+    _otherText: string,
+    removeFromList: boolean,
+  ) {
+    const id = notRelevantModalFor
+    if (!id) return
+
+    if (removeFromList) {
+      // Animate card out, then remove from visible list
+      setDismissingIds((prev) => new Set(Array.from(prev).concat(id)))
+      setTimeout(() => {
+        setHiddenIds((prev) => new Set(Array.from(prev).concat(id)))
+        setDismissingIds((prev) => {
+          const next = new Set(Array.from(prev))
+          next.delete(id)
+          return next
+        })
+        if (selectedId === id) {
+          const next = visibleOpps.find((o) => o.id !== id)
+          if (next) setSelectedId(next.id)
+        }
+      }, 220)
+    } else {
+      // Keep in list but mark as not relevant (active thumbs down state)
+      setNotRelevantIds((prev) => new Set(Array.from(prev).concat(id)))
     }
-    setHideModalFor(null)
+
+    setNotRelevantModalFor(null)
   }
 
   function handleClearFilters() {
@@ -1164,6 +1444,8 @@ export default function OpportunitiesPage() {
         filters={filters}
         onChange={setFilters}
         onClear={handleClearFilters}
+        collapsed={filterCollapsed}
+        onToggleCollapse={handleToggleFilter}
       />
 
       {/* ── Center: results list ── */}
@@ -1189,8 +1471,15 @@ export default function OpportunitiesPage() {
             borderBottom: "1px solid var(--border-color)",
           }}
         >
-          <span style={{ fontSize: 13, color: "var(--ink-secondary)", lineHeight: "16px" }}>
-            43 opportunities match your initiatives
+          <span
+            style={{
+              fontSize: 13,
+              color: "var(--ink-secondary)",
+              lineHeight: "16px",
+              textAlign: "left",
+            }}
+          >
+            43 opportunities matching your initiatives
           </span>
           <button
             type="button"
@@ -1226,15 +1515,32 @@ export default function OpportunitiesPage() {
             gap: 10,
           }}
         >
-          {visibleOpps.map((opp) => (
-            <OpportunityCard
-              key={opp.id}
-              opp={opp}
-              isSelected={opp.id === selectedId}
-              onClick={() => handleCardClick(opp.id)}
-              onHide={() => setHideModalFor(opp.id)}
-            />
-          ))}
+          {visibleOpps.map((opp) => {
+            const isDismissing = dismissingIds.has(opp.id)
+            return (
+              <div
+                key={opp.id}
+                style={{
+                  opacity: isDismissing ? 0 : 1,
+                  maxHeight: isDismissing ? 0 : "600px",
+                  overflow: "hidden",
+                  transition: "opacity 200ms ease-in-out, max-height 200ms ease-in-out",
+                }}
+              >
+                <OpportunityCard
+                  opp={opp}
+                  isSelected={opp.id === selectedId}
+                  isNotRelevant={notRelevantIds.has(opp.id)}
+                  onClick={() => handleCardClick(opp.id)}
+                  onNotRelevant={() => setNotRelevantModalFor(opp.id)}
+                  onTrackThis={() => {
+                    handleCardClick(opp.id)
+                    setShowPopover(true)
+                  }}
+                />
+              </div>
+            )
+          })}
         </div>
       </div>
 
@@ -1247,17 +1553,13 @@ export default function OpportunitiesPage() {
         onSelectEngagement={handleSelectEngagement}
       />
 
-      {/* ── Hide Modal ── */}
-      {hideModalFor && (() => {
-        const opp = OPPORTUNITIES.find((o) => o.id === hideModalFor)
-        return opp ? (
-          <HideModal
-            grantName={opp.grantName}
-            onCancel={() => setHideModalFor(null)}
-            onConfirm={handleHideConfirm}
-          />
-        ) : null
-      })()}
+      {/* ── Not Relevant Modal ── */}
+      {notRelevantModalFor && (
+        <NotRelevantModal
+          onCancel={() => setNotRelevantModalFor(null)}
+          onConfirm={handleNotRelevantConfirm}
+        />
+      )}
 
       {/* ── Toast ── */}
       {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}

@@ -3,10 +3,11 @@
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Search, Plus, X, ExternalLink, Pencil } from "lucide-react"
+import { NewEngagementModal, type NewEngagementData } from "@/components/proposals/NewEngagementModal"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type EngagementStatus = "Active" | "Lapsed"
+type EngagementStatus = "Active" | "Lapsed" | "Closed"
 type OpportunityStage = "Active" | "Submitted" | "Tracking" | "Awarded"
 
 interface Opportunity {
@@ -355,6 +356,7 @@ const STAGE_BADGE: Record<OpportunityStage, { bg: string; color: string }> = {
 const ENG_BADGE: Record<EngagementStatus, { bg: string; color: string }> = {
   Active: { bg: "#EBF0F5", color: "#4A6080" },
   Lapsed: { bg: "#FEF3DC", color: "#C47A10" },
+  Closed: { bg: "#F5F5F6", color: "#8A8A99" },
 }
 
 // ── Note bubble icon ───────────────────────────────────────────────────────
@@ -935,6 +937,7 @@ export default function PortfolioPage() {
   const [hoveredNoteId, setHoveredNoteId] = useState<string | null>(null)
   const [showFunderPanel, setShowFunderPanel] = useState(false)
   const [showNewOpportunityModal, setShowNewOpportunityModal] = useState(false)
+  const [showNewEngagementModal, setShowNewEngagementModal] = useState(false)
 
   const selected = engagements.find((e) => e.id === selectedId) ?? engagements[0]
   const filtered = engagements.filter((e) =>
@@ -996,6 +999,25 @@ export default function PortfolioPage() {
     setShowNewOpportunityModal(false)
   }
 
+  function handleCreateEngagement(data: NewEngagementData) {
+    const now = new Date()
+    const sinceDateLabel = `Since ${now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`
+    const id = `eng-${Date.now()}`
+    const displayName = data.engagementName.trim() || data.funderName.trim()
+    const newEng: Engagement = {
+      id,
+      name: displayName,
+      status: data.status as EngagementStatus,
+      sinceDateLabel,
+      totalAwarded: "$0 awarded",
+      opportunities: [],
+      notes: [],
+      stats: { inPursuit: "$0", awaiting: "$0", awardedLifetime: "$0", openTasks: 0 },
+    }
+    setEngagements((prev) => [newEng, ...prev])
+    setSelectedId(id)
+  }
+
   const handleCancelAddNote = useCallback(() => setShowAddNote(false), [])
   const handleCancelEditNote = useCallback(() => setEditingNoteId(null), [])
   const handleCloseFunderPanel = useCallback(() => setShowFunderPanel(false), [])
@@ -1017,6 +1039,13 @@ export default function PortfolioPage() {
         open={showNewOpportunityModal}
         onClose={() => setShowNewOpportunityModal(false)}
         onCreate={handleAddOpportunity}
+      />
+
+      {/* New engagement modal */}
+      <NewEngagementModal
+        open={showNewEngagementModal}
+        onClose={() => setShowNewEngagementModal(false)}
+        onCreate={handleCreateEngagement}
       />
 
       {/* ── Left pane ── */}
@@ -1049,6 +1078,7 @@ export default function PortfolioPage() {
             </h2>
             <button
               type="button"
+              onClick={() => setShowNewEngagementModal(true)}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -1195,18 +1225,6 @@ export default function PortfolioPage() {
             </h1>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <GhostButton onClick={() => setShowFunderPanel(true)}>View funder</GhostButton>
-              <GhostButton
-                onClick={() => {
-                  if (showAddNote) {
-                    setShowAddNote(false)
-                  } else {
-                    setEditingNoteId(null)
-                    setShowAddNote(true)
-                  }
-                }}
-              >
-                Add note
-              </GhostButton>
               <SlateButton onClick={() => setShowNewOpportunityModal(true)}>
                 <Plus size={13} style={{ flexShrink: 0 }} />
                 New opportunity
@@ -1267,7 +1285,19 @@ export default function PortfolioPage() {
               marginBottom: 28,
             }}
           >
-            {selected.opportunities.map((opp, i) => {
+            {selected.opportunities.length === 0 ? (
+              <div
+                style={{
+                  padding: "28px 20px",
+                  textAlign: "center",
+                  color: "var(--ink-tertiary)",
+                  fontSize: 13,
+                  lineHeight: "19px",
+                }}
+              >
+                No opportunities yet. Click &lsquo;New opportunity&rsquo; to add one.
+              </div>
+            ) : selected.opportunities.map((opp, i) => {
               const dotColor = STAGE_DOT[opp.stage]
               const badge = STAGE_BADGE[opp.stage]
               return (
@@ -1320,7 +1350,34 @@ export default function PortfolioPage() {
           </div>
 
           {/* Notes */}
-          <p style={sectionLabel}>Notes</p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <p style={{ ...sectionLabel, margin: 0 }}>Notes</p>
+            <button
+              type="button"
+              onClick={() => {
+                if (showAddNote) {
+                  setShowAddNote(false)
+                } else {
+                  setEditingNoteId(null)
+                  setShowAddNote(true)
+                }
+              }}
+              style={{
+                background: "none",
+                border: "none",
+                padding: "0 2px",
+                fontSize: 12,
+                fontWeight: 500,
+                color: "var(--plum-soft)",
+                cursor: "pointer",
+                lineHeight: "16px",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "underline" }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "none" }}
+            >
+              Add note
+            </button>
+          </div>
 
           {/* Inline add note form */}
           <div
@@ -1350,6 +1407,11 @@ export default function PortfolioPage() {
 
           {/* Note list */}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {selected.notes.length === 0 && !showAddNote && (
+              <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>
+                No notes yet.
+              </p>
+            )}
             {selected.notes.map((note) => (
               <div
                 key={note.id}

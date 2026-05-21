@@ -1,0 +1,138 @@
+export interface PlatformFunder {
+  id: string
+  name: string
+  type: "Private foundation" | "Community foundation" | "Government" | "Corporate foundation"
+  website: string
+  focusAreas: string[]
+  geography: string
+  fundingRange: string
+}
+
+export const PLATFORM_FUNDERS: PlatformFunder[] = [
+  {
+    id: "ford",
+    name: "Ford Foundation",
+    type: "Private foundation",
+    website: "https://www.fordfoundation.org",
+    focusAreas: ["Social Justice", "Economic Equity", "Housing", "Arts & Culture"],
+    geography: "National (U.S.) + International",
+    fundingRange: "$25,000 – $500,000",
+  },
+  {
+    id: "kresge",
+    name: "Kresge Foundation",
+    type: "Private foundation",
+    website: "https://kresge.org",
+    focusAreas: ["Housing", "Climate", "Education", "Health", "Arts"],
+    geography: "National (U.S.)",
+    fundingRange: "$50,000 – $300,000",
+  },
+  {
+    id: "casey",
+    name: "Annie E. Casey Foundation",
+    type: "Private foundation",
+    website: "https://www.aecf.org",
+    focusAreas: ["Child Welfare", "Youth Development", "Community Development"],
+    geography: "National (U.S.)",
+    fundingRange: "$25,000 – $150,000",
+  },
+  {
+    id: "rwj",
+    name: "Robert Wood Johnson Foundation",
+    type: "Private foundation",
+    website: "https://www.rwjf.org",
+    focusAreas: ["Health Equity", "Public Health", "Community Health", "Mental Health"],
+    geography: "National (U.S.)",
+    fundingRange: "$50,000 – $250,000",
+  },
+  {
+    id: "kellogg",
+    name: "W.K. Kellogg Foundation",
+    type: "Private foundation",
+    website: "https://www.wkkf.org",
+    focusAreas: ["Food Systems", "Early Childhood", "Education", "Civic Engagement"],
+    geography: "National (U.S.) + International",
+    fundingRange: "$30,000 – $200,000",
+  },
+  {
+    id: "macarthur",
+    name: "MacArthur Foundation",
+    type: "Private foundation",
+    website: "https://www.macfound.org",
+    focusAreas: ["Criminal Justice", "Climate", "Journalism", "Arts"],
+    geography: "National (U.S.) + International",
+    fundingRange: "$100,000 – $15,000,000",
+  },
+  {
+    id: "gates",
+    name: "Bill & Melinda Gates Foundation",
+    type: "Private foundation",
+    website: "https://www.gatesfoundation.org",
+    focusAreas: ["Global Health", "Education", "Poverty Alleviation", "Agriculture"],
+    geography: "Global",
+    fundingRange: "$100,000 – $50,000,000",
+  },
+  {
+    id: "hewlett",
+    name: "William and Flora Hewlett Foundation",
+    type: "Private foundation",
+    website: "https://hewlett.org",
+    focusAreas: ["Education", "Environment", "Global Development", "Performing Arts"],
+    geography: "National (U.S.) + International",
+    fundingRange: "$50,000 – $1,000,000",
+  },
+  {
+    id: "knight",
+    name: "Knight Foundation",
+    type: "Private foundation",
+    website: "https://knightfoundation.org",
+    focusAreas: ["Journalism", "Arts", "Community Engagement", "Technology"],
+    geography: "National (U.S.) — 26 communities",
+    fundingRange: "$25,000 – $5,000,000",
+  },
+  {
+    id: "mellon",
+    name: "Andrew W. Mellon Foundation",
+    type: "Private foundation",
+    website: "https://mellon.org",
+    focusAreas: ["Arts & Culture", "Higher Education", "Humanities", "Social Justice"],
+    geography: "National (U.S.)",
+    fundingRange: "$75,000 – $2,000,000",
+  },
+  {
+    id: "lumina",
+    name: "Lumina Foundation",
+    type: "Private foundation",
+    website: "https://luminafoundation.org",
+    focusAreas: ["Higher Education", "Workforce Development", "Equity", "Learning"],
+    geography: "National (U.S.)",
+    fundingRange: "$50,000 – $500,000",
+  },
+  {
+    id: "bloomberg",
+    name: "Bloomberg Philanthropies",
+    type: "Private foundation",
+    website: "https://www.bloomberg.org",
+    focusAreas: ["Public Health", "Environment", "Education", "Arts", "Government"],
+    geography: "Global",
+    fundingRange: "$50,000 – $10,000,000",
+  },
+  {
+    id: "silicon-valley-cf",
+    name: "Silicon Valley Community Foundation",
+    type: "Community foundation",
+    website: "https://www.siliconvalleycf.org",
+    focusAreas: ["Education", "Economic Security", "Immigration", "Bay Area Communities"],
+    geography: "San Francisco Bay Area",
+    fundingRange: "$10,000 – $500,000",
+  },
+  {
+    id: "cdc",
+    name: "Centers for Disease Control and Prevention",
+    type: "Government",
+    website: "https://www.cdc.gov/grants",
+    focusAreas: ["Public Health", "Disease Prevention", "Community Health", "Research"],
+    geography: "National (U.S.)",
+    fundingRange: "$100,000 – $5,000,000",
+  },
+]
