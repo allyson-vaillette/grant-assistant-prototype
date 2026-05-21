@@ -11,7 +11,7 @@ import {
   Database,
   Settings,
   Sparkles,
-  FileText,
+  PlusCircle,
 } from "lucide-react"
 import { useState } from "react"
 import { NewProposalModal } from "@/components/proposals/NewProposalModal"
@@ -300,21 +300,21 @@ function NewProposalButton() {
           padding: "8px 10px",
           margin: "8px 0 2px",
           borderRadius: 8,
-          border: "1px solid rgba(255,255,255,0.22)",
-          backgroundColor: "rgba(255,255,255,0.1)",
+          border: "none",
+          backgroundColor: "transparent",
           cursor: "pointer",
           textAlign: "left",
-          transition: "background-color 150ms, border-color 150ms",
+          transition: "background-color 150ms",
         }}
         onMouseEnter={(e) => {
-          ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.17)"
+          ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--plum-tint)"
         }}
         onMouseLeave={(e) => {
-          ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.1)"
+          ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"
         }}
       >
-        <FileText size={16} style={{ flexShrink: 0, color: "rgba(255,255,255,0.75)" }} />
-        <span style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.9)", lineHeight: "16px" }}>
+        <PlusCircle size={16} style={{ flexShrink: 0, color: "var(--plum-soft)" }} />
+        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--plum-soft)", lineHeight: "16px" }}>
           New proposal
         </span>
       </button>

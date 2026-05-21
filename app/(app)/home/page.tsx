@@ -228,6 +228,7 @@ function StatCardWithHover({
   popoverAlign?: "left" | "right"
 }) {
   const [hovered, setHovered] = useState(false)
+  const side = popoverAlign === "left" ? { left: 0 } : { right: 0 }
   return (
     <div
       style={{ position: "relative" }}
@@ -236,22 +237,26 @@ function StatCardWithHover({
     >
       {children}
       {hovered && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 6px)",
-            ...(popoverAlign === "left" ? { left: 0 } : { right: 0 }),
-            width: 280,
-            backgroundColor: "#FFFFFF",
-            borderRadius: 12,
-            boxShadow: "0 4px 20px rgba(28,24,64,0.12), 0 1px 4px rgba(28,24,64,0.06)",
-            border: "1px solid var(--border-default)",
-            padding: "14px 16px",
-            zIndex: 50,
-          }}
-        >
-          {hoverContent}
-        </div>
+        <>
+          {/* Transparent bridge covers the 6px gap so the hover zone is continuous */}
+          <div style={{ position: "absolute", top: "100%", ...side, width: 280, height: 6, zIndex: 49 }} />
+          <div
+            style={{
+              position: "absolute",
+              top: "calc(100% + 6px)",
+              ...side,
+              width: 280,
+              backgroundColor: "#FFFFFF",
+              borderRadius: 12,
+              boxShadow: "0 4px 20px rgba(28,24,64,0.12), 0 1px 4px rgba(28,24,64,0.06)",
+              border: "1px solid var(--border-default)",
+              padding: "14px 16px",
+              zIndex: 50,
+            }}
+          >
+            {hoverContent}
+          </div>
+        </>
       )}
     </div>
   )
@@ -353,13 +358,20 @@ export default function HomeDashboard() {
                 {ACTIVE_ENGAGEMENTS.slice(0, 4).map((eng, i) => (
                   <div
                     key={i}
+                    onClick={() => router.push("/portfolio")}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--slate-tint)"; (e.currentTarget as HTMLDivElement).style.borderRadius = "6px" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
                       gap: 8,
-                      padding: "6px 0",
+                      padding: "6px 4px",
+                      margin: "0 -4px",
                       borderBottom: i < 3 ? "1px solid var(--border-default)" : "none",
+                      cursor: "pointer",
+                      transition: "background-color 100ms",
+                      borderRadius: 6,
                     }}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -404,13 +416,20 @@ export default function HomeDashboard() {
                 {IN_PROGRESS_PROPOSALS.map((p, i) => (
                   <div
                     key={i}
+                    onClick={() => router.push("/editor")}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--slate-tint)"; (e.currentTarget as HTMLDivElement).style.borderRadius = "6px" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
                       gap: 8,
-                      padding: "6px 0",
+                      padding: "6px 4px",
+                      margin: "0 -4px",
                       borderBottom: i < IN_PROGRESS_PROPOSALS.length - 1 ? "1px solid var(--border-default)" : "none",
+                      cursor: "pointer",
+                      transition: "background-color 100ms",
+                      borderRadius: 6,
                     }}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -457,13 +476,20 @@ export default function HomeDashboard() {
                 {SUBMITTED_PROPOSALS.map((p, i) => (
                   <div
                     key={i}
+                    onClick={() => router.push("/opportunity")}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--slate-tint)"; (e.currentTarget as HTMLDivElement).style.borderRadius = "6px" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
                       gap: 8,
-                      padding: "6px 0",
+                      padding: "6px 4px",
+                      margin: "0 -4px",
                       borderBottom: i < SUBMITTED_PROPOSALS.length - 1 ? "1px solid var(--border-default)" : "none",
+                      cursor: "pointer",
+                      transition: "background-color 100ms",
+                      borderRadius: 6,
                     }}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -499,13 +525,20 @@ export default function HomeDashboard() {
                 {AWARDED_ENGAGEMENTS.map((a, i) => (
                   <div
                     key={i}
+                    onClick={() => router.push("/portfolio")}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--slate-tint)"; (e.currentTarget as HTMLDivElement).style.borderRadius = "6px" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
                       gap: 8,
-                      padding: "6px 0",
+                      padding: "6px 4px",
+                      margin: "0 -4px",
                       borderBottom: i < AWARDED_ENGAGEMENTS.length - 1 ? "1px solid var(--border-default)" : "none",
+                      cursor: "pointer",
+                      transition: "background-color 100ms",
+                      borderRadius: 6,
                     }}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
