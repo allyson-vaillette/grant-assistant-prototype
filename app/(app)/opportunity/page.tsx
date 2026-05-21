@@ -4,6 +4,7 @@ import React, { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ChevronDown, Copy, FileText, Plus } from "lucide-react"
+import { NewProposalModal } from "@/components/proposals/NewProposalModal"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -262,7 +263,7 @@ function Avatar({ initials }: { initials: string }) {
 
 // ── Tab content ────────────────────────────────────────────────────────────
 
-function OverviewTab({ tasks, onToggle }: { tasks: Task[]; onToggle: (id: string) => void; stage: Stage }) {
+function OverviewTab({ tasks, onToggle, onNewProposal }: { tasks: Task[]; onToggle: (id: string) => void; stage: Stage; onNewProposal: () => void }) {
   const router = useRouter()
   const openTasks = tasks.filter((t) => !t.done)
 
@@ -349,7 +350,7 @@ function OverviewTab({ tasks, onToggle }: { tasks: Task[]; onToggle: (id: string
           })}
           <button
             type="button"
-            onClick={() => router.push("/editor")}
+            onClick={onNewProposal}
             style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: "4px 8px", fontSize: 13, fontWeight: 500, color: "var(--slate-secondary)", cursor: "pointer", borderRadius: 6, transition: "background-color 150ms", textAlign: "left" }}
             onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-tint)" }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
@@ -537,11 +538,11 @@ const TABS: { id: TabId; label: string }[] = [
 ]
 
 export default function OpportunityDetailPage() {
-  const router = useRouter()
   const [activeTab, setActiveTab] = useState<TabId>("overview")
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS)
   const [stage, setStage] = useState<Stage>("Active")
   const [toast, setToast] = useState<{ msg: string; visible: boolean }>({ msg: "", visible: false })
+  const [modalOpen, setModalOpen] = useState(false)
 
   function toggleTask(id: string) {
     setTasks((prev) =>
@@ -560,6 +561,11 @@ export default function OpportunityDetailPage() {
   return (
     <div className="flex-1 overflow-y-auto" style={{ backgroundColor: "var(--surface-white)" }}>
       <Toast message={toast.msg} visible={toast.visible} />
+      <NewProposalModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        opportunityName="Equitable Futures Grant 2026"
+      />
 
       {/* Breadcrumb */}
       <div style={{ padding: "12px 32px", borderBottom: "1px solid var(--border-default)", backgroundColor: "var(--surface-white)" }}>
@@ -595,7 +601,7 @@ export default function OpportunityDetailPage() {
             <StageControl stage={stage} onChange={handleStageChange} />
             <button
               type="button"
-              onClick={() => router.push("/editor")}
+              onClick={() => setModalOpen(true)}
               style={{
                 display: "flex", alignItems: "center", gap: 6,
                 padding: "7px 14px", borderRadius: 8, border: "none",
@@ -673,7 +679,7 @@ export default function OpportunityDetailPage() {
 
       {/* Tab content */}
       <div style={{ padding: "28px 32px", maxWidth: 960 }}>
-        {activeTab === "overview" && <OverviewTab tasks={tasks} onToggle={toggleTask} stage={stage} />}
+        {activeTab === "overview" && <OverviewTab tasks={tasks} onToggle={toggleTask} stage={stage} onNewProposal={() => setModalOpen(true)} />}
         {activeTab === "tasks"    && <TasksTab tasks={tasks} onToggle={toggleTask} />}
         {activeTab === "budget"   && <EmptyTab label="Budget" />}
         {activeTab === "reports"  && <EmptyTab label="Reports" />}
