@@ -10,8 +10,9 @@
  * same gradient-ai-sidebar for the left nav rail.
  */
 
-import React, { useState, useRef } from "react"
+import React, { useState, useRef, Suspense } from "react"
 import Link from "next/link"
+import { useParams, useSearchParams } from "next/navigation"
 import {
   Bold,
   Italic,
@@ -217,7 +218,17 @@ function NavItem({
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
-export default function ProposalEditorPage() {
+function ProposalEditorContent() {
+  const routeParams = useParams()
+  const searchParams = useSearchParams()
+  const proposalId = routeParams.proposalId as string
+
+  const isKnown = proposalId === "equitable-futures-2026-draft"
+  const documentTitle = isKnown ? "Equitable Futures Grant 2026" : (searchParams.get("name") ?? "New Proposal")
+  const opportunityName = isKnown ? "Equitable Futures Grant 2026" : (searchParams.get("opportunityName") ?? "")
+  const opportunityId = isKnown ? "equitable-futures" : (searchParams.get("opportunityId") ?? "")
+  const funderLabel = isKnown ? "Ford Foundation" : opportunityName
+
   const [activeId, setActiveId] = useState<SectionId>("executive-summary")
   const [aiTab, setAiTab] = useState<AITab>("assistant")
   const [chat, setChat] = useState<ChatMessage[]>(INITIAL_CHAT)
@@ -280,7 +291,7 @@ export default function ProposalEditorPage() {
         {/* Left: back + breadcrumb */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Link
-            href="/opportunity"
+            href={opportunityId ? `/opportunity/${opportunityId}` : "/portfolio"}
             style={{
               width: 26,
               height: 26,
@@ -308,15 +319,23 @@ export default function ProposalEditorPage() {
               Portfolio
             </Link>
             <span>›</span>
-            <Link href="/portfolio" style={{ color: "var(--ink-tertiary)", textDecoration: "none" }}>
-              Ford Foundation
-            </Link>
-            <span>›</span>
-            <Link href="/opportunity" style={{ color: "var(--ink-tertiary)", textDecoration: "none" }}>
-              Equitable Futures Grant 2026
-            </Link>
-            <span>›</span>
-            <span style={{ color: "var(--ink)", fontWeight: 500 }}>New Proposal</span>
+            {isKnown && (
+              <>
+                <Link href="/portfolio" style={{ color: "var(--ink-tertiary)", textDecoration: "none" }}>
+                  Ford Foundation
+                </Link>
+                <span>›</span>
+              </>
+            )}
+            {opportunityId && (
+              <>
+                <Link href={`/opportunity/${opportunityId}`} style={{ color: "var(--ink-tertiary)", textDecoration: "none" }}>
+                  {opportunityName || "Opportunity"}
+                </Link>
+                <span>›</span>
+              </>
+            )}
+            <span style={{ color: "var(--ink)", fontWeight: 500 }}>{documentTitle}</span>
           </div>
         </div>
 
@@ -578,18 +597,20 @@ export default function ProposalEditorPage() {
                   letterSpacing: "-0.02em",
                 }}
               >
-                Equitable Futures Grant 2026
+                {documentTitle}
               </h1>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 13,
-                  fontWeight: 500,
-                  color: "var(--slate-secondary)",
-                }}
-              >
-                Ford Foundation
-              </p>
+              {funderLabel && (
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: "var(--slate-secondary)",
+                  }}
+                >
+                  {funderLabel}
+                </p>
+              )}
             </div>
             <div
               style={{
@@ -1040,5 +1061,13 @@ function ToolbarBtn({ children }: { children: React.ReactNode }) {
     >
       {children}
     </button>
+  )
+}
+
+export default function ProposalEditorPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProposalEditorContent />
+    </Suspense>
   )
 }

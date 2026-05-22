@@ -2,12 +2,15 @@
 
 import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Plus, ThumbsDown, X } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Plus, SlidersHorizontal, ThumbsDown, X } from "lucide-react"
+import { NewEngagementModal, type NewEngagementData } from "@/components/proposals/NewEngagementModal"
+import { DISCOVER_FUNDERS, type DiscoverFunder } from "@/lib/funders"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type StatusType = "Applications open" | "Letters of inquiry open" | "Rolling deadline"
 type MatchStrength = "Strong match" | "Good match" | "Partial match"
+type ActiveTab = "opportunities" | "funders"
 
 interface WhyMatch {
   icon: "check" | "warning"
@@ -37,10 +40,24 @@ interface Opportunity {
   initiatives: Initiative[]
 }
 
-interface FilterState {
+const FUNDER_TYPES = [
+  "Private foundation",
+  "Community foundation",
+  "Government",
+  "Corporate foundation",
+  "Public charity",
+] as const
+
+type FunderTypeFilter = (typeof FUNDER_TYPES)[number]
+
+interface CombinedFilterState {
   focusAreas: Record<string, boolean>
   geography: Record<string, boolean>
+  // Opportunity-specific
   deadline: "next-6" | "next-12" | null
+  // Funder-specific
+  funderTypes: Record<FunderTypeFilter, boolean>
+  acceptsUnsolicited: boolean
 }
 
 // ── Data ──────────────────────────────────────────────────────────────────
@@ -242,8 +259,6 @@ function OpportunityCard({
   onClick: () => void
   onNotRelevant: () => void
 }) {
-  // Use state for hover so the flag always resets on mouse-off, regardless of
-  // whether isSelected changes between enter and leave.
   const [isHovered, setIsHovered] = useState(false)
 
   const statusStyle = STATUS_STYLE[opp.status]
@@ -413,6 +428,211 @@ function OpportunityCard({
   )
 }
 
+// ── Funder Card ─────────────────────────────────────────────────────────────
+
+function FunderCard({
+  funder,
+  isSelected,
+  isNotRelevant,
+  onClick,
+  onNotRelevant,
+}: {
+  funder: DiscoverFunder
+  isSelected: boolean
+  isNotRelevant: boolean
+  onClick: () => void
+  onNotRelevant: () => void
+}) {
+  const [isHovered, setIsHovered] = useState(false)
+
+  const matchColor =
+    funder.matchStrength === "Partial match" ? "var(--slate)" : "var(--slate-secondary)"
+  const showMatchLabel = funder.matchStrength === "Strong match"
+  const matchedInitiatives = funder.initiatives.filter(
+    (i) => i.match === "Strong match" || i.match === "Good match"
+  )
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        width: "100%",
+        padding: "14px 16px 14px 14px",
+        borderRadius: 12,
+        backgroundColor: "var(--surface)",
+        border: isSelected
+          ? "1.5px solid rgba(90,138,53,0.3)"
+          : isHovered
+          ? "1px solid rgba(90,138,53,0.2)"
+          : "1px solid var(--border-default)",
+        borderLeft: isSelected
+          ? "3px solid var(--slate-secondary)"
+          : "3px solid transparent",
+        boxShadow:
+          isSelected || isHovered
+            ? "0px 2px 8px rgba(28,24,64,0.07)"
+            : "0px 1px 3px rgba(28,24,64,0.04)",
+        cursor: "pointer",
+        textAlign: "left",
+        transition: "border-color 150ms ease-in-out, box-shadow 150ms ease-in-out",
+      }}
+    >
+      {/* Funder type chip + (no status equivalent — chip sits right) */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
+        <span
+          style={{
+            flexShrink: 0,
+            borderRadius: "var(--radius-pill)",
+            padding: "3px 9px",
+            backgroundColor: "var(--slate-tint)",
+            fontSize: 11,
+            fontWeight: 500,
+            color: "var(--slate-primary)",
+            letterSpacing: "0.02em",
+            lineHeight: "14px",
+          }}
+        >
+          {funder.type}
+        </span>
+      </div>
+
+      {/* Funder name (prominent) */}
+      <div
+        style={{
+          fontSize: 14,
+          fontWeight: 600,
+          color: "var(--ink)",
+          lineHeight: "18px",
+          letterSpacing: "-0.01em",
+        }}
+      >
+        {funder.name}
+      </div>
+
+      {/* Geography + funding range meta */}
+      <div style={{ fontSize: 12, color: "var(--slate)", lineHeight: "16px" }}>
+        {funder.geography} · {funder.fundingRange}
+      </div>
+
+      {/* Focus area chips */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+        {funder.focusAreas.slice(0, 3).map((area) => (
+          <span
+            key={area}
+            style={{
+              borderRadius: "var(--radius-pill)",
+              padding: "3px 8px",
+              backgroundColor: "var(--slate-tint)",
+              fontSize: 11,
+              fontWeight: 500,
+              color: "var(--slate-primary)",
+              lineHeight: "14px",
+            }}
+          >
+            {area}
+          </span>
+        ))}
+      </div>
+
+      {/* Initiative match + dots */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            {showMatchLabel && (
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  color: "var(--slate-secondary)",
+                  lineHeight: "12px",
+                }}
+              >
+                Matches your initiatives
+              </span>
+            )}
+            {matchedInitiatives.slice(0, 2).map((init) => (
+              <span
+                key={init.name}
+                style={{
+                  borderRadius: "var(--radius-pill)",
+                  padding: "3px 9px",
+                  backgroundColor: "var(--slate-tint)",
+                  fontSize: 11,
+                  fontWeight: 500,
+                  color: "var(--slate-primary)",
+                  lineHeight: "14px",
+                }}
+              >
+                {init.name}
+              </span>
+            ))}
+          </div>
+          <MatchDots filled={funder.matchDots} />
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            color: matchColor,
+            lineHeight: "16px",
+            fontStyle: "italic",
+          }}
+        >
+          {funder.matchLabel}
+        </div>
+      </div>
+
+      {/* Not relevant */}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onNotRelevant() }}
+          title={isNotRelevant ? "Re-evaluate this funder" : "Mark as not relevant"}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: "2px 4px",
+            borderRadius: 5,
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            color: isNotRelevant ? "var(--plum-soft)" : "var(--ink-tertiary)",
+            fontSize: 11,
+            transition: "color 150ms, background-color 150ms",
+          }}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            if (!isNotRelevant) {
+              el.style.color = "#C0302A"
+              el.style.backgroundColor = "#FEEAEA"
+            }
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            el.style.color = isNotRelevant ? "var(--plum-soft)" : "var(--ink-tertiary)"
+            el.style.backgroundColor = "transparent"
+          }}
+        >
+          <ThumbsDown
+            size={11}
+            fill={isNotRelevant ? "var(--plum-soft)" : "none"}
+            color={isNotRelevant ? "var(--plum-soft)" : "currentColor"}
+          />
+          <span>Not relevant</span>
+        </button>
+      </div>
+    </button>
+  )
+}
+
 // ── Track This Popover ─────────────────────────────────────────────────────
 
 function TrackPopover({ onCancel, onSelect }: { onCancel: () => void; onSelect: () => void }) {
@@ -423,12 +643,12 @@ function TrackPopover({ onCancel, onSelect }: { onCancel: () => void; onSelect: 
         bottom: "calc(100% + 8px)",
         left: 0,
         right: 0,
-        backgroundColor: "var(--surface)",
-        border: "1px solid var(--border-color)",
-        borderRadius: "var(--radius-card)",
-        boxShadow: "0px 8px 28px rgba(28,24,64,0.13)",
+        backgroundColor: "#FFFFFF",
+        border: "1px solid var(--border-default)",
+        borderRadius: 12,
+        boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
         padding: "16px",
-        zIndex: 20,
+        zIndex: 30,
       }}
     >
       <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", margin: "0 0 3px 0" }}>
@@ -605,7 +825,6 @@ function NotRelevantModal({
                   transition: "background-color 150ms, border-color 150ms",
                 }}
               >
-                {/* Radio indicator */}
                 <div
                   style={{
                     width: 16,
@@ -675,7 +894,7 @@ function NotRelevantModal({
             <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Remove from my list</span>
           </button>
           <p style={{ margin: "6px 0 0 24px", fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "16px" }}>
-            You can always find this opportunity again in Discover.
+            You can always find this again in Discover.
           </p>
         </div>
 
@@ -754,7 +973,53 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
   )
 }
 
-// ── Detail Panel ───────────────────────────────────────────────────────────
+// ── View Toggle ─────────────────────────────────────────────────────────────
+
+function ViewToggle({
+  activeTab,
+  onSwitch,
+}: {
+  activeTab: ActiveTab
+  onSwitch: (tab: ActiveTab) => void
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        borderRadius: 9,
+        border: "1px solid var(--border-default)",
+        overflow: "hidden",
+        width: "fit-content",
+      }}
+    >
+      {(["opportunities", "funders"] as const).map((tab) => {
+        const isActive = activeTab === tab
+        return (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => onSwitch(tab)}
+            style={{
+              padding: "7px 18px",
+              border: "none",
+              backgroundColor: isActive ? "var(--slate-primary)" : "transparent",
+              color: isActive ? "#FFFFFF" : "var(--ink-secondary)",
+              fontSize: 13,
+              fontWeight: isActive ? 600 : 400,
+              cursor: "pointer",
+              transition: "background-color 150ms, color 150ms",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {tab === "opportunities" ? "Opportunities" : "Funders"}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Opportunity Detail Panel ────────────────────────────────────────────────
 
 function DetailPanel({
   opp,
@@ -778,9 +1043,6 @@ function DetailPanel({
         flexDirection: "column",
         borderLeft: "1px solid var(--border-color)",
         backgroundColor: "var(--canvas)",
-        position: "sticky",
-        top: 44,
-        height: "calc(100vh - 44px)",
         overflow: "hidden",
       }}
     >
@@ -924,31 +1186,304 @@ function DetailPanel({
             width: "100%",
             height: 40,
             borderRadius: 10,
-            backgroundColor: "white",
-            border: "1.5px solid #4A6080",
+            backgroundColor: "var(--slate-primary)",
+            border: "none",
             cursor: "pointer",
             marginBottom: 8,
             transition: "background-color 150ms",
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#EBF0F5" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "white" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-secondary)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
         >
-          <Plus size={15} color="#4A6080" style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#4A6080", lineHeight: "18px" }}>
+          <Plus size={15} color="#FFFFFF" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF", lineHeight: "18px" }}>
             Track This
           </span>
         </button>
 
-        <p
-          style={{
-            fontSize: 12,
-            color: "var(--ink-tertiary)",
-            textAlign: "center",
-            margin: 0,
-          }}
-        >
+        <p style={{ fontSize: 12, color: "var(--ink-tertiary)", textAlign: "center", margin: 0 }}>
           Already tracking a similar opportunity
         </p>
+      </div>
+    </div>
+  )
+}
+
+// ── Funder Detail Panel ─────────────────────────────────────────────────────
+
+function FunderDetailPanel({
+  funder,
+  onCreateEngagement,
+  onOpportunityClick,
+}: {
+  funder: DiscoverFunder
+  onCreateEngagement: (funderName: string) => void
+  onOpportunityClick: (oppId: string) => void
+}) {
+  const hasExistingEngagement = ENGAGEMENTS.some(
+    (e) => e.name.toLowerCase() === funder.name.toLowerCase()
+  )
+
+  return (
+    <div
+      style={{
+        width: 320,
+        flexShrink: 0,
+        display: "flex",
+        flexDirection: "column",
+        borderLeft: "1px solid var(--border-color)",
+        backgroundColor: "var(--canvas)",
+        overflow: "hidden",
+      }}
+    >
+      {/* Scrollable body */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "20px 20px 0 20px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+          minHeight: 0,
+        }}
+      >
+        {/* Header */}
+        <div>
+          <a
+            href={funder.website}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              textDecoration: "none",
+              marginBottom: 8,
+            }}
+          >
+            <h3
+              style={{
+                margin: 0,
+                fontSize: 17,
+                fontWeight: 600,
+                letterSpacing: "-0.025em",
+                lineHeight: "22px",
+                color: "var(--ink)",
+                fontFamily: "var(--font-lora)",
+              }}
+            >
+              {funder.name}
+            </h3>
+            <ExternalLink size={13} color="var(--ink-tertiary)" style={{ flexShrink: 0 }} />
+          </a>
+          <div>
+            <span
+              style={{
+                display: "inline-block",
+                borderRadius: "var(--radius-pill)",
+                padding: "4px 10px",
+                backgroundColor: "var(--slate-tint)",
+                fontSize: 12,
+                fontWeight: 500,
+                color: "var(--slate-primary)",
+              }}
+            >
+              {funder.type}
+            </span>
+          </div>
+        </div>
+
+        <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+
+        {/* Details */}
+        <div>
+          <p style={sectionLabelStyle}>Focus areas</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+            {funder.focusAreas.map((area) => (
+              <span
+                key={area}
+                style={{
+                  borderRadius: "var(--radius-pill)",
+                  padding: "4px 10px",
+                  backgroundColor: "var(--slate-tint)",
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: "var(--slate-primary)",
+                }}
+              >
+                {area}
+              </span>
+            ))}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+            {[
+              { label: "Geography", value: funder.geography },
+              { label: "Funding range", value: funder.fundingRange },
+              { label: "Unsolicited applications", value: funder.acceptsUnsolicited ? "Yes" : "No" },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ fontSize: 12, color: "var(--ink)", lineHeight: "16px" }}>
+                <span style={{ color: "var(--ink-tertiary)", fontWeight: 500 }}>{label}: </span>
+                {value}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Description */}
+        <p style={{ fontSize: 12, color: "var(--ink)", lineHeight: "19px", margin: 0 }}>
+          {funder.description}
+        </p>
+
+        <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+
+        {/* Why this matches */}
+        <div>
+          <p style={sectionLabelStyle}>Why this matches you</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {funder.whyMatches.map((item, i) => (
+              <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                {item.icon === "check" ? <CheckCircle /> : <WarningCircle />}
+                <span style={{ fontSize: 12, color: "var(--ink)", lineHeight: "18px" }}>{item.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+
+        {/* Your initiatives */}
+        <div>
+          <p style={sectionLabelStyle}>Your initiatives</p>
+          <div>
+            {funder.initiatives.map((init, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "9px 0",
+                  borderBottom:
+                    i < funder.initiatives.length - 1
+                      ? "1px solid var(--border-color)"
+                      : "none",
+                }}
+              >
+                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{init.name}</span>
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: init.match === "Partial match" ? "var(--slate)" : "var(--slate-secondary)",
+                  }}
+                >
+                  {init.match}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Known opportunities */}
+        {funder.knownOpportunities.length > 0 && (
+          <>
+            <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+            <div style={{ paddingBottom: 20 }}>
+              <p style={sectionLabelStyle}>Open opportunities</p>
+              <div>
+                {funder.knownOpportunities.map((opp, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => onOpportunityClick(opp.id)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      width: "100%",
+                      padding: "8px 0",
+                      background: "none",
+                      border: "none",
+                      borderBottom:
+                        i < funder.knownOpportunities.length - 1
+                          ? "1px solid var(--border-color)"
+                          : "none",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      gap: 8,
+                    }}
+                    onMouseEnter={(e) => {
+                      ;(e.currentTarget as HTMLButtonElement).style.opacity = "0.7"
+                    }}
+                    onMouseLeave={(e) => {
+                      ;(e.currentTarget as HTMLButtonElement).style.opacity = "1"
+                    }}
+                  >
+                    <span style={{ fontSize: 13, color: "var(--ink)", fontWeight: 500, lineHeight: "16px" }}>
+                      {opp.name}
+                    </span>
+                    <span
+                      style={{
+                        flexShrink: 0,
+                        borderRadius: "var(--radius-pill)",
+                        padding: "2px 8px",
+                        backgroundColor: "var(--slate-tint)",
+                        fontSize: 11,
+                        fontWeight: 500,
+                        color: "var(--slate-primary)",
+                      }}
+                    >
+                      {opp.deadline}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+        {funder.knownOpportunities.length === 0 && <div style={{ paddingBottom: 8 }} />}
+      </div>
+
+      {/* Sticky footer: Create engagement */}
+      <div
+        style={{
+          flexShrink: 0,
+          borderTop: "1px solid var(--border-color)",
+          padding: "14px 20px",
+          backgroundColor: "var(--canvas)",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => onCreateEngagement(funder.name)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            width: "100%",
+            height: 40,
+            borderRadius: 10,
+            backgroundColor: "var(--slate-primary)",
+            border: "none",
+            cursor: "pointer",
+            marginBottom: hasExistingEngagement ? 8 : 0,
+            transition: "background-color 150ms",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-secondary)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
+        >
+          <Plus size={15} color="#FFFFFF" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF", lineHeight: "18px" }}>
+            Create new engagement
+          </span>
+        </button>
+
+        {hasExistingEngagement && (
+          <p style={{ fontSize: 12, color: "var(--ink-tertiary)", textAlign: "center", margin: 0 }}>
+            Already have an engagement with this funder
+          </p>
+        )}
       </div>
     </div>
   )
@@ -957,14 +1492,16 @@ function DetailPanel({
 // ── Filter Sidebar ─────────────────────────────────────────────────────────
 
 function FilterSidebar({
+  activeTab,
   filters,
   onChange,
   onClear,
   collapsed,
   onToggleCollapse,
 }: {
-  filters: FilterState
-  onChange: (next: FilterState) => void
+  activeTab: ActiveTab
+  filters: CombinedFilterState
+  onChange: (next: CombinedFilterState) => void
   onClear: () => void
   collapsed: boolean
   onToggleCollapse: () => void
@@ -973,6 +1510,7 @@ function FilterSidebar({
     focusAreas: true,
     geography: true,
     fundingRange: true,
+    funderTypes: true,
   })
 
   function toggleSection(key: keyof typeof openSections) {
@@ -980,87 +1518,119 @@ function FilterSidebar({
   }
 
   function toggleFocus(key: string) {
-    onChange({
-      ...filters,
-      focusAreas: { ...filters.focusAreas, [key]: !filters.focusAreas[key] },
-    })
+    onChange({ ...filters, focusAreas: { ...filters.focusAreas, [key]: !filters.focusAreas[key] } })
   }
 
   function toggleGeo(key: string) {
-    onChange({
-      ...filters,
-      geography: { ...filters.geography, [key]: !filters.geography[key] },
-    })
+    onChange({ ...filters, geography: { ...filters.geography, [key]: !filters.geography[key] } })
   }
 
-  function setDeadline(val: FilterState["deadline"]) {
+  function setDeadline(val: CombinedFilterState["deadline"]) {
     onChange({ ...filters, deadline: filters.deadline === val ? null : val })
   }
+
+  function toggleFunderType(key: FunderTypeFilter) {
+    onChange({ ...filters, funderTypes: { ...filters.funderTypes, [key]: !filters.funderTypes[key] } })
+  }
+
+  function toggleUnsolicited() {
+    onChange({ ...filters, acceptsUnsolicited: !filters.acceptsUnsolicited })
+  }
+
+  const hasActiveFilters =
+    Object.values(filters.focusAreas).some(Boolean) ||
+    Object.values(filters.geography).some(Boolean) ||
+    filters.deadline !== null ||
+    Object.values(filters.funderTypes).some(Boolean) ||
+    filters.acceptsUnsolicited
 
   return (
     <aside
       style={{
-        // Width transitions between collapsed strip and full panel.
-        // overflow: hidden always so content clips cleanly during the animation.
         width: collapsed ? 40 : 268,
         flexShrink: 0,
         backgroundColor: "var(--canvas)",
         borderRight: "1px solid var(--border-default)",
         display: "flex",
-        flexDirection: "column",
-        position: "sticky",
-        top: 44,
-        height: "calc(100vh - 44px)",
+        flexDirection: "row",
         overflow: "hidden",
         transition: "width 200ms ease-in-out",
       }}
     >
-      {/*
-        Inner container is always 268px wide so the content doesn't reflow
-        as the aside clips it during the transition. Vertical scroll lives here.
-      */}
-      <div style={{ width: 268, minWidth: 268, height: "100%", overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column" }}>
-
-        {/* Sidebar header: Filters label + collapse toggle */}
-        <div
+      {/* Chevron strip */}
+      <div
+        style={{
+          width: 40,
+          flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          paddingTop: 18,
+        }}
+      >
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          title={collapsed ? "Expand filters" : "Collapse filters"}
           style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 4,
+            borderRadius: 6,
+            color: "var(--ink-tertiary)",
             display: "flex",
             alignItems: "center",
-            padding: "20px 16px 12px 16px",
-            gap: 8,
+            justifyContent: "center",
+            transition: "color 150ms, background-color 150ms",
+          }}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            el.style.color = "var(--ink-secondary)"
+            el.style.backgroundColor = "var(--slate-tint)"
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            el.style.color = "var(--ink-tertiary)"
+            el.style.backgroundColor = "transparent"
           }}
         >
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            title={collapsed ? "Expand filters" : "Collapse filters"}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 4,
-              borderRadius: 6,
-              color: "var(--ink-tertiary)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              transition: "color 150ms, background-color 150ms",
-            }}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget as HTMLButtonElement
-              el.style.color = "var(--ink-secondary)"
-              el.style.backgroundColor = "var(--slate-tint)"
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget as HTMLButtonElement
-              el.style.color = "var(--ink-tertiary)"
-              el.style.backgroundColor = "transparent"
-            }}
-          >
-            {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-          </button>
+          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        </button>
 
+        {collapsed && (
+          <div style={{ position: "relative", marginTop: 8 }}>
+            <SlidersHorizontal size={14} color="var(--ink-tertiary)" />
+            {hasActiveFilters && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: -2,
+                  right: -2,
+                  width: 5,
+                  height: 5,
+                  borderRadius: "50%",
+                  backgroundColor: "var(--plum-primary)",
+                  border: "1.5px solid var(--canvas)",
+                }}
+              />
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Filter content */}
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          overflowY: "auto",
+          overflowX: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div style={{ padding: "20px 16px 12px 0", display: "flex", alignItems: "center" }}>
           <span
             style={{
               fontSize: 10,
@@ -1074,23 +1644,18 @@ function FilterSidebar({
           </span>
         </div>
 
-        {/* Filter content */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             gap: 20,
-            padding: "0 16px 20px 16px",
+            padding: "0 16px 20px 0",
             flex: 1,
           }}
         >
-          {/* Focus Areas */}
+          {/* Focus Areas — shared */}
           <div>
-            <button
-              type="button"
-              onClick={() => toggleSection("focusAreas")}
-              style={sectionToggleStyle}
-            >
+            <button type="button" onClick={() => toggleSection("focusAreas")} style={sectionToggleStyle}>
               <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Focus Areas</span>
               <ChevronDown
                 size={12}
@@ -1104,12 +1669,7 @@ function FilterSidebar({
             {openSections.focusAreas && (
               <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
                 {Object.entries(filters.focusAreas).map(([label, checked]) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => toggleFocus(label)}
-                    style={checkRowStyle}
-                  >
+                  <button key={label} type="button" onClick={() => toggleFocus(label)} style={checkRowStyle}>
                     <CheckboxIcon checked={checked} />
                     <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{label}</span>
                   </button>
@@ -1120,13 +1680,9 @@ function FilterSidebar({
 
           <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
 
-          {/* Geography */}
+          {/* Geography — shared */}
           <div>
-            <button
-              type="button"
-              onClick={() => toggleSection("geography")}
-              style={sectionToggleStyle}
-            >
+            <button type="button" onClick={() => toggleSection("geography")} style={sectionToggleStyle}>
               <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Geography</span>
               <ChevronDown
                 size={12}
@@ -1140,12 +1696,7 @@ function FilterSidebar({
             {openSections.geography && (
               <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
                 {Object.entries(filters.geography).map(([label, checked]) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => toggleGeo(label)}
-                    style={checkRowStyle}
-                  >
+                  <button key={label} type="button" onClick={() => toggleGeo(label)} style={checkRowStyle}>
                     <CheckboxIcon checked={checked} />
                     <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{label}</span>
                   </button>
@@ -1156,99 +1707,167 @@ function FilterSidebar({
 
           <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
 
-          {/* Funding Range */}
-          <div>
-            <button
-              type="button"
-              onClick={() => toggleSection("fundingRange")}
-              style={sectionToggleStyle}
-            >
-              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Funding Range</span>
-              <ChevronDown
-                size={12}
-                color="var(--ink-tertiary)"
-                style={{
-                  transform: openSections.fundingRange ? "rotate(0deg)" : "rotate(-90deg)",
-                  transition: "transform 150ms",
-                }}
-              />
-            </button>
-            {openSections.fundingRange && (
-              <div style={{ marginTop: 10 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: 6,
-                  }}
-                >
-                  <span style={{ fontSize: 12, color: "var(--slate)" }}>$25,000</span>
-                  <span style={{ fontSize: 12, color: "var(--slate)" }}>$150,000</span>
-                </div>
-                <div style={{ position: "relative", height: 4, borderRadius: 2, backgroundColor: "var(--slate-light)" }}>
-                  <div
+          {activeTab === "opportunities" ? (
+            <>
+              {/* Funding Range — opportunities */}
+              <div>
+                <button type="button" onClick={() => toggleSection("fundingRange")} style={sectionToggleStyle}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Funding Range</span>
+                  <ChevronDown
+                    size={12}
+                    color="var(--ink-tertiary)"
                     style={{
-                      position: "absolute",
-                      left: 0,
-                      width: "75%",
-                      height: "100%",
-                      borderRadius: 2,
-                      backgroundColor: "var(--slate-primary)",
+                      transform: openSections.fundingRange ? "rotate(0deg)" : "rotate(-90deg)",
+                      transition: "transform 150ms",
                     }}
                   />
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: "calc(75% - 6px)",
-                      top: -4,
-                      width: 12,
-                      height: 12,
-                      borderRadius: "50%",
-                      backgroundColor: "var(--slate-primary)",
-                      border: "2px solid var(--surface)",
-                      boxShadow: "0 1px 3px rgba(28,24,64,0.15)",
-                    }}
-                  />
+                </button>
+                {openSections.fundingRange && (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, color: "var(--slate)" }}>$25,000</span>
+                      <span style={{ fontSize: 12, color: "var(--slate)" }}>$150,000</span>
+                    </div>
+                    <div style={{ position: "relative", height: 4, borderRadius: 2, backgroundColor: "var(--slate-light)" }}>
+                      <div style={{ position: "absolute", left: 0, width: "75%", height: "100%", borderRadius: 2, backgroundColor: "var(--slate-primary)" }} />
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: "calc(75% - 6px)",
+                          top: -4,
+                          width: 12,
+                          height: 12,
+                          borderRadius: "50%",
+                          backgroundColor: "var(--slate-primary)",
+                          border: "2px solid var(--surface)",
+                          boxShadow: "0 1px 3px rgba(28,24,64,0.15)",
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+
+              {/* Deadline — opportunities only */}
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", margin: "0 0 10px 0" }}>
+                  Deadline
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {(["next-6", "next-12"] as const).map((val) => {
+                    const isActive = filters.deadline === val
+                    const label = val === "next-6" ? "Next 6 months" : "Next 12 months"
+                    return (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setDeadline(val)}
+                        style={{
+                          borderRadius: "var(--radius-pill)",
+                          padding: "6px 14px",
+                          border: isActive ? "none" : "1px solid var(--border-color)",
+                          backgroundColor: isActive ? "var(--slate-primary)" : "transparent",
+                          fontSize: 12,
+                          fontWeight: isActive ? 500 : 400,
+                          color: isActive ? "#FFFFFF" : "var(--ink)",
+                          cursor: "pointer",
+                          textAlign: "left",
+                          transition: "background-color 150ms, color 150ms",
+                        }}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
-            )}
-          </div>
-
-          <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
-
-          {/* Deadline */}
-          <div>
-            <p style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", margin: "0 0 10px 0" }}>
-              Deadline
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {(["next-6", "next-12"] as const).map((val) => {
-                const isActive = filters.deadline === val
-                const label = val === "next-6" ? "Next 6 months" : "Next 12 months"
-                return (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => setDeadline(val)}
+            </>
+          ) : (
+            <>
+              {/* Funder Type — funders only */}
+              <div>
+                <button type="button" onClick={() => toggleSection("funderTypes")} style={sectionToggleStyle}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Funder Type</span>
+                  <ChevronDown
+                    size={12}
+                    color="var(--ink-tertiary)"
                     style={{
-                      borderRadius: "var(--radius-pill)",
-                      padding: "6px 14px",
-                      border: isActive ? "none" : "1px solid var(--border-color)",
-                      backgroundColor: isActive ? "var(--slate-primary)" : "transparent",
-                      fontSize: 12,
-                      fontWeight: isActive ? 500 : 400,
-                      color: isActive ? "#FFFFFF" : "var(--ink)",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      transition: "background-color 150ms, color 150ms",
+                      transform: openSections.funderTypes ? "rotate(0deg)" : "rotate(-90deg)",
+                      transition: "transform 150ms",
                     }}
-                  >
-                    {label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+                  />
+                </button>
+                {openSections.funderTypes && (
+                  <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+                    {FUNDER_TYPES.map((ft) => (
+                      <button key={ft} type="button" onClick={() => toggleFunderType(ft)} style={checkRowStyle}>
+                        <CheckboxIcon checked={filters.funderTypes[ft] ?? false} />
+                        <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{ft}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+
+              {/* Funding Range — funders */}
+              <div>
+                <button type="button" onClick={() => toggleSection("fundingRange")} style={sectionToggleStyle}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Funding Range</span>
+                  <ChevronDown
+                    size={12}
+                    color="var(--ink-tertiary)"
+                    style={{
+                      transform: openSections.fundingRange ? "rotate(0deg)" : "rotate(-90deg)",
+                      transition: "transform 150ms",
+                    }}
+                  />
+                </button>
+                {openSections.fundingRange && (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, color: "var(--slate)" }}>$10,000</span>
+                      <span style={{ fontSize: 12, color: "var(--slate)" }}>$200,000</span>
+                    </div>
+                    <div style={{ position: "relative", height: 4, borderRadius: 2, backgroundColor: "var(--slate-light)" }}>
+                      <div style={{ position: "absolute", left: 0, width: "80%", height: "100%", borderRadius: 2, backgroundColor: "var(--slate-primary)" }} />
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: "calc(80% - 6px)",
+                          top: -4,
+                          width: 12,
+                          height: 12,
+                          borderRadius: "50%",
+                          backgroundColor: "var(--slate-primary)",
+                          border: "2px solid var(--surface)",
+                          boxShadow: "0 1px 3px rgba(28,24,64,0.15)",
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+
+              {/* Accepts unsolicited — funders only */}
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", margin: "0 0 10px 0" }}>
+                  Application
+                </p>
+                <button type="button" onClick={toggleUnsolicited} style={checkRowStyle}>
+                  <CheckboxIcon checked={filters.acceptsUnsolicited} />
+                  <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>
+                    Accepts unsolicited
+                  </span>
+                </button>
+              </div>
+            </>
+          )}
 
           {/* Clear filters */}
           <button
@@ -1307,9 +1926,9 @@ const checkRowStyle: React.CSSProperties = {
   width: "100%",
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────
+// ── Default filter state ───────────────────────────────────────────────────
 
-const DEFAULT_FILTERS: FilterState = {
+const DEFAULT_COMBINED_FILTERS: CombinedFilterState = {
   focusAreas: {
     "Animal Welfare": true,
     "Community Development": true,
@@ -1323,20 +1942,47 @@ const DEFAULT_FILTERS: FilterState = {
     International: false,
   },
   deadline: "next-6",
+  funderTypes: {
+    "Private foundation": false,
+    "Community foundation": false,
+    Government: false,
+    "Corporate foundation": false,
+    "Public charity": false,
+  },
+  acceptsUnsolicited: false,
 }
 
-export default function OpportunitiesPage() {
+// ── Page ───────────────────────────────────────────────────────────────────
+
+export default function DiscoverPage() {
   const router = useRouter()
+
+  // Tab
+  const [activeTab, setActiveTab] = useState<ActiveTab>("opportunities")
+
+  // Opportunities state
   const [selectedId, setSelectedId] = useState("petco-love")
   const [showPopover, setShowPopover] = useState(false)
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS)
-  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
-  const [dismissingIds, setDismissingIds] = useState<Set<string>>(new Set())
-  const [notRelevantModalFor, setNotRelevantModalFor] = useState<string | null>(null)
-  const [notRelevantIds, setNotRelevantIds] = useState<Set<string>>(new Set())
+  const [hiddenOppIds, setHiddenOppIds] = useState<Set<string>>(new Set())
+  const [dismissingOppIds, setDismissingOppIds] = useState<Set<string>>(new Set())
+  const [notRelevantOppModalFor, setNotRelevantOppModalFor] = useState<string | null>(null)
+  const [notRelevantOppIds, setNotRelevantOppIds] = useState<Set<string>>(new Set())
+
+  // Funders state
+  const [selectedFunderId, setSelectedFunderId] = useState<string>(DISCOVER_FUNDERS[0]?.id ?? "")
+  const [hiddenFunderIds, setHiddenFunderIds] = useState<Set<string>>(new Set())
+  const [dismissingFunderIds, setDismissingFunderIds] = useState<Set<string>>(new Set())
+  const [notRelevantFunderModalFor, setNotRelevantFunderModalFor] = useState<string | null>(null)
+  const [notRelevantFunderIds, setNotRelevantFunderIds] = useState<Set<string>>(new Set())
+
+  // Shared / layout state
+  const [filters, setFilters] = useState<CombinedFilterState>(DEFAULT_COMBINED_FILTERS)
   const [toast, setToast] = useState<string | null>(null)
-  // Default expanded; hydrate from localStorage after mount to avoid SSR mismatch.
   const [filterCollapsed, setFilterCollapsed] = useState(false)
+
+  // Engagement modal
+  const [showEngagementModal, setShowEngagementModal] = useState(false)
+  const [engagementModalFunderName, setEngagementModalFunderName] = useState("")
 
   useEffect(() => {
     const stored = localStorage.getItem("discover-filter-collapsed")
@@ -1351,13 +1997,36 @@ export default function OpportunitiesPage() {
     })
   }
 
-  const visibleOpps = OPPORTUNITIES.filter((o) => !hiddenIds.has(o.id))
-  const selected =
+  const visibleOpps = OPPORTUNITIES.filter((o) => !hiddenOppIds.has(o.id))
+  const visibleFunders = DISCOVER_FUNDERS.filter((f) => !hiddenFunderIds.has(f.id))
+
+  const selectedOpp =
     visibleOpps.find((o) => o.id === selectedId) ??
     visibleOpps[0] ??
     OPPORTUNITIES[0]
 
-  function handleCardClick(id: string) {
+  const selectedFunder =
+    visibleFunders.find((f) => f.id === selectedFunderId) ??
+    visibleFunders[0] ??
+    DISCOVER_FUNDERS[0]
+
+  function handleTabSwitch(tab: ActiveTab) {
+    if (tab === activeTab) return
+    setActiveTab(tab)
+    setShowPopover(false)
+    // Reset right panel to first card of the new tab
+    if (tab === "funders") {
+      const first = DISCOVER_FUNDERS.find((f) => !hiddenFunderIds.has(f.id))
+      if (first) setSelectedFunderId(first.id)
+    } else {
+      const first = OPPORTUNITIES.find((o) => !hiddenOppIds.has(o.id))
+      if (first) setSelectedId(first.id)
+    }
+  }
+
+  // ── Opportunity handlers ──
+
+  function handleOppCardClick(id: string) {
     setSelectedId(id)
     setShowPopover(false)
   }
@@ -1365,23 +2034,22 @@ export default function OpportunitiesPage() {
   function handleSelectEngagement() {
     setShowPopover(false)
     setToast("Added to portfolio")
-    router.push("/opportunity")
+    router.push("/opportunity/equitable-futures")
   }
 
-  function handleNotRelevantConfirm(
+  function handleOppNotRelevantConfirm(
     _reason: NotRelevantReason,
     _otherText: string,
     removeFromList: boolean,
   ) {
-    const id = notRelevantModalFor
+    const id = notRelevantOppModalFor
     if (!id) return
 
     if (removeFromList) {
-      // Animate card out, then remove from visible list
-      setDismissingIds((prev) => new Set(Array.from(prev).concat(id)))
+      setDismissingOppIds((prev) => new Set(Array.from(prev).concat(id)))
       setTimeout(() => {
-        setHiddenIds((prev) => new Set(Array.from(prev).concat(id)))
-        setDismissingIds((prev) => {
+        setHiddenOppIds((prev) => new Set(Array.from(prev).concat(id)))
+        setDismissingOppIds((prev) => {
           const next = new Set(Array.from(prev))
           next.delete(id)
           return next
@@ -1392,144 +2060,277 @@ export default function OpportunitiesPage() {
         }
       }, 220)
     } else {
-      // Keep in list but mark as not relevant (active thumbs down state)
-      setNotRelevantIds((prev) => new Set(Array.from(prev).concat(id)))
+      setNotRelevantOppIds((prev) => new Set(Array.from(prev).concat(id)))
     }
 
-    setNotRelevantModalFor(null)
+    setNotRelevantOppModalFor(null)
   }
+
+  // ── Funder handlers ──
+
+  function handleFunderCardClick(id: string) {
+    setSelectedFunderId(id)
+  }
+
+  function handleFunderNotRelevantConfirm(
+    _reason: NotRelevantReason,
+    _otherText: string,
+    removeFromList: boolean,
+  ) {
+    const id = notRelevantFunderModalFor
+    if (!id) return
+
+    if (removeFromList) {
+      setDismissingFunderIds((prev) => new Set(Array.from(prev).concat(id)))
+      setTimeout(() => {
+        setHiddenFunderIds((prev) => new Set(Array.from(prev).concat(id)))
+        setDismissingFunderIds((prev) => {
+          const next = new Set(Array.from(prev))
+          next.delete(id)
+          return next
+        })
+        if (selectedFunderId === id) {
+          const next = visibleFunders.find((f) => f.id !== id)
+          if (next) setSelectedFunderId(next.id)
+        }
+      }, 220)
+    } else {
+      setNotRelevantFunderIds((prev) => new Set(Array.from(prev).concat(id)))
+    }
+
+    setNotRelevantFunderModalFor(null)
+  }
+
+  function handleOpportunityClickFromFunderPanel(oppId: string) {
+    setActiveTab("opportunities")
+    if (oppId && OPPORTUNITIES.some((o) => o.id === oppId)) {
+      setSelectedId(oppId)
+    } else {
+      const first = OPPORTUNITIES.find((o) => !hiddenOppIds.has(o.id))
+      if (first) setSelectedId(first.id)
+    }
+  }
+
+  function handleCreateEngagement(funderName: string) {
+    setEngagementModalFunderName(funderName)
+    setShowEngagementModal(true)
+  }
+
+  function handleEngagementCreated(_data: NewEngagementData) { // eslint-disable-line @typescript-eslint/no-unused-vars
+    setToast("Engagement created")
+  }
+
+  // ── Clear filters ──
 
   function handleClearFilters() {
     setFilters({
       focusAreas: Object.fromEntries(
-        Object.keys(DEFAULT_FILTERS.focusAreas).map((k) => [k, false])
+        Object.keys(DEFAULT_COMBINED_FILTERS.focusAreas).map((k) => [k, false])
       ),
       geography: Object.fromEntries(
-        Object.keys(DEFAULT_FILTERS.geography).map((k) => [k, false])
+        Object.keys(DEFAULT_COMBINED_FILTERS.geography).map((k) => [k, false])
       ),
       deadline: null,
+      funderTypes: Object.fromEntries(
+        FUNDER_TYPES.map((k) => [k, false])
+      ) as Record<FunderTypeFilter, boolean>,
+      acceptsUnsolicited: false,
     })
   }
 
   return (
-    <div className="flex flex-1" style={{ overflow: "hidden", minHeight: 0, backgroundColor: "#FFFFFF" }}>
-      {/* ── Filter Sidebar ── */}
-      <FilterSidebar
-        filters={filters}
-        onChange={setFilters}
-        onClear={handleClearFilters}
-        collapsed={filterCollapsed}
-        onToggleCollapse={handleToggleFilter}
-      />
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        overflow: "hidden",
+        minHeight: 0,
+        backgroundColor: "#FFFFFF",
+      }}
+    >
+      {/* ── View Toggle Header ── */}
+      <div
+        style={{
+          flexShrink: 0,
+          padding: "10px 20px",
+          borderBottom: "1px solid var(--border-color)",
+          backgroundColor: "#FFFFFF",
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <ViewToggle activeTab={activeTab} onSwitch={handleTabSwitch} />
+      </div>
 
-      {/* ── Center: results list ── */}
+      {/* ── Three-column layout ── */}
       <div
         style={{
           flex: 1,
           display: "flex",
-          flexDirection: "column",
           overflow: "hidden",
-          borderRight: "1px solid var(--border-color)",
-          backgroundColor: "#FFFFFF",
+          minHeight: 0,
         }}
       >
-        {/* Results header */}
-        <div
-          style={{
-            flexShrink: 0,
-            padding: "14px 20px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            backgroundColor: "#FFFFFF",
-            borderBottom: "1px solid var(--border-color)",
-          }}
-        >
-          <span
-            style={{
-              fontSize: 13,
-              color: "var(--ink-secondary)",
-              lineHeight: "16px",
-              textAlign: "left",
-            }}
-          >
-            43 opportunities matching your initiatives
-          </span>
-          <button
-            type="button"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              borderRadius: "var(--radius-button)",
-              padding: "6px 12px",
-              backgroundColor: "#FFFFFF",
-              border: "1px solid var(--border-color)",
-              fontSize: 13,
-              color: "var(--ink)",
-              cursor: "pointer",
-              transition: "background-color 150ms",
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#FFFFFF" }}
-          >
-            <span>Sort: Relevance</span>
-            <ChevronDown size={12} color="var(--ink-tertiary)" />
-          </button>
-        </div>
+        {/* Filter Sidebar */}
+        <FilterSidebar
+          activeTab={activeTab}
+          filters={filters}
+          onChange={setFilters}
+          onClear={handleClearFilters}
+          collapsed={filterCollapsed}
+          onToggleCollapse={handleToggleFilter}
+        />
 
-        {/* Cards */}
+        {/* Center: results list */}
         <div
           style={{
             flex: 1,
-            overflowY: "auto",
-            padding: "16px 20px",
             display: "flex",
             flexDirection: "column",
-            gap: 10,
+            overflow: "hidden",
+            borderRight: "1px solid var(--border-color)",
+            backgroundColor: "#FFFFFF",
           }}
         >
-          {visibleOpps.map((opp) => {
-            const isDismissing = dismissingIds.has(opp.id)
-            return (
-              <div
-                key={opp.id}
-                style={{
-                  opacity: isDismissing ? 0 : 1,
-                  maxHeight: isDismissing ? 0 : "600px",
-                  overflow: "hidden",
-                  transition: "opacity 200ms ease-in-out, max-height 200ms ease-in-out",
-                }}
-              >
-                <OpportunityCard
-                  opp={opp}
-                  isSelected={opp.id === selectedId}
-                  isNotRelevant={notRelevantIds.has(opp.id)}
-                  onClick={() => handleCardClick(opp.id)}
-                  onNotRelevant={() => setNotRelevantModalFor(opp.id)}
-                />
-              </div>
-            )
-          })}
+          {/* Results header */}
+          <div
+            style={{
+              flexShrink: 0,
+              padding: "14px 20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              backgroundColor: "#FFFFFF",
+              borderBottom: "1px solid var(--border-color)",
+            }}
+          >
+            <span style={{ fontSize: 13, color: "var(--ink-secondary)", lineHeight: "16px" }}>
+              {activeTab === "opportunities"
+                ? `${visibleOpps.length} opportunities matching your initiatives`
+                : `${visibleFunders.length} funders matching your initiatives`}
+            </span>
+            <button
+              type="button"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                borderRadius: "var(--radius-button)",
+                padding: "6px 12px",
+                backgroundColor: "#FFFFFF",
+                border: "1px solid var(--border-color)",
+                fontSize: 13,
+                color: "var(--ink)",
+                cursor: "pointer",
+                transition: "background-color 150ms",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#FFFFFF" }}
+            >
+              <span>Sort: Relevance</span>
+              <ChevronDown size={12} color="var(--ink-tertiary)" />
+            </button>
+          </div>
+
+          {/* Cards */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: "16px 20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+            }}
+          >
+            {activeTab === "opportunities"
+              ? visibleOpps.map((opp) => {
+                  const isDismissing = dismissingOppIds.has(opp.id)
+                  return (
+                    <div
+                      key={opp.id}
+                      style={{
+                        opacity: isDismissing ? 0 : 1,
+                        maxHeight: isDismissing ? 0 : "2000px",
+                        overflow: isDismissing ? "hidden" : "visible",
+                        transition: "opacity 200ms ease-in-out, max-height 200ms ease-in-out",
+                      }}
+                    >
+                      <OpportunityCard
+                        opp={opp}
+                        isSelected={opp.id === selectedId}
+                        isNotRelevant={notRelevantOppIds.has(opp.id)}
+                        onClick={() => handleOppCardClick(opp.id)}
+                        onNotRelevant={() => setNotRelevantOppModalFor(opp.id)}
+                      />
+                    </div>
+                  )
+                })
+              : visibleFunders.map((funder) => {
+                  const isDismissing = dismissingFunderIds.has(funder.id)
+                  return (
+                    <div
+                      key={funder.id}
+                      style={{
+                        opacity: isDismissing ? 0 : 1,
+                        maxHeight: isDismissing ? 0 : "2000px",
+                        overflow: isDismissing ? "hidden" : "visible",
+                        transition: "opacity 200ms ease-in-out, max-height 200ms ease-in-out",
+                      }}
+                    >
+                      <FunderCard
+                        funder={funder}
+                        isSelected={funder.id === selectedFunderId}
+                        isNotRelevant={notRelevantFunderIds.has(funder.id)}
+                        onClick={() => handleFunderCardClick(funder.id)}
+                        onNotRelevant={() => setNotRelevantFunderModalFor(funder.id)}
+                      />
+                    </div>
+                  )
+                })}
+          </div>
         </div>
+
+        {/* Right panel */}
+        {activeTab === "opportunities" ? (
+          <DetailPanel
+            opp={selectedOpp}
+            showPopover={showPopover}
+            onTrackClick={() => setShowPopover((v) => !v)}
+            onCancelPopover={() => setShowPopover(false)}
+            onSelectEngagement={handleSelectEngagement}
+          />
+        ) : (
+          <FunderDetailPanel
+            funder={selectedFunder}
+            onCreateEngagement={handleCreateEngagement}
+            onOpportunityClick={handleOpportunityClickFromFunderPanel}
+          />
+        )}
       </div>
 
-      {/* ── Detail Panel ── */}
-      <DetailPanel
-        opp={selected}
-        showPopover={showPopover}
-        onTrackClick={() => setShowPopover((v) => !v)}
-        onCancelPopover={() => setShowPopover(false)}
-        onSelectEngagement={handleSelectEngagement}
-      />
-
-      {/* ── Not Relevant Modal ── */}
-      {notRelevantModalFor && (
+      {/* ── Not Relevant Modals ── */}
+      {notRelevantOppModalFor && (
         <NotRelevantModal
-          onCancel={() => setNotRelevantModalFor(null)}
-          onConfirm={handleNotRelevantConfirm}
+          onCancel={() => setNotRelevantOppModalFor(null)}
+          onConfirm={handleOppNotRelevantConfirm}
         />
       )}
+      {notRelevantFunderModalFor && (
+        <NotRelevantModal
+          onCancel={() => setNotRelevantFunderModalFor(null)}
+          onConfirm={handleFunderNotRelevantConfirm}
+        />
+      )}
+
+      {/* ── New Engagement Modal ── */}
+      <NewEngagementModal
+        open={showEngagementModal}
+        onClose={() => setShowEngagementModal(false)}
+        onCreate={handleEngagementCreated}
+        lockedFunderName={engagementModalFunderName}
+      />
 
       {/* ── Toast ── */}
       {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}

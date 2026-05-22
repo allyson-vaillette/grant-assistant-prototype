@@ -26,6 +26,7 @@ export interface NewProposalModalProps {
   open: boolean
   onClose: () => void
   opportunityName: string
+  opportunityId?: string
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -205,7 +206,7 @@ function UploadRow({
 
 // ── Main component ─────────────────────────────────────────────────────────
 
-export function NewProposalModal({ open, onClose, opportunityName }: NewProposalModalProps) {
+export function NewProposalModal({ open, onClose, opportunityName, opportunityId }: NewProposalModalProps) {
   const router = useRouter()
   const [step, setStep] = useState<1 | 2>(1)
   const [proposalName, setProposalName] = useState(`${opportunityName} — 2026`)
@@ -224,7 +225,13 @@ export function NewProposalModal({ open, onClose, opportunityName }: NewProposal
 
   function handleComplete() {
     handleClose()
-    router.push("/proposals/equitable-futures-2026-draft")
+    const proposalId = `proposal-${Date.now()}`
+    const qp = new URLSearchParams({
+      name: proposalName,
+      opportunityId: opportunityId ?? "equitable-futures",
+      opportunityName,
+    })
+    router.push(`/proposals/${proposalId}?${qp.toString()}`)
   }
 
   function addUploads(

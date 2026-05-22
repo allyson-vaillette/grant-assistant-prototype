@@ -1,8 +1,8 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, Suspense } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useParams, useSearchParams, useRouter } from "next/navigation"
 import { ChevronDown, Copy, FileText, Plus } from "lucide-react"
 import { NewProposalModal } from "@/components/proposals/NewProposalModal"
 
@@ -31,9 +31,9 @@ interface Task {
   done: boolean
 }
 
-// ── Data ──────────────────────────────────────────────────────────────────
+// ── Hardcoded data for known opportunities ─────────────────────────────────
 
-const PROPOSALS: Proposal[] = [
+const KNOWN_PROPOSALS: Proposal[] = [
   {
     id: "draft-1",
     name: "Equitable Futures — Draft 1",
@@ -44,11 +44,13 @@ const PROPOSALS: Proposal[] = [
   },
 ]
 
-const INITIAL_TASKS: Task[] = [
+const KNOWN_TASKS: Task[] = [
   { id: "t1", name: "Complete narrative section",        due: "Due May 20", dueBadge: "today", assignee: "TS", status: "To Do",       done: false },
   { id: "t2", name: "Get budget sign-off from finance",  due: "Due May 22", dueBadge: "soon",  assignee: "TS", status: "In Progress", done: false },
   { id: "t3", name: "Collect letters of support",        due: "Due Jun 1",  dueBadge: "later", assignee: "TS", status: "To Do",       done: false },
 ]
+
+// ── Stage config ───────────────────────────────────────────────────────────
 
 const STAGE_ORDER: Stage[] = ["Tracking", "Active", "Submitted", "Awarded", "Reporting", "Complete"]
 const TERMINAL_STAGES: Stage[] = ["Declined", "Complete"]
@@ -79,13 +81,19 @@ const TASK_STATUS_STYLE: Record<TaskStatus, { bg: string; color: string }> = {
   "Done":        { bg: "#E0EDE6", color: "#3C5E4C"  },
 }
 
+const PROPOSAL_STATUS_STYLE: Record<Proposal["status"], { bg: string; color: string }> = {
+  Draft:     { bg: "#EBF0F5", color: "#4A6080" },
+  Final:     { bg: "#E0EDE6", color: "#3C5E4C" },
+  Submitted: { bg: "#F2EDF3", color: "#7A5F7E" },
+}
+
 function dueBadgeStyle(cat: Task["dueBadge"]): React.CSSProperties {
   if (cat === "today") return { backgroundColor: "#FDE8E8", color: "#8B2020" }
   if (cat === "soon")  return { backgroundColor: "#FFF3E0", color: "#7A4A10" }
   return { backgroundColor: "#E8ECF0", color: "#4A6080" }
 }
 
-// ── Toast ──────────────────────────────────────────────────────────────────
+// ── Sub-components ─────────────────────────────────────────────────────────
 
 function Toast({ message, visible }: { message: string; visible: boolean }) {
   return (
@@ -113,8 +121,6 @@ function Toast({ message, visible }: { message: string; visible: boolean }) {
     </div>
   )
 }
-
-// ── Stage dropdown ─────────────────────────────────────────────────────────
 
 function StageControl({ stage, onChange }: { stage: Stage; onChange: (s: Stage) => void }) {
   const [open, setOpen] = useState(false)
@@ -145,16 +151,7 @@ function StageControl({ stage, onChange }: { stage: Stage; onChange: (s: Stage) 
         onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface-white)" }}
       >
         <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: dot, flexShrink: 0 }} />
-        <span
-          style={{
-            fontSize: 12,
-            fontWeight: 500,
-            borderRadius: 20,
-            padding: "2px 8px",
-            backgroundColor: badge.bg,
-            color: badge.color,
-          }}
-        >
+        <span style={{ fontSize: 12, fontWeight: 500, borderRadius: 20, padding: "2px 8px", backgroundColor: badge.bg, color: badge.color }}>
           {stage}
         </span>
         <ChevronDown size={12} color="var(--ink-tertiary)" style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 150ms" }} />
@@ -210,8 +207,6 @@ function StageControl({ stage, onChange }: { stage: Stage; onChange: (s: Stage) 
   )
 }
 
-// ── Checkbox ───────────────────────────────────────────────────────────────
-
 function TaskCheckbox({ done, onClick }: { done: boolean; onClick: () => void }) {
   return (
     <button
@@ -240,8 +235,6 @@ function TaskCheckbox({ done, onClick }: { done: boolean; onClick: () => void })
   )
 }
 
-// ── Avatar ─────────────────────────────────────────────────────────────────
-
 function Avatar({ initials }: { initials: string }) {
   return (
     <div
@@ -261,9 +254,44 @@ function Avatar({ initials }: { initials: string }) {
   )
 }
 
-// ── Tab content ────────────────────────────────────────────────────────────
+function GlanceCard({ label, value, sub, subColor }: { label: string; value: string; sub: string; subColor: string }) {
+  return (
+    <div style={{ borderRadius: 10, padding: "14px 16px", backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)" }}>
+      <p style={{ margin: "0 0 6px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>{label}</p>
+      <p style={{ margin: "0 0 3px", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>{value}</p>
+      <p style={{ margin: 0, fontSize: 12, color: subColor }}>{sub}</p>
+    </div>
+  )
+}
 
-function OverviewTab({ tasks, onToggle, onNewProposal }: { tasks: Task[]; onToggle: (id: string) => void; stage: Stage; onNewProposal: () => void }) {
+function EmptyTab({ label }: { label: string }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 0", gap: 8 }}>
+      <p style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-secondary)", margin: 0 }}>No {label.toLowerCase()} yet</p>
+      <p style={{ fontSize: 13, color: "var(--ink-tertiary)", margin: 0 }}>{label} for this opportunity will appear here.</p>
+    </div>
+  )
+}
+
+// ── Tab components ─────────────────────────────────────────────────────────
+
+function OverviewTab({
+  proposals,
+  tasks,
+  onToggle,
+  onNewProposal,
+  isKnown,
+  deadline,
+  amount,
+}: {
+  proposals: Proposal[]
+  tasks: Task[]
+  onToggle: (id: string) => void
+  onNewProposal: () => void
+  isKnown: boolean
+  deadline: string
+  amount: string
+}) {
   const router = useRouter()
   const openTasks = tasks.filter((t) => !t.done)
 
@@ -273,7 +301,9 @@ function OverviewTab({ tasks, onToggle, onNewProposal }: { tasks: Task[]; onTogg
       <div>
         <p style={sectionLabelStyle}>Proposals</p>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {PROPOSALS.map((p) => {
+          {proposals.length === 0 ? (
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>No proposals yet.</p>
+          ) : proposals.map((p) => {
             const badge = PROPOSAL_STATUS_STYLE[p.status]
             return (
               <div
@@ -308,16 +338,7 @@ function OverviewTab({ tasks, onToggle, onNewProposal }: { tasks: Task[]; onTogg
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                       <span style={{ fontSize: 14, fontWeight: 500, color: "var(--ink)" }}>{p.name}</span>
-                      <span
-                        style={{
-                          borderRadius: 20,
-                          padding: "2px 8px",
-                          backgroundColor: badge.bg,
-                          fontSize: 11,
-                          fontWeight: 500,
-                          color: badge.color,
-                        }}
-                      >
+                      <span style={{ borderRadius: 20, padding: "2px 8px", backgroundColor: badge.bg, fontSize: 11, fontWeight: 500, color: badge.color }}>
                         {p.status}
                       </span>
                     </div>
@@ -362,15 +383,74 @@ function OverviewTab({ tasks, onToggle, onNewProposal }: { tasks: Task[]; onTogg
       </div>
 
       {/* Open tasks */}
-      <div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <p style={{ ...sectionLabelStyle, margin: 0 }}>Open tasks ({openTasks.length})</p>
-          <button type="button" style={{ background: "none", border: "none", fontSize: 12, color: "var(--slate-secondary)", cursor: "pointer", fontWeight: 500 }}>
-            View all tasks →
-          </button>
+      {tasks.length > 0 && (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <p style={{ ...sectionLabelStyle, margin: 0 }}>Open tasks ({openTasks.length})</p>
+            <button type="button" style={{ background: "none", border: "none", fontSize: 12, color: "var(--slate-secondary)", cursor: "pointer", fontWeight: 500 }}>
+              View all tasks →
+            </button>
+          </div>
+          <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)", overflow: "hidden" }}>
+            {tasks.slice(0, 3).map((task, i) => {
+              const badge = TASK_STATUS_STYLE[task.status]
+              return (
+                <div
+                  key={task.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 14,
+                    padding: "14px 18px",
+                    borderBottom: i < 2 ? "1px solid var(--border-default)" : "none",
+                    opacity: task.done ? 0.45 : 1,
+                    transition: "opacity 150ms",
+                  }}
+                >
+                  <TaskCheckbox done={task.done} onClick={() => onToggle(task.id)} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ margin: "0 0 4px", fontSize: 14, color: "var(--ink)", textDecoration: task.done ? "line-through" : "none" }}>
+                      {task.name}
+                    </p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>{task.due}</span>
+                      <Avatar initials={task.assignee} />
+                    </div>
+                  </div>
+                  <span style={{ flexShrink: 0, borderRadius: 20, padding: "3px 10px", backgroundColor: badge.bg, fontSize: 11, fontWeight: 500, color: badge.color }}>
+                    {task.status}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
         </div>
+      )}
+
+      {/* At a glance */}
+      {isKnown && (
+        <div>
+          <p style={sectionLabelStyle}>At a glance</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+            <GlanceCard label="Deadline" value={deadline || "—"} sub="6 days away" subColor="#B91C1C" />
+            <GlanceCard label="Target amount" value={amount || "—"} sub="1 draft proposal" subColor="var(--ink-tertiary)" />
+            <GlanceCard label="Last activity" value="2 days ago" sub="by Taylor S." subColor="var(--ink-tertiary)" />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TasksTab({ tasks, onToggle }: { tasks: Task[]; onToggle: (id: string) => void }) {
+  return (
+    <div>
+      <p style={sectionLabelStyle}>All tasks ({tasks.length})</p>
+      {tasks.length === 0 ? (
+        <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>No tasks yet.</p>
+      ) : (
         <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)", overflow: "hidden" }}>
-          {tasks.slice(0, 3).map((task, i) => {
+          {tasks.map((task, i) => {
             const badge = TASK_STATUS_STYLE[task.status]
             return (
               <div
@@ -380,91 +460,30 @@ function OverviewTab({ tasks, onToggle, onNewProposal }: { tasks: Task[]; onTogg
                   alignItems: "center",
                   gap: 14,
                   padding: "14px 18px",
-                  borderBottom: i < 2 ? "1px solid var(--border-default)" : "none",
+                  borderBottom: i < tasks.length - 1 ? "1px solid var(--border-default)" : "none",
                   opacity: task.done ? 0.45 : 1,
                   transition: "opacity 150ms",
                 }}
               >
                 <TaskCheckbox done={task.done} onClick={() => onToggle(task.id)} />
                 <div style={{ flex: 1 }}>
-                  <p style={{ margin: "0 0 4px", fontSize: 14, color: "var(--ink)", textDecoration: task.done ? "line-through" : "none" }}>
-                    {task.name}
-                  </p>
+                  <p style={{ margin: "0 0 4px", fontSize: 14, color: "var(--ink)", textDecoration: task.done ? "line-through" : "none" }}>{task.name}</p>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>{task.due}</span>
                     <Avatar initials={task.assignee} />
+                    <span style={{ borderRadius: 20, padding: "2px 8px", fontSize: 11, fontWeight: 500, ...dueBadgeStyle(task.dueBadge) }}>
+                      {task.dueBadge === "today" ? "Due today" : task.dueBadge === "soon" ? "In progress" : ""}
+                    </span>
                   </div>
                 </div>
-                <span
-                  style={{ flexShrink: 0, borderRadius: 20, padding: "3px 10px", backgroundColor: badge.bg, fontSize: 11, fontWeight: 500, color: badge.color }}
-                >
+                <span style={{ flexShrink: 0, borderRadius: 20, padding: "3px 10px", backgroundColor: badge.bg, fontSize: 11, fontWeight: 500, color: badge.color }}>
                   {task.status}
                 </span>
               </div>
             )
           })}
         </div>
-      </div>
-
-      {/* At a glance */}
-      <div>
-        <p style={sectionLabelStyle}>At a glance</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-          <GlanceCard label="Deadline" value="Jun 15, 2026" sub="6 days away" subColor="#B91C1C" />
-          <GlanceCard label="Target amount" value="$75,000" sub="1 draft proposal" subColor="var(--ink-tertiary)" />
-          <GlanceCard label="Last activity" value="2 days ago" sub="by Taylor S." subColor="var(--ink-tertiary)" />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function TasksTab({ tasks, onToggle }: { tasks: Task[]; onToggle: (id: string) => void }) {
-  return (
-    <div>
-      <p style={sectionLabelStyle}>All tasks ({tasks.length})</p>
-      <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)", overflow: "hidden" }}>
-        {tasks.map((task, i) => {
-          const badge = TASK_STATUS_STYLE[task.status]
-          return (
-            <div
-              key={task.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 14,
-                padding: "14px 18px",
-                borderBottom: i < tasks.length - 1 ? "1px solid var(--border-default)" : "none",
-                opacity: task.done ? 0.45 : 1,
-                transition: "opacity 150ms",
-              }}
-            >
-              <TaskCheckbox done={task.done} onClick={() => onToggle(task.id)} />
-              <div style={{ flex: 1 }}>
-                <p style={{ margin: "0 0 4px", fontSize: 14, color: "var(--ink)", textDecoration: task.done ? "line-through" : "none" }}>{task.name}</p>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>{task.due}</span>
-                  <Avatar initials={task.assignee} />
-                  <span
-                    style={{
-                      borderRadius: 20,
-                      padding: "2px 8px",
-                      fontSize: 11,
-                      fontWeight: 500,
-                      ...dueBadgeStyle(task.dueBadge),
-                    }}
-                  >
-                    {task.dueBadge === "today" ? "Due today" : task.dueBadge === "soon" ? "In progress" : ""}
-                  </span>
-                </div>
-              </div>
-              <span style={{ flexShrink: 0, borderRadius: 20, padding: "3px 10px", backgroundColor: badge.bg, fontSize: 11, fontWeight: 500, color: badge.color }}>
-                {task.status}
-              </span>
-            </div>
-          )
-        })}
-      </div>
+      )}
       <button
         type="button"
         style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: "8px", marginTop: 4, fontSize: 13, fontWeight: 500, color: "var(--slate-secondary)", cursor: "pointer", borderRadius: 6, transition: "background-color 150ms" }}
@@ -478,32 +497,7 @@ function TasksTab({ tasks, onToggle }: { tasks: Task[]; onToggle: (id: string) =
   )
 }
 
-function EmptyTab({ label }: { label: string }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 0", gap: 8 }}>
-      <p style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-secondary)", margin: 0 }}>No {label.toLowerCase()} yet</p>
-      <p style={{ fontSize: 13, color: "var(--ink-tertiary)", margin: 0 }}>{label} for this opportunity will appear here.</p>
-    </div>
-  )
-}
-
-function GlanceCard({ label, value, sub, subColor }: { label: string; value: string; sub: string; subColor: string }) {
-  return (
-    <div style={{ borderRadius: 10, padding: "14px 16px", backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)" }}>
-      <p style={{ margin: "0 0 6px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>{label}</p>
-      <p style={{ margin: "0 0 3px", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>{value}</p>
-      <p style={{ margin: 0, fontSize: 12, color: subColor }}>{sub}</p>
-    </div>
-  )
-}
-
 // ── Style helpers ──────────────────────────────────────────────────────────
-
-const PROPOSAL_STATUS_STYLE: Record<Proposal["status"], { bg: string; color: string }> = {
-  Draft:     { bg: "#EBF0F5", color: "#4A6080" },
-  Final:     { bg: "#E0EDE6", color: "#3C5E4C" },
-  Submitted: { bg: "#F2EDF3", color: "#7A5F7E" },
-}
 
 const sectionLabelStyle: React.CSSProperties = {
   fontSize: 10,
@@ -526,8 +520,6 @@ const ghostBtnStyle: React.CSSProperties = {
   transition: "background-color 150ms",
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────
-
 const TABS: { id: TabId; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "tasks",    label: "Tasks"    },
@@ -537,10 +529,35 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "files",    label: "Files"    },
 ]
 
-export default function OpportunityDetailPage() {
+// ── Inner page (uses useSearchParams) ─────────────────────────────────────
+
+function OpportunityDetailContent() {
+  const params = useParams()
+  const searchParams = useSearchParams()
+  const opportunityId = params.opportunityId as string
+
+  const isKnown = opportunityId === "equitable-futures"
+
+  // Display values — for known ID use hardcoded data; for new IDs read from URL
+  const opportunityName = isKnown
+    ? "Equitable Futures Grant 2026"
+    : (searchParams.get("name") ?? "New Opportunity")
+  const engagementName = isKnown
+    ? "Ford Foundation"
+    : (searchParams.get("engagementName") ?? "Portfolio")
+  const chipStage = isKnown
+    ? "Active"
+    : (searchParams.get("stage") ?? "Tracking")
+  const chipAmount = isKnown
+    ? "$75,000"
+    : (searchParams.get("amount") ?? "—")
+  const chipDeadline = isKnown ? "Due Jun 15, 2026" : null
+
+  // Page state
   const [activeTab, setActiveTab] = useState<TabId>("overview")
-  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS)
-  const [stage, setStage] = useState<Stage>("Active")
+  const [tasks, setTasks] = useState<Task[]>(isKnown ? KNOWN_TASKS : [])
+  const [proposals] = useState<Proposal[]>(isKnown ? KNOWN_PROPOSALS : [])
+  const [stage, setStage] = useState<Stage>(chipStage as Stage)
   const [toast, setToast] = useState<{ msg: string; visible: boolean }>({ msg: "", visible: false })
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -564,7 +581,8 @@ export default function OpportunityDetailPage() {
       <NewProposalModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        opportunityName="Equitable Futures Grant 2026"
+        opportunityName={opportunityName}
+        opportunityId={opportunityId}
       />
 
       {/* Breadcrumb */}
@@ -572,12 +590,12 @@ export default function OpportunityDetailPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
           <Link href="/home" style={{ fontSize: 13, color: "var(--ink-tertiary)", textDecoration: "none" }}>Home</Link>
           <span style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>›</span>
-          <Link href="/portfolio" style={{ fontSize: 13, color: "var(--ink-secondary)", textDecoration: "none" }}>Ford Foundation</Link>
+          <Link href="/portfolio" style={{ fontSize: 13, color: "var(--ink-secondary)", textDecoration: "none" }}>{engagementName}</Link>
           <span style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>›</span>
-          <span style={{ fontSize: 13, color: "var(--ink)", fontWeight: 500 }}>Equitable Futures Grant 2026</span>
+          <span style={{ fontSize: 13, color: "var(--ink)", fontWeight: 500 }}>{opportunityName}</span>
         </div>
         <Link href="/portfolio" style={{ fontSize: 13, color: "var(--slate-secondary)", textDecoration: "none", fontWeight: 500 }}>
-          ‹ Ford Foundation
+          ‹ {engagementName}
         </Link>
       </div>
 
@@ -595,7 +613,7 @@ export default function OpportunityDetailPage() {
               fontFamily: "var(--font-lora)",
             }}
           >
-            Equitable Futures Grant 2026
+            {opportunityName}
           </h1>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginTop: 2 }}>
             <StageControl stage={stage} onChange={handleStageChange} />
@@ -619,19 +637,20 @@ export default function OpportunityDetailPage() {
 
         {/* Meta chips */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
-          {[
-            { label: "Ford Foundation",  style: { backgroundColor: "var(--canvas)", color: "var(--ink-secondary)" } },
-            { label: "Active",           style: { backgroundColor: "#EBF0F5",       color: "#4A6080"              } },
-            { label: "Due Jun 15, 2026", style: { backgroundColor: "#FDE8E8",       color: "#8B2020"              } },
-            { label: "$75,000",          style: { backgroundColor: "var(--canvas)", color: "var(--ink-secondary)" } },
-          ].map(({ label, style }) => (
-            <span
-              key={label}
-              style={{ borderRadius: 20, padding: "4px 12px", fontSize: 13, border: "1px solid var(--border-default)", ...style }}
-            >
-              {label}
+          <span style={{ borderRadius: 20, padding: "4px 12px", fontSize: 13, border: "1px solid var(--border-default)", backgroundColor: "var(--canvas)", color: "var(--ink-secondary)" }}>
+            {engagementName}
+          </span>
+          <span style={{ borderRadius: 20, padding: "4px 12px", fontSize: 13, border: "1px solid var(--border-default)", backgroundColor: "#EBF0F5", color: "#4A6080" }}>
+            {chipStage}
+          </span>
+          {chipDeadline && (
+            <span style={{ borderRadius: 20, padding: "4px 12px", fontSize: 13, border: "1px solid var(--border-default)", backgroundColor: "#FDE8E8", color: "#8B2020" }}>
+              {chipDeadline}
             </span>
-          ))}
+          )}
+          <span style={{ borderRadius: 20, padding: "4px 12px", fontSize: 13, border: "1px solid var(--border-default)", backgroundColor: "var(--canvas)", color: "var(--ink-secondary)" }}>
+            {chipAmount}
+          </span>
         </div>
 
         {/* Action buttons */}
@@ -679,7 +698,17 @@ export default function OpportunityDetailPage() {
 
       {/* Tab content */}
       <div style={{ padding: "28px 32px", maxWidth: 960 }}>
-        {activeTab === "overview" && <OverviewTab tasks={tasks} onToggle={toggleTask} stage={stage} onNewProposal={() => setModalOpen(true)} />}
+        {activeTab === "overview" && (
+          <OverviewTab
+            proposals={proposals}
+            tasks={tasks}
+            onToggle={toggleTask}
+            onNewProposal={() => setModalOpen(true)}
+            isKnown={isKnown}
+            deadline={chipDeadline ?? ""}
+            amount={chipAmount}
+          />
+        )}
         {activeTab === "tasks"    && <TasksTab tasks={tasks} onToggle={toggleTask} />}
         {activeTab === "budget"   && <EmptyTab label="Budget" />}
         {activeTab === "reports"  && <EmptyTab label="Reports" />}
@@ -687,5 +716,15 @@ export default function OpportunityDetailPage() {
         {activeTab === "files"    && <EmptyTab label="Files" />}
       </div>
     </div>
+  )
+}
+
+// ── Page export (Suspense required for useSearchParams) ────────────────────
+
+export default function OpportunityDetailPage() {
+  return (
+    <Suspense fallback={null}>
+      <OpportunityDetailContent />
+    </Suspense>
   )
 }

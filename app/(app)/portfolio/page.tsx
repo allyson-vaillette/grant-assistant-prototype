@@ -1303,7 +1303,16 @@ export default function PortfolioPage() {
               return (
                 <div
                   key={opp.id}
-                  onClick={() => router.push("/opportunity")}
+                  onClick={() => {
+                    const qp = new URLSearchParams({
+                      name: opp.name,
+                      stage: opp.stage,
+                      amount: opp.amount,
+                      engagementId: selectedId,
+                      engagementName: selected.name,
+                    })
+                    router.push(`/opportunity/${opp.id}?${qp.toString()}`)
+                  }}
                   style={{
                     display: "flex",
                     alignItems: "center",

@@ -476,7 +476,7 @@ export default function HomeDashboard() {
                 {SUBMITTED_PROPOSALS.map((p, i) => (
                   <div
                     key={i}
-                    onClick={() => router.push("/opportunity")}
+                    onClick={() => router.push("/opportunity/equitable-futures")}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--slate-tint)"; (e.currentTarget as HTMLDivElement).style.borderRadius = "6px" }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
                     style={{
@@ -626,7 +626,7 @@ export default function HomeDashboard() {
               <button
                 type="button"
                 style={{ background: "none", border: "none", fontSize: 12, color: "var(--slate-secondary)", cursor: "pointer", fontWeight: 500 }}
-                onClick={() => router.push("/opportunity")}
+                onClick={() => router.push("/opportunity/equitable-futures")}
               >
                 View all
               </button>
@@ -644,7 +644,7 @@ export default function HomeDashboard() {
                   return (
                     <div
                       key={task.id}
-                      onClick={() => router.push("/opportunity")}
+                      onClick={() => router.push("/opportunity/equitable-futures")}
                       onMouseEnter={() => setHoveredTask(task.id)}
                       onMouseLeave={() => setHoveredTask(null)}
                       style={{
@@ -758,7 +758,7 @@ export default function HomeDashboard() {
                     backgroundColor: hoveredDeadline === i ? "var(--canvas)" : "transparent",
                     transition: "background-color 150ms",
                   }}
-                  onClick={() => router.push("/opportunity")}
+                  onClick={() => router.push("/opportunity/equitable-futures")}
                 >
                   <div
                     style={{

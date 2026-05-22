@@ -176,7 +176,7 @@ export default function EditorPage() {
       {/* Top bar */}
       <div style={{ flexShrink: 0, height: 44, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", backgroundColor: "var(--surface-white)", borderBottom: "1px solid var(--border-default)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <NextLink href="/opportunity" style={{ width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "var(--surface-white)", textDecoration: "none", flexShrink: 0 }}>
+          <NextLink href="/opportunity/equitable-futures" style={{ width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "var(--surface-white)", textDecoration: "none", flexShrink: 0 }}>
             <ChevronLeft size={13} color="var(--ink-secondary)" />
           </NextLink>
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--ink-tertiary)" }}>
