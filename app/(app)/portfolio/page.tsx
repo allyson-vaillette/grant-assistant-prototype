@@ -408,6 +408,12 @@ function NoteEditor({
         ref={ref}
         value={text}
         onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault()
+            if (text.trim()) onSave(text.trim())
+          }
+        }}
         placeholder={placeholder}
         rows={3}
         style={{
@@ -1397,21 +1403,23 @@ export default function PortfolioPage() {
               marginBottom: showAddNote ? 12 : 0,
             }}
           >
-            <div
-              style={{
-                padding: "14px 16px",
-                borderRadius: 10,
-                backgroundColor: "var(--surface-white)",
-                border: "1px solid var(--border-default)",
-              }}
-            >
-              <NoteEditor
-                placeholder="Add a note..."
-                saveLabel="Save note"
-                onSave={handleAddNote}
-                onCancel={handleCancelAddNote}
-              />
-            </div>
+            {showAddNote && (
+              <div
+                style={{
+                  padding: "14px 16px",
+                  borderRadius: 10,
+                  backgroundColor: "var(--surface-white)",
+                  border: "1px solid var(--border-default)",
+                }}
+              >
+                <NoteEditor
+                  placeholder="Add a note..."
+                  saveLabel="Save note"
+                  onSave={handleAddNote}
+                  onCancel={handleCancelAddNote}
+                />
+              </div>
+            )}
           </div>
 
           {/* Note list */}

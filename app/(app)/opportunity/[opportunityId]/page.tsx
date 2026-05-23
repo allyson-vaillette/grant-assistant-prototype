@@ -1,9 +1,9 @@
 "use client"
 
-import React, { useState, Suspense } from "react"
+import React, { useState, useEffect, useRef, useCallback, Suspense } from "react"
 import Link from "next/link"
 import { useParams, useSearchParams, useRouter } from "next/navigation"
-import { ChevronDown, Copy, FileText, Plus } from "lucide-react"
+import { ChevronDown, Copy, FileText, Plus, Paperclip, Pencil, Trash2, X } from "lucide-react"
 import { NewProposalModal } from "@/components/proposals/NewProposalModal"
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -11,6 +11,13 @@ import { NewProposalModal } from "@/components/proposals/NewProposalModal"
 type TabId = "overview" | "tasks" | "budget" | "reports" | "notes" | "files"
 type TaskStatus = "To Do" | "In Progress" | "Done"
 type Stage = "Tracking" | "Active" | "Submitted" | "Awarded" | "Reporting" | "Complete" | "Declined"
+
+interface Note {
+  id: string
+  text: string
+  date: string
+  author: string
+}
 
 interface Proposal {
   id: string
@@ -31,7 +38,44 @@ interface Task {
   done: boolean
 }
 
+interface Expense {
+  id: string
+  date: string
+  description: string
+  category: string
+  amount: number
+  receiptName: string | null
+}
+
+// ── Constants ──────────────────────────────────────────────────────────────
+
+const AWARDED_AMOUNT = 75000
+
+const DEFAULT_EXPENSE_CATEGORIES = [
+  "Personnel",
+  "Supplies",
+  "Travel",
+  "Indirect Costs",
+  "Program Expenses",
+  "Other",
+]
+
 // ── Hardcoded data for known opportunities ─────────────────────────────────
+
+const KNOWN_NOTES: Note[] = [
+  {
+    id: "opp-note-1",
+    text: "Spoke with program officer on May 5 — emphasized community engagement outcomes. She seemed receptive to the data-sharing angle.",
+    date: "May 5, 2026",
+    author: "Taylor S.",
+  },
+  {
+    id: "opp-note-2",
+    text: "LOI submitted Mar 12. Received confirmation email Mar 14.",
+    date: "Mar 12, 2026",
+    author: "Taylor S.",
+  },
+]
 
 const KNOWN_PROPOSALS: Proposal[] = [
   {
@@ -50,10 +94,23 @@ const KNOWN_TASKS: Task[] = [
   { id: "t3", name: "Collect letters of support",        due: "Due Jun 1",  dueBadge: "later", assignee: "TS", status: "To Do",       done: false },
 ]
 
+const KNOWN_EXPENSES: Expense[] = [
+  { id: "e1", date: "2026-05-01", description: "Program staff salary (May)",     category: "Personnel",        amount: 4200, receiptName: null },
+  { id: "e2", date: "2026-05-05", description: "Community meeting venue rental", category: "Program Expenses", amount: 350,  receiptName: null },
+  { id: "e3", date: "2026-05-12", description: "Travel to partner site visit",   category: "Travel",           amount: 180,  receiptName: null },
+  { id: "e4", date: "2026-05-15", description: "Office supplies",                category: "Supplies",         amount: 95,   receiptName: null },
+]
+
 // ── Stage config ───────────────────────────────────────────────────────────
 
 const STAGE_ORDER: Stage[] = ["Tracking", "Active", "Submitted", "Awarded", "Reporting", "Complete"]
 const TERMINAL_STAGES: Stage[] = ["Declined", "Complete"]
+const UNLOCK_STAGES: Stage[] = ["Awarded", "Reporting", "Complete"]
+const LOCKED_TABS: TabId[] = ["budget", "reports"]
+
+function isTabLocked(tabId: TabId, stage: Stage): boolean {
+  return LOCKED_TABS.includes(tabId) && !UNLOCK_STAGES.includes(stage)
+}
 
 const STAGE_DOT: Record<Stage, string> = {
   Tracking:  "#A6B3C5",
@@ -91,6 +148,28 @@ function dueBadgeStyle(cat: Task["dueBadge"]): React.CSSProperties {
   if (cat === "today") return { backgroundColor: "#FDE8E8", color: "#8B2020" }
   if (cat === "soon")  return { backgroundColor: "#FFF3E0", color: "#7A4A10" }
   return { backgroundColor: "#E8ECF0", color: "#4A6080" }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function formatCurrency(n: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(n)
+}
+
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00")
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+}
+
+function todayISO(): string {
+  const d = new Date()
+  const mm = String(d.getMonth() + 1).padStart(2, "0")
+  const dd = String(d.getDate()).padStart(2, "0")
+  return `${d.getFullYear()}-${mm}-${dd}`
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────
@@ -254,16 +333,6 @@ function Avatar({ initials }: { initials: string }) {
   )
 }
 
-function GlanceCard({ label, value, sub, subColor }: { label: string; value: string; sub: string; subColor: string }) {
-  return (
-    <div style={{ borderRadius: 10, padding: "14px 16px", backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)" }}>
-      <p style={{ margin: "0 0 6px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>{label}</p>
-      <p style={{ margin: "0 0 3px", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>{value}</p>
-      <p style={{ margin: 0, fontSize: 12, color: subColor }}>{sub}</p>
-    </div>
-  )
-}
-
 function EmptyTab({ label }: { label: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 0", gap: 8 }}>
@@ -277,23 +346,12 @@ function EmptyTab({ label }: { label: string }) {
 
 function OverviewTab({
   proposals,
-  tasks,
-  onToggle,
   onNewProposal,
-  isKnown,
-  deadline,
-  amount,
 }: {
   proposals: Proposal[]
-  tasks: Task[]
-  onToggle: (id: string) => void
   onNewProposal: () => void
-  isKnown: boolean
-  deadline: string
-  amount: string
 }) {
   const router = useRouter()
-  const openTasks = tasks.filter((t) => !t.done)
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
@@ -382,62 +440,6 @@ function OverviewTab({
         </div>
       </div>
 
-      {/* Open tasks */}
-      {tasks.length > 0 && (
-        <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <p style={{ ...sectionLabelStyle, margin: 0 }}>Open tasks ({openTasks.length})</p>
-            <button type="button" style={{ background: "none", border: "none", fontSize: 12, color: "var(--slate-secondary)", cursor: "pointer", fontWeight: 500 }}>
-              View all tasks →
-            </button>
-          </div>
-          <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)", overflow: "hidden" }}>
-            {tasks.slice(0, 3).map((task, i) => {
-              const badge = TASK_STATUS_STYLE[task.status]
-              return (
-                <div
-                  key={task.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 14,
-                    padding: "14px 18px",
-                    borderBottom: i < 2 ? "1px solid var(--border-default)" : "none",
-                    opacity: task.done ? 0.45 : 1,
-                    transition: "opacity 150ms",
-                  }}
-                >
-                  <TaskCheckbox done={task.done} onClick={() => onToggle(task.id)} />
-                  <div style={{ flex: 1 }}>
-                    <p style={{ margin: "0 0 4px", fontSize: 14, color: "var(--ink)", textDecoration: task.done ? "line-through" : "none" }}>
-                      {task.name}
-                    </p>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>{task.due}</span>
-                      <Avatar initials={task.assignee} />
-                    </div>
-                  </div>
-                  <span style={{ flexShrink: 0, borderRadius: 20, padding: "3px 10px", backgroundColor: badge.bg, fontSize: 11, fontWeight: 500, color: badge.color }}>
-                    {task.status}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* At a glance */}
-      {isKnown && (
-        <div>
-          <p style={sectionLabelStyle}>At a glance</p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-            <GlanceCard label="Deadline" value={deadline || "—"} sub="6 days away" subColor="#B91C1C" />
-            <GlanceCard label="Target amount" value={amount || "—"} sub="1 draft proposal" subColor="var(--ink-tertiary)" />
-            <GlanceCard label="Last activity" value="2 days ago" sub="by Taylor S." subColor="var(--ink-tertiary)" />
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -497,6 +499,633 @@ function TasksTab({ tasks, onToggle }: { tasks: Task[]; onToggle: (id: string) =
   )
 }
 
+// ── BudgetTab ──────────────────────────────────────────────────────────────
+
+function BudgetTab({
+  awardedAmount,
+  expenses,
+  onAddExpense,
+  onUpdateExpense,
+  onDeleteExpense,
+}: {
+  awardedAmount: number
+  expenses: Expense[]
+  onAddExpense: (e: Expense) => void
+  onUpdateExpense: (e: Expense) => void
+  onDeleteExpense: (id: string) => void
+}) {
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [draft, setDraft] = useState<Expense | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [customCategories, setCustomCategories] = useState<string[]>([])
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null)
+
+  const allCategories = [...DEFAULT_EXPENSE_CATEGORIES, ...customCategories]
+  const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0)
+  const remaining = awardedAmount - totalSpent
+  const isOverspent = remaining < 0
+
+  function startEdit(expense: Expense) {
+    setEditingId(expense.id)
+    setDraft({ ...expense })
+    setDeletingId(null)
+  }
+
+  function startNew() {
+    setEditingId("new")
+    setDraft({ id: `e${Date.now()}`, date: todayISO(), description: "", category: "Personnel", amount: 0, receiptName: null })
+    setDeletingId(null)
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    setDraft(null)
+  }
+
+  function saveEdit() {
+    if (!draft) return
+    if (!DEFAULT_EXPENSE_CATEGORIES.includes(draft.category) && !customCategories.includes(draft.category) && draft.category.trim()) {
+      setCustomCategories((prev) => [...prev, draft.category])
+    }
+    if (editingId === "new") {
+      onAddExpense(draft)
+    } else {
+      onUpdateExpense(draft)
+    }
+    setEditingId(null)
+    setDraft(null)
+  }
+
+  const editInputStyle: React.CSSProperties = {
+    padding: "6px 10px",
+    borderRadius: 6,
+    border: "1px solid var(--border-default)",
+    fontSize: 13,
+    color: "var(--ink)",
+    backgroundColor: "var(--surface-white)",
+    outline: "none",
+    width: "100%",
+    boxSizing: "border-box",
+  }
+
+  const editLabelStyle: React.CSSProperties = {
+    fontSize: 11,
+    fontWeight: 500,
+    color: "var(--ink-tertiary)",
+    marginBottom: 2,
+  }
+
+  function renderEditRow(borderBottom: string) {
+    if (!draft) return null
+    return (
+      <div style={{ padding: "14px 18px", backgroundColor: "var(--canvas)", borderBottom, display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+          <div style={{ display: "flex", flexDirection: "column", flex: "0 0 140px" }}>
+            <span style={editLabelStyle}>Date</span>
+            <input
+              type="date"
+              value={draft.date}
+              onChange={(e) => setDraft((prev) => prev ? { ...prev, date: e.target.value } : null)}
+              style={editInputStyle}
+            />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+            <span style={editLabelStyle}>Description</span>
+            <input
+              type="text"
+              value={draft.description}
+              onChange={(e) => setDraft((prev) => prev ? { ...prev, description: e.target.value } : null)}
+              placeholder="e.g. Program supplies"
+              style={editInputStyle}
+            />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", flex: "0 0 164px" }}>
+            <span style={editLabelStyle}>Category</span>
+            <input
+              list="expense-categories"
+              value={draft.category}
+              onChange={(e) => setDraft((prev) => prev ? { ...prev, category: e.target.value } : null)}
+              style={editInputStyle}
+              placeholder="Select or type..."
+            />
+            <datalist id="expense-categories">
+              {allCategories.map((c) => <option key={c} value={c} />)}
+            </datalist>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", flex: "0 0 120px" }}>
+            <span style={editLabelStyle}>Amount</span>
+            <div style={{ position: "relative" }}>
+              <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--ink-secondary)", pointerEvents: "none" }}>$</span>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={draft.amount || ""}
+                onChange={(e) => setDraft((prev) => prev ? { ...prev, amount: parseFloat(e.target.value) || 0 } : null)}
+                placeholder="0"
+                style={{ ...editInputStyle, paddingLeft: 24 }}
+              />
+            </div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <label
+            style={{
+              display: "flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--slate-secondary)",
+              cursor: "pointer", borderRadius: 6, padding: "5px 10px",
+              border: "1px solid var(--border-default)", backgroundColor: "transparent",
+            }}
+          >
+            <input
+              type="file"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) setDraft((prev) => prev ? { ...prev, receiptName: file.name } : null)
+              }}
+            />
+            <Paperclip size={13} />
+            Attach receipt
+          </label>
+          {draft.receiptName && (
+            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--ink-secondary)" }}>
+              <span>{draft.receiptName}</span>
+              <button
+                type="button"
+                onClick={() => setDraft((prev) => prev ? { ...prev, receiptName: null } : null)}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", lineHeight: 1 }}
+              >
+                <X size={12} color="var(--ink-tertiary)" />
+              </button>
+            </div>
+          )}
+          <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={saveEdit}
+              style={{ padding: "6px 14px", borderRadius: 7, border: "none", backgroundColor: "var(--slate-primary)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={cancelEdit}
+              style={{ background: "none", border: "none", fontSize: 13, color: "var(--ink-secondary)", cursor: "pointer", textDecoration: "underline" }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const statCardStyle: React.CSSProperties = {
+    borderRadius: 10,
+    padding: "14px 16px",
+    backgroundColor: "var(--canvas)",
+    border: "1px solid var(--border-default)",
+  }
+
+  const statLabelStyle: React.CSSProperties = {
+    margin: "0 0 6px",
+    fontSize: 10,
+    fontWeight: 600,
+    letterSpacing: "0.07em",
+    textTransform: "uppercase",
+    color: "var(--ink-tertiary)",
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+      {/* Awarded header */}
+      <div>
+        <p style={sectionLabelStyle}>Awarded</p>
+        <p style={{ margin: 0, fontSize: 28, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.02em" }}>
+          {formatCurrency(awardedAmount)}
+        </p>
+      </div>
+
+      {/* Summary bar */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+        <div style={statCardStyle}>
+          <p style={statLabelStyle}>Awarded</p>
+          <p style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>{formatCurrency(awardedAmount)}</p>
+        </div>
+        <div style={statCardStyle}>
+          <p style={statLabelStyle}>Spent</p>
+          <p style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>{formatCurrency(totalSpent)}</p>
+        </div>
+        <div style={statCardStyle}>
+          <p style={statLabelStyle}>Remaining</p>
+          <p style={{ margin: 0, fontSize: 20, fontWeight: 600, color: isOverspent ? "#D97706" : "var(--ink)" }}>
+            {formatCurrency(remaining)}
+          </p>
+        </div>
+      </div>
+
+      {/* Expenses section */}
+      <div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <p style={{ ...sectionLabelStyle, margin: 0 }}>Expenses</p>
+          <button
+            type="button"
+            onClick={startNew}
+            style={{ background: "none", border: "none", fontSize: 13, fontWeight: 500, color: "var(--slate-secondary)", cursor: "pointer", padding: "4px 8px", borderRadius: 6, transition: "background-color 150ms" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-tint)" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+          >
+            + Add expense
+          </button>
+        </div>
+
+        {expenses.length === 0 && editingId !== "new" ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 0", gap: 10 }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "var(--ink-secondary)" }}>No expenses recorded yet.</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>Add your first expense to start tracking.</p>
+            <button
+              type="button"
+              onClick={startNew}
+              style={{ marginTop: 4, padding: "7px 16px", borderRadius: 7, border: "none", backgroundColor: "var(--slate-primary)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}
+            >
+              + Add expense
+            </button>
+          </div>
+        ) : (
+          <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)", overflow: "hidden" }}>
+            {expenses.map((expense, i) => {
+              const isEditing = editingId === expense.id
+              const isDeleting = deletingId === expense.id
+              const isHovered = hoveredRow === expense.id
+              const isLastExpense = i === expenses.length - 1
+              const borderBottom = (isLastExpense && editingId !== "new") ? "none" : "1px solid var(--border-default)"
+
+              if (isEditing && draft) {
+                return (
+                  <div key={expense.id}>
+                    {renderEditRow(borderBottom)}
+                  </div>
+                )
+              }
+
+              return (
+                <div
+                  key={expense.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "12px 18px",
+                    borderBottom,
+                    backgroundColor: isDeleting ? "var(--canvas)" : "var(--surface-white)",
+                    transition: "background-color 150ms",
+                  }}
+                  onMouseEnter={() => { if (!isDeleting) setHoveredRow(expense.id) }}
+                  onMouseLeave={() => setHoveredRow(null)}
+                >
+                  {isDeleting ? (
+                    <>
+                      <span style={{ flex: 1, fontSize: 13, color: "var(--ink-secondary)" }}>
+                        Delete &ldquo;{expense.description}&rdquo;?
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => { onDeleteExpense(expense.id); setDeletingId(null) }}
+                        style={{ padding: "5px 12px", borderRadius: 6, border: "none", backgroundColor: "#DC2626", color: "#fff", fontSize: 12, fontWeight: 500, cursor: "pointer" }}
+                      >
+                        Delete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeletingId(null)}
+                        style={{ padding: "5px 12px", borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "transparent", fontSize: 12, fontWeight: 500, cursor: "pointer", color: "var(--ink)" }}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ flex: "0 0 110px", fontSize: 13, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>
+                        {formatDate(expense.date)}
+                      </span>
+                      <span style={{ flex: 1, fontSize: 14, color: "var(--ink)" }}>
+                        {expense.description}
+                      </span>
+                      <span style={{ flexShrink: 0, borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 500, backgroundColor: "#F0F2F5", color: "var(--ink-secondary)" }}>
+                        {expense.category}
+                      </span>
+                      <span style={{ flex: "0 0 80px", textAlign: "right", fontSize: 14, fontWeight: 500, color: "var(--ink)" }}>
+                        {formatCurrency(expense.amount)}
+                      </span>
+                      <Paperclip
+                        size={14}
+                        color={expense.receiptName ? "var(--ink-secondary)" : "var(--border-default)"}
+                        style={{ flexShrink: 0 }}
+                      />
+                      <div style={{ display: "flex", gap: 4, opacity: isHovered ? 1 : 0, transition: "opacity 150ms", flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          onClick={() => startEdit(expense)}
+                          style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Pencil size={13} color="var(--ink-secondary)" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setDeletingId(expense.id); setHoveredRow(null) }}
+                          style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <Trash2 size={13} color="var(--ink-secondary)" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )
+            })}
+
+            {/* New expense row */}
+            {editingId === "new" && draft && renderEditRow("none")}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Notes components ───────────────────────────────────────────────────────
+
+function NoteBubble() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <path
+        d="M2.5 2A1.5 1.5 0 0 0 1 3.5v5A1.5 1.5 0 0 0 2.5 10H5v2.5L8 10h3.5A1.5 1.5 0 0 0 13 8.5v-5A1.5 1.5 0 0 0 11.5 2h-9Z"
+        fill="var(--slate-secondary)"
+      />
+    </svg>
+  )
+}
+
+function NoteEditor({
+  initialText = "",
+  placeholder = "Add a note...",
+  saveLabel,
+  onSave,
+  onCancel,
+}: {
+  initialText?: string
+  placeholder?: string
+  saveLabel: string
+  onSave: (text: string) => void
+  onCancel: () => void
+}) {
+  const [text, setText] = useState(initialText)
+  const ref = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    ref.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onCancel()
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [onCancel])
+
+  return (
+    <div>
+      <textarea
+        ref={ref}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault()
+            if (text.trim()) onSave(text.trim())
+          }
+        }}
+        placeholder={placeholder}
+        rows={3}
+        style={{
+          width: "100%",
+          padding: "9px 12px",
+          borderRadius: 8,
+          border: "1px solid var(--border-default)",
+          backgroundColor: "var(--surface-white)",
+          fontSize: 13,
+          color: "var(--ink)",
+          outline: "none",
+          resize: "none" as const,
+          lineHeight: "19px",
+          boxSizing: "border-box" as const,
+          fontFamily: "inherit",
+        }}
+      />
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+        <button
+          type="button"
+          onClick={() => { if (text.trim()) onSave(text.trim()) }}
+          style={{
+            padding: "5px 14px",
+            borderRadius: 7,
+            border: "none",
+            backgroundColor: "var(--slate-primary)",
+            fontSize: 12,
+            fontWeight: 500,
+            color: "#FFFFFF",
+            cursor: "pointer",
+            transition: "background-color 150ms",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
+        >
+          {saveLabel}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          style={{
+            background: "none",
+            border: "none",
+            fontSize: 12,
+            color: "var(--ink-secondary)",
+            cursor: "pointer",
+            padding: "5px 0",
+          }}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function NotesTab({
+  notes,
+  composerOpen,
+  onComposerChange,
+  onAddNote,
+  onEditNote,
+}: {
+  notes: Note[]
+  composerOpen: boolean
+  onComposerChange: (open: boolean) => void
+  onAddNote: (text: string) => void
+  onEditNote: (id: string, text: string) => void
+}) {
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
+  const [hoveredNoteId, setHoveredNoteId] = useState<string | null>(null)
+
+  // close any open edit when the add composer opens
+  useEffect(() => {
+    if (composerOpen) setEditingNoteId(null)
+  }, [composerOpen])
+
+  const handleSave = useCallback(
+    (text: string) => {
+      onAddNote(text)
+      onComposerChange(false)
+    },
+    [onAddNote, onComposerChange]
+  )
+
+  const handleCancelComposer = useCallback(() => onComposerChange(false), [onComposerChange])
+  const handleCancelEdit = useCallback(() => setEditingNoteId(null), [])
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <p style={{ ...sectionLabelStyle, margin: 0 }}>Notes ({notes.length})</p>
+        <button
+          type="button"
+          onClick={() => {
+            setEditingNoteId(null)
+            onComposerChange(!composerOpen)
+          }}
+          style={{
+            background: "none",
+            border: "none",
+            padding: "0 2px",
+            fontSize: 12,
+            fontWeight: 500,
+            color: "var(--slate-secondary)",
+            cursor: "pointer",
+            lineHeight: "16px",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "underline" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "none" }}
+        >
+          + Add note
+        </button>
+      </div>
+
+      {/* Inline composer */}
+      {composerOpen && (
+        <div
+          style={{
+            marginBottom: 12,
+            padding: "14px 16px",
+            borderRadius: 10,
+            backgroundColor: "var(--surface-white)",
+            border: "1px solid var(--border-default)",
+          }}
+        >
+          <NoteEditor
+            placeholder="Add a note..."
+            saveLabel="Save note"
+            onSave={handleSave}
+            onCancel={handleCancelComposer}
+          />
+        </div>
+      )}
+
+      {/* Note list */}
+      {notes.length === 0 && !composerOpen ? (
+        <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>No notes yet.</p>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {notes.map((note) => (
+            <div
+              key={note.id}
+              style={{ position: "relative" }}
+              onMouseEnter={() => setHoveredNoteId(note.id)}
+              onMouseLeave={() => setHoveredNoteId(null)}
+            >
+              {editingNoteId === note.id ? (
+                <div
+                  style={{
+                    padding: "14px 16px",
+                    borderRadius: 10,
+                    backgroundColor: "var(--surface-white)",
+                    border: "1px solid var(--border-default)",
+                  }}
+                >
+                  <NoteEditor
+                    initialText={note.text}
+                    saveLabel="Save"
+                    onSave={(text) => {
+                      onEditNote(note.id, text)
+                      setEditingNoteId(null)
+                    }}
+                    onCancel={handleCancelEdit}
+                  />
+                </div>
+              ) : (
+                <div
+                  onClick={() => {
+                    onComposerChange(false)
+                    setEditingNoteId(note.id)
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 12,
+                    padding: "14px 16px",
+                    borderRadius: 10,
+                    backgroundColor: "var(--canvas)",
+                    border: "1px solid var(--border-default)",
+                    cursor: "text",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      flexShrink: 0,
+                      borderRadius: 7,
+                      backgroundColor: "var(--slate-tint)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <NoteBubble />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: "0 0 4px", fontSize: 13, color: "var(--ink)", lineHeight: "19px" }}>
+                      {note.text}
+                    </p>
+                    <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
+                      {note.date} · {note.author}
+                    </span>
+                  </div>
+                  {hoveredNoteId === note.id && (
+                    <div style={{ flexShrink: 0, opacity: 0.5, marginTop: 2 }}>
+                      <Pencil size={12} color="var(--ink-tertiary)" />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Style helpers ──────────────────────────────────────────────────────────
 
 const sectionLabelStyle: React.CSSProperties = {
@@ -521,7 +1150,7 @@ const ghostBtnStyle: React.CSSProperties = {
 }
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: "overview", label: "Overview" },
+  { id: "overview", label: "Proposals" },
   { id: "tasks",    label: "Tasks"    },
   { id: "budget",   label: "Budget"   },
   { id: "reports",  label: "Reports"  },
@@ -538,7 +1167,6 @@ function OpportunityDetailContent() {
 
   const isKnown = opportunityId === "equitable-futures"
 
-  // Display values — for known ID use hardcoded data; for new IDs read from URL
   const opportunityName = isKnown
     ? "Equitable Futures Grant 2026"
     : (searchParams.get("name") ?? "New Opportunity")
@@ -553,13 +1181,26 @@ function OpportunityDetailContent() {
     : (searchParams.get("amount") ?? "—")
   const chipDeadline = isKnown ? "Due Jun 15, 2026" : null
 
-  // Page state
   const [activeTab, setActiveTab] = useState<TabId>("overview")
   const [tasks, setTasks] = useState<Task[]>(isKnown ? KNOWN_TASKS : [])
   const [proposals] = useState<Proposal[]>(isKnown ? KNOWN_PROPOSALS : [])
   const [stage, setStage] = useState<Stage>(chipStage as Stage)
+  const [expenses, setExpenses] = useState<Expense[]>(isKnown ? KNOWN_EXPENSES : [])
+  const [notes, setNotes] = useState<Note[]>(isKnown ? KNOWN_NOTES : [])
+  const [noteComposerOpen, setNoteComposerOpen] = useState(false)
   const [toast, setToast] = useState<{ msg: string; visible: boolean }>({ msg: "", visible: false })
   const [modalOpen, setModalOpen] = useState(false)
+  const [lockedHover, setLockedHover] = useState<TabId | null>(null)
+
+  // Redirect to overview if active tab becomes locked due to stage change
+  useEffect(() => {
+    setActiveTab((prev) => isTabLocked(prev, stage) ? "overview" : prev)
+  }, [stage])
+
+  // Reset note composer when navigating away from notes tab
+  useEffect(() => {
+    if (activeTab !== "notes") setNoteComposerOpen(false)
+  }, [activeTab])
 
   function toggleTask(id: string) {
     setTasks((prev) =>
@@ -573,6 +1214,30 @@ function OpportunityDetailContent() {
     setStage(s)
     setToast({ msg: `Stage: ${s}`, visible: true })
     setTimeout(() => setToast((v) => ({ ...v, visible: false })), 3000)
+  }
+
+  function handleAddNote(text: string) {
+    const now = new Date()
+    const dateStr = now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    setNotes((prev) => [{ id: `note-${Date.now()}`, text, date: dateStr, author: "Taylor S." }, ...prev])
+  }
+
+  function handleEditNote(id: string, text: string) {
+    const now = new Date()
+    const dateStr = now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    setNotes((prev) => prev.map((n) => n.id === id ? { ...n, text, date: dateStr } : n))
+  }
+
+  function addExpense(e: Expense) {
+    setExpenses((prev) => [...prev, e])
+  }
+
+  function updateExpense(e: Expense) {
+    setExpenses((prev) => prev.map((x) => (x.id === e.id ? e : x)))
+  }
+
+  function deleteExpense(id: string) {
+    setExpenses((prev) => prev.filter((x) => x.id !== id))
   }
 
   return (
@@ -655,42 +1320,76 @@ function OpportunityDetailContent() {
 
         {/* Action buttons */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-          {["Add task", "Add note"].map((label) => (
-            <button
-              key={label}
-              type="button"
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, backgroundColor: "transparent", border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", cursor: "pointer", transition: "background-color 150ms" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
-            >
-              <Plus size={13} />
-              {label}
-            </button>
-          ))}
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("notes")
+              setNoteComposerOpen(true)
+            }}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, backgroundColor: "transparent", border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", cursor: "pointer", transition: "background-color 150ms" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+          >
+            <Plus size={13} />
+            Add note
+          </button>
         </div>
 
         {/* Tabs */}
         <div style={{ display: "flex", gap: 4 }}>
           {TABS.map(({ id, label }) => {
             const isActive = activeTab === id
+            const locked = isTabLocked(id, stage)
             return (
-              <button
+              <div
                 key={id}
-                type="button"
-                onClick={() => setActiveTab(id)}
-                style={{
-                  position: "relative", padding: "8px 14px", background: "none", border: "none",
-                  cursor: "pointer", fontSize: 14,
-                  fontWeight: isActive ? 600 : 400,
-                  color: isActive ? "var(--slate-primary)" : "var(--ink-secondary)",
-                  transition: "color 150ms",
-                }}
+                style={{ position: "relative" }}
+                onMouseEnter={() => { if (locked) setLockedHover(id) }}
+                onMouseLeave={() => setLockedHover(null)}
               >
-                {label}
-                {isActive && (
-                  <div style={{ position: "absolute", bottom: 0, left: 14, right: 14, height: 2, borderRadius: 1, backgroundColor: "var(--slate-primary)" }} />
+                <button
+                  type="button"
+                  onClick={() => { if (!locked) setActiveTab(id) }}
+                  style={{
+                    position: "relative",
+                    padding: "8px 14px",
+                    background: "none",
+                    border: "none",
+                    cursor: locked ? "not-allowed" : "pointer",
+                    opacity: locked ? 0.4 : 1,
+                    fontSize: 14,
+                    fontWeight: isActive ? 600 : 400,
+                    color: isActive ? "var(--slate-primary)" : "var(--ink-secondary)",
+                    transition: "color 150ms",
+                  }}
+                >
+                  {label}
+                  {isActive && !locked && (
+                    <div style={{ position: "absolute", bottom: 0, left: 14, right: 14, height: 2, borderRadius: 1, backgroundColor: "var(--slate-primary)" }} />
+                  )}
+                </button>
+                {locked && lockedHover === id && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 4px)",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      backgroundColor: "#1C2E26",
+                      color: "#FFFFFF",
+                      fontSize: 12,
+                      padding: "6px 10px",
+                      borderRadius: 6,
+                      whiteSpace: "nowrap",
+                      zIndex: 200,
+                      pointerEvents: "none",
+                      boxShadow: "0 2px 8px rgba(28,46,38,0.2)",
+                    }}
+                  >
+                    Available once this opportunity is awarded
+                  </div>
                 )}
-              </button>
+              </div>
             )
           })}
         </div>
@@ -701,18 +1400,31 @@ function OpportunityDetailContent() {
         {activeTab === "overview" && (
           <OverviewTab
             proposals={proposals}
-            tasks={tasks}
-            onToggle={toggleTask}
             onNewProposal={() => setModalOpen(true)}
-            isKnown={isKnown}
-            deadline={chipDeadline ?? ""}
-            amount={chipAmount}
           />
         )}
-        {activeTab === "tasks"    && <TasksTab tasks={tasks} onToggle={toggleTask} />}
-        {activeTab === "budget"   && <EmptyTab label="Budget" />}
+        {activeTab === "tasks" && <TasksTab tasks={tasks} onToggle={toggleTask} />}
+        {activeTab === "budget" && (
+          isKnown
+            ? <BudgetTab
+                awardedAmount={AWARDED_AMOUNT}
+                expenses={expenses}
+                onAddExpense={addExpense}
+                onUpdateExpense={updateExpense}
+                onDeleteExpense={deleteExpense}
+              />
+            : <EmptyTab label="Budget" />
+        )}
         {activeTab === "reports"  && <EmptyTab label="Reports" />}
-        {activeTab === "notes"    && <EmptyTab label="Notes" />}
+        {activeTab === "notes" && (
+          <NotesTab
+            notes={notes}
+            composerOpen={noteComposerOpen}
+            onComposerChange={setNoteComposerOpen}
+            onAddNote={handleAddNote}
+            onEditNote={handleEditNote}
+          />
+        )}
         {activeTab === "files"    && <EmptyTab label="Files" />}
       </div>
     </div>
