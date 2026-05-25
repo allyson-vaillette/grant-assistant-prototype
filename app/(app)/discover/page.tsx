@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Plus, SlidersHorizontal, ThumbsDown, X } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Plus, Search, SlidersHorizontal, ThumbsDown, X } from "lucide-react"
 import { NewEngagementModal, type NewEngagementData } from "@/components/proposals/NewEngagementModal"
 import { DISCOVER_FUNDERS, type DiscoverFunder } from "@/lib/funders"
 
@@ -50,7 +50,10 @@ const FUNDER_TYPES = [
 
 type FunderTypeFilter = (typeof FUNDER_TYPES)[number]
 
+const INITIATIVE_OPTIONS = ["Rescue & Intake", "Foster Program", "Neutering"] as const
+
 interface CombinedFilterState {
+  initiatives: Record<string, boolean>
   focusAreas: Record<string, boolean>
   geography: Record<string, boolean>
   // Opportunity-specific
@@ -1493,20 +1496,27 @@ function FunderDetailPanel({
 
 function FilterSidebar({
   activeTab,
-  filters,
-  onChange,
-  onClear,
+  stagedFilters,
+  appliedFilters,
+  onStagedChange,
+  onApply,
+  onClearAll,
   collapsed,
   onToggleCollapse,
 }: {
   activeTab: ActiveTab
-  filters: CombinedFilterState
-  onChange: (next: CombinedFilterState) => void
-  onClear: () => void
+  stagedFilters: CombinedFilterState
+  appliedFilters: CombinedFilterState
+  onStagedChange: (next: CombinedFilterState) => void
+  onApply: () => void
+  onClearAll: () => void
   collapsed: boolean
   onToggleCollapse: () => void
 }) {
+  const hasPending = JSON.stringify(stagedFilters) !== JSON.stringify(appliedFilters)
+
   const [openSections, setOpenSections] = useState({
+    initiatives: true,
     focusAreas: true,
     geography: true,
     fundingRange: true,
@@ -1517,32 +1527,37 @@ function FilterSidebar({
     setOpenSections((s) => ({ ...s, [key]: !s[key] }))
   }
 
+  function toggleInitiative(key: string) {
+    onStagedChange({ ...stagedFilters, initiatives: { ...stagedFilters.initiatives, [key]: !stagedFilters.initiatives[key] } })
+  }
+
   function toggleFocus(key: string) {
-    onChange({ ...filters, focusAreas: { ...filters.focusAreas, [key]: !filters.focusAreas[key] } })
+    onStagedChange({ ...stagedFilters, focusAreas: { ...stagedFilters.focusAreas, [key]: !stagedFilters.focusAreas[key] } })
   }
 
   function toggleGeo(key: string) {
-    onChange({ ...filters, geography: { ...filters.geography, [key]: !filters.geography[key] } })
+    onStagedChange({ ...stagedFilters, geography: { ...stagedFilters.geography, [key]: !stagedFilters.geography[key] } })
   }
 
   function setDeadline(val: CombinedFilterState["deadline"]) {
-    onChange({ ...filters, deadline: filters.deadline === val ? null : val })
+    onStagedChange({ ...stagedFilters, deadline: stagedFilters.deadline === val ? null : val })
   }
 
   function toggleFunderType(key: FunderTypeFilter) {
-    onChange({ ...filters, funderTypes: { ...filters.funderTypes, [key]: !filters.funderTypes[key] } })
+    onStagedChange({ ...stagedFilters, funderTypes: { ...stagedFilters.funderTypes, [key]: !stagedFilters.funderTypes[key] } })
   }
 
   function toggleUnsolicited() {
-    onChange({ ...filters, acceptsUnsolicited: !filters.acceptsUnsolicited })
+    onStagedChange({ ...stagedFilters, acceptsUnsolicited: !stagedFilters.acceptsUnsolicited })
   }
 
-  const hasActiveFilters =
-    Object.values(filters.focusAreas).some(Boolean) ||
-    Object.values(filters.geography).some(Boolean) ||
-    filters.deadline !== null ||
-    Object.values(filters.funderTypes).some(Boolean) ||
-    filters.acceptsUnsolicited
+  const hasAppliedFilters =
+    Object.values(appliedFilters.initiatives).some(Boolean) ||
+    Object.values(appliedFilters.focusAreas).some(Boolean) ||
+    Object.values(appliedFilters.geography).some(Boolean) ||
+    appliedFilters.deadline !== null ||
+    Object.values(appliedFilters.funderTypes).some(Boolean) ||
+    appliedFilters.acceptsUnsolicited
 
   return (
     <aside
@@ -1601,7 +1616,7 @@ function FilterSidebar({
         {collapsed && (
           <div style={{ position: "relative", marginTop: 8 }}>
             <SlidersHorizontal size={14} color="var(--ink-tertiary)" />
-            {hasActiveFilters && (
+            {(hasAppliedFilters || hasPending) && (
               <div
                 style={{
                   position: "absolute",
@@ -1610,7 +1625,7 @@ function FilterSidebar({
                   width: 5,
                   height: 5,
                   borderRadius: "50%",
-                  backgroundColor: "var(--plum-primary)",
+                  backgroundColor: hasPending ? "var(--amber)" : "var(--slate-primary)",
                   border: "1.5px solid var(--canvas)",
                 }}
               />
@@ -1619,18 +1634,18 @@ function FilterSidebar({
         )}
       </div>
 
-      {/* Filter content */}
+      {/* Filter content: scrollable sections + sticky footer */}
       <div
         style={{
           flex: 1,
           minWidth: 0,
-          overflowY: "auto",
-          overflowX: "hidden",
           display: "flex",
           flexDirection: "column",
+          overflow: "hidden",
         }}
       >
-        <div style={{ padding: "20px 16px 12px 0", display: "flex", alignItems: "center" }}>
+        {/* Fixed header */}
+        <div style={{ padding: "20px 16px 12px 0", flexShrink: 0, display: "flex", alignItems: "center" }}>
           <span
             style={{
               fontSize: 10,
@@ -1644,235 +1659,314 @@ function FilterSidebar({
           </span>
         </div>
 
+        {/* Scrollable filter sections */}
+        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 20,
+              padding: "0 16px 20px 0",
+            }}
+          >
+            {/* Initiatives — shared, always first */}
+            <div>
+              <button type="button" onClick={() => toggleSection("initiatives")} style={sectionToggleStyle}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Initiatives</span>
+                <ChevronDown
+                  size={12}
+                  color="var(--ink-tertiary)"
+                  style={{
+                    transform: openSections.initiatives ? "rotate(0deg)" : "rotate(-90deg)",
+                    transition: "transform 150ms",
+                  }}
+                />
+              </button>
+              {openSections.initiatives && (
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {INITIATIVE_OPTIONS.map((name) => (
+                    <button key={name} type="button" onClick={() => toggleInitiative(name)} style={checkRowStyle}>
+                      <CheckboxIcon checked={stagedFilters.initiatives[name] ?? false} />
+                      <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ height: 1, backgroundColor: "var(--border-default)" }} />
+
+            {/* Focus Areas — shared */}
+            <div>
+              <button type="button" onClick={() => toggleSection("focusAreas")} style={sectionToggleStyle}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Focus Areas</span>
+                <ChevronDown
+                  size={12}
+                  color="var(--ink-tertiary)"
+                  style={{
+                    transform: openSections.focusAreas ? "rotate(0deg)" : "rotate(-90deg)",
+                    transition: "transform 150ms",
+                  }}
+                />
+              </button>
+              {openSections.focusAreas && (
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {Object.entries(stagedFilters.focusAreas).map(([label, checked]) => (
+                    <button key={label} type="button" onClick={() => toggleFocus(label)} style={checkRowStyle}>
+                      <CheckboxIcon checked={checked} />
+                      <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ height: 1, backgroundColor: "var(--border-default)" }} />
+
+            {/* Geography — shared */}
+            <div>
+              <button type="button" onClick={() => toggleSection("geography")} style={sectionToggleStyle}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Geography</span>
+                <ChevronDown
+                  size={12}
+                  color="var(--ink-tertiary)"
+                  style={{
+                    transform: openSections.geography ? "rotate(0deg)" : "rotate(-90deg)",
+                    transition: "transform 150ms",
+                  }}
+                />
+              </button>
+              {openSections.geography && (
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {Object.entries(stagedFilters.geography).map(([label, checked]) => (
+                    <button key={label} type="button" onClick={() => toggleGeo(label)} style={checkRowStyle}>
+                      <CheckboxIcon checked={checked} />
+                      <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ height: 1, backgroundColor: "var(--border-default)" }} />
+
+            {activeTab === "opportunities" ? (
+              <>
+                {/* Funding Range — opportunities */}
+                <div>
+                  <button type="button" onClick={() => toggleSection("fundingRange")} style={sectionToggleStyle}>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Funding Range</span>
+                    <ChevronDown
+                      size={12}
+                      color="var(--ink-tertiary)"
+                      style={{
+                        transform: openSections.fundingRange ? "rotate(0deg)" : "rotate(-90deg)",
+                        transition: "transform 150ms",
+                      }}
+                    />
+                  </button>
+                  {openSections.fundingRange && (
+                    <div style={{ marginTop: 10 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, color: "var(--slate)" }}>$25,000</span>
+                        <span style={{ fontSize: 12, color: "var(--slate)" }}>$150,000</span>
+                      </div>
+                      <div style={{ position: "relative", height: 4, borderRadius: 2, backgroundColor: "var(--slate-light)" }}>
+                        <div style={{ position: "absolute", left: 0, width: "75%", height: "100%", borderRadius: 2, backgroundColor: "var(--slate-primary)" }} />
+                        <div
+                          style={{
+                            position: "absolute",
+                            left: "calc(75% - 6px)",
+                            top: -4,
+                            width: 12,
+                            height: 12,
+                            borderRadius: "50%",
+                            backgroundColor: "var(--slate-primary)",
+                            border: "2px solid var(--surface)",
+                            boxShadow: "0 1px 3px rgba(28,24,64,0.15)",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ height: 1, backgroundColor: "var(--border-default)" }} />
+
+                {/* Deadline — opportunities only */}
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", margin: "0 0 10px 0" }}>
+                    Deadline
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {(["next-6", "next-12"] as const).map((val) => {
+                      const isActive = stagedFilters.deadline === val
+                      const label = val === "next-6" ? "Next 6 months" : "Next 12 months"
+                      return (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setDeadline(val)}
+                          style={{
+                            borderRadius: "var(--radius-pill)",
+                            padding: "6px 14px",
+                            border: isActive ? "none" : "1px solid var(--border-default)",
+                            backgroundColor: isActive ? "var(--slate-primary)" : "transparent",
+                            fontSize: 12,
+                            fontWeight: isActive ? 500 : 400,
+                            color: isActive ? "#FFFFFF" : "var(--ink)",
+                            cursor: "pointer",
+                            textAlign: "left",
+                            transition: "background-color 150ms, color 150ms",
+                          }}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Funder Type — funders only */}
+                <div>
+                  <button type="button" onClick={() => toggleSection("funderTypes")} style={sectionToggleStyle}>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Funder Type</span>
+                    <ChevronDown
+                      size={12}
+                      color="var(--ink-tertiary)"
+                      style={{
+                        transform: openSections.funderTypes ? "rotate(0deg)" : "rotate(-90deg)",
+                        transition: "transform 150ms",
+                      }}
+                    />
+                  </button>
+                  {openSections.funderTypes && (
+                    <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+                      {FUNDER_TYPES.map((ft) => (
+                        <button key={ft} type="button" onClick={() => toggleFunderType(ft)} style={checkRowStyle}>
+                          <CheckboxIcon checked={stagedFilters.funderTypes[ft] ?? false} />
+                          <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{ft}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ height: 1, backgroundColor: "var(--border-default)" }} />
+
+                {/* Funding Range — funders */}
+                <div>
+                  <button type="button" onClick={() => toggleSection("fundingRange")} style={sectionToggleStyle}>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Funding Range</span>
+                    <ChevronDown
+                      size={12}
+                      color="var(--ink-tertiary)"
+                      style={{
+                        transform: openSections.fundingRange ? "rotate(0deg)" : "rotate(-90deg)",
+                        transition: "transform 150ms",
+                      }}
+                    />
+                  </button>
+                  {openSections.fundingRange && (
+                    <div style={{ marginTop: 10 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, color: "var(--slate)" }}>$10,000</span>
+                        <span style={{ fontSize: 12, color: "var(--slate)" }}>$200,000</span>
+                      </div>
+                      <div style={{ position: "relative", height: 4, borderRadius: 2, backgroundColor: "var(--slate-light)" }}>
+                        <div style={{ position: "absolute", left: 0, width: "80%", height: "100%", borderRadius: 2, backgroundColor: "var(--slate-primary)" }} />
+                        <div
+                          style={{
+                            position: "absolute",
+                            left: "calc(80% - 6px)",
+                            top: -4,
+                            width: 12,
+                            height: 12,
+                            borderRadius: "50%",
+                            backgroundColor: "var(--slate-primary)",
+                            border: "2px solid var(--surface)",
+                            boxShadow: "0 1px 3px rgba(28,24,64,0.15)",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ height: 1, backgroundColor: "var(--border-default)" }} />
+
+                {/* Accepts unsolicited — funders only */}
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", margin: "0 0 10px 0" }}>
+                    Application
+                  </p>
+                  <button type="button" onClick={toggleUnsolicited} style={checkRowStyle}>
+                    <CheckboxIcon checked={stagedFilters.acceptsUnsolicited} />
+                    <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>
+                      Accepts unsolicited
+                    </span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Sticky footer: Apply + Clear */}
         <div
           style={{
+            flexShrink: 0,
+            borderTop: "1px solid var(--border-default)",
+            padding: "12px 16px 16px 0",
             display: "flex",
             flexDirection: "column",
-            gap: 20,
-            padding: "0 16px 20px 0",
-            flex: 1,
+            gap: 8,
           }}
         >
-          {/* Focus Areas — shared */}
-          <div>
-            <button type="button" onClick={() => toggleSection("focusAreas")} style={sectionToggleStyle}>
-              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Focus Areas</span>
-              <ChevronDown
-                size={12}
-                color="var(--ink-tertiary)"
-                style={{
-                  transform: openSections.focusAreas ? "rotate(0deg)" : "rotate(-90deg)",
-                  transition: "transform 150ms",
-                }}
-              />
-            </button>
-            {openSections.focusAreas && (
-              <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
-                {Object.entries(filters.focusAreas).map(([label, checked]) => (
-                  <button key={label} type="button" onClick={() => toggleFocus(label)} style={checkRowStyle}>
-                    <CheckboxIcon checked={checked} />
-                    <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
-
-          {/* Geography — shared */}
-          <div>
-            <button type="button" onClick={() => toggleSection("geography")} style={sectionToggleStyle}>
-              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Geography</span>
-              <ChevronDown
-                size={12}
-                color="var(--ink-tertiary)"
-                style={{
-                  transform: openSections.geography ? "rotate(0deg)" : "rotate(-90deg)",
-                  transition: "transform 150ms",
-                }}
-              />
-            </button>
-            {openSections.geography && (
-              <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
-                {Object.entries(filters.geography).map(([label, checked]) => (
-                  <button key={label} type="button" onClick={() => toggleGeo(label)} style={checkRowStyle}>
-                    <CheckboxIcon checked={checked} />
-                    <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
-
-          {activeTab === "opportunities" ? (
-            <>
-              {/* Funding Range — opportunities */}
-              <div>
-                <button type="button" onClick={() => toggleSection("fundingRange")} style={sectionToggleStyle}>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Funding Range</span>
-                  <ChevronDown
-                    size={12}
-                    color="var(--ink-tertiary)"
-                    style={{
-                      transform: openSections.fundingRange ? "rotate(0deg)" : "rotate(-90deg)",
-                      transition: "transform 150ms",
-                    }}
-                  />
-                </button>
-                {openSections.fundingRange && (
-                  <div style={{ marginTop: 10 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                      <span style={{ fontSize: 12, color: "var(--slate)" }}>$25,000</span>
-                      <span style={{ fontSize: 12, color: "var(--slate)" }}>$150,000</span>
-                    </div>
-                    <div style={{ position: "relative", height: 4, borderRadius: 2, backgroundColor: "var(--slate-light)" }}>
-                      <div style={{ position: "absolute", left: 0, width: "75%", height: "100%", borderRadius: 2, backgroundColor: "var(--slate-primary)" }} />
-                      <div
-                        style={{
-                          position: "absolute",
-                          left: "calc(75% - 6px)",
-                          top: -4,
-                          width: 12,
-                          height: 12,
-                          borderRadius: "50%",
-                          backgroundColor: "var(--slate-primary)",
-                          border: "2px solid var(--surface)",
-                          boxShadow: "0 1px 3px rgba(28,24,64,0.15)",
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
-
-              {/* Deadline — opportunities only */}
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", margin: "0 0 10px 0" }}>
-                  Deadline
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {(["next-6", "next-12"] as const).map((val) => {
-                    const isActive = filters.deadline === val
-                    const label = val === "next-6" ? "Next 6 months" : "Next 12 months"
-                    return (
-                      <button
-                        key={val}
-                        type="button"
-                        onClick={() => setDeadline(val)}
-                        style={{
-                          borderRadius: "var(--radius-pill)",
-                          padding: "6px 14px",
-                          border: isActive ? "none" : "1px solid var(--border-color)",
-                          backgroundColor: isActive ? "var(--slate-primary)" : "transparent",
-                          fontSize: 12,
-                          fontWeight: isActive ? 500 : 400,
-                          color: isActive ? "#FFFFFF" : "var(--ink)",
-                          cursor: "pointer",
-                          textAlign: "left",
-                          transition: "background-color 150ms, color 150ms",
-                        }}
-                      >
-                        {label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Funder Type — funders only */}
-              <div>
-                <button type="button" onClick={() => toggleSection("funderTypes")} style={sectionToggleStyle}>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Funder Type</span>
-                  <ChevronDown
-                    size={12}
-                    color="var(--ink-tertiary)"
-                    style={{
-                      transform: openSections.funderTypes ? "rotate(0deg)" : "rotate(-90deg)",
-                      transition: "transform 150ms",
-                    }}
-                  />
-                </button>
-                {openSections.funderTypes && (
-                  <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
-                    {FUNDER_TYPES.map((ft) => (
-                      <button key={ft} type="button" onClick={() => toggleFunderType(ft)} style={checkRowStyle}>
-                        <CheckboxIcon checked={filters.funderTypes[ft] ?? false} />
-                        <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{ft}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
-
-              {/* Funding Range — funders */}
-              <div>
-                <button type="button" onClick={() => toggleSection("fundingRange")} style={sectionToggleStyle}>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Funding Range</span>
-                  <ChevronDown
-                    size={12}
-                    color="var(--ink-tertiary)"
-                    style={{
-                      transform: openSections.fundingRange ? "rotate(0deg)" : "rotate(-90deg)",
-                      transition: "transform 150ms",
-                    }}
-                  />
-                </button>
-                {openSections.fundingRange && (
-                  <div style={{ marginTop: 10 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                      <span style={{ fontSize: 12, color: "var(--slate)" }}>$10,000</span>
-                      <span style={{ fontSize: 12, color: "var(--slate)" }}>$200,000</span>
-                    </div>
-                    <div style={{ position: "relative", height: 4, borderRadius: 2, backgroundColor: "var(--slate-light)" }}>
-                      <div style={{ position: "absolute", left: 0, width: "80%", height: "100%", borderRadius: 2, backgroundColor: "var(--slate-primary)" }} />
-                      <div
-                        style={{
-                          position: "absolute",
-                          left: "calc(80% - 6px)",
-                          top: -4,
-                          width: 12,
-                          height: 12,
-                          borderRadius: "50%",
-                          backgroundColor: "var(--slate-primary)",
-                          border: "2px solid var(--surface)",
-                          boxShadow: "0 1px 3px rgba(28,24,64,0.15)",
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
-
-              {/* Accepts unsolicited — funders only */}
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", margin: "0 0 10px 0" }}>
-                  Application
-                </p>
-                <button type="button" onClick={toggleUnsolicited} style={checkRowStyle}>
-                  <CheckboxIcon checked={filters.acceptsUnsolicited} />
-                  <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>
-                    Accepts unsolicited
-                  </span>
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* Clear filters */}
           <button
             type="button"
-            onClick={onClear}
+            onClick={onApply}
+            style={{
+              width: "100%",
+              padding: "9px 14px",
+              borderRadius: "var(--radius-button)",
+              border: "none",
+              backgroundColor: hasPending ? "var(--slate-primary)" : "var(--slate-tint)",
+              color: hasPending ? "#FFFFFF" : "var(--ink-secondary)",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              position: "relative",
+              transition: "background-color 150ms, color 150ms",
+            }}
+            onMouseEnter={(e) => {
+              if (hasPending) (e.currentTarget as HTMLButtonElement).style.opacity = "0.88"
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.opacity = "1"
+            }}
+          >
+            Apply filters
+            {hasPending && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: -3,
+                  right: -3,
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  backgroundColor: "var(--amber)",
+                  border: "1.5px solid var(--canvas)",
+                }}
+              />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={onClearAll}
             style={{
               background: "none",
               border: "none",
@@ -1880,11 +1974,11 @@ function FilterSidebar({
               cursor: "pointer",
               fontSize: 13,
               color: "var(--slate-secondary)",
-              textAlign: "left",
-              marginTop: "auto",
+              textAlign: "center",
+              width: "100%",
             }}
           >
-            Clear filters
+            Clear all
           </button>
         </div>
       </div>
@@ -1929,6 +2023,11 @@ const checkRowStyle: React.CSSProperties = {
 // ── Default filter state ───────────────────────────────────────────────────
 
 const DEFAULT_COMBINED_FILTERS: CombinedFilterState = {
+  initiatives: {
+    "Rescue & Intake": false,
+    "Foster Program": false,
+    "Neutering": false,
+  },
   focusAreas: {
     "Animal Welfare": true,
     "Community Development": true,
@@ -1949,6 +2048,15 @@ const DEFAULT_COMBINED_FILTERS: CombinedFilterState = {
     "Corporate foundation": false,
     "Public charity": false,
   },
+  acceptsUnsolicited: false,
+}
+
+const EMPTY_COMBINED_FILTERS: CombinedFilterState = {
+  initiatives: { "Rescue & Intake": false, "Foster Program": false, "Neutering": false },
+  focusAreas: { "Animal Welfare": false, "Community Development": false, Education: false, Health: false, Environment: false },
+  geography: { California: false, National: false, International: false },
+  deadline: null,
+  funderTypes: { "Private foundation": false, "Community foundation": false, Government: false, "Corporate foundation": false, "Public charity": false },
   acceptsUnsolicited: false,
 }
 
@@ -1976,7 +2084,9 @@ export default function DiscoverPage() {
   const [notRelevantFunderIds, setNotRelevantFunderIds] = useState<Set<string>>(new Set())
 
   // Shared / layout state
-  const [filters, setFilters] = useState<CombinedFilterState>(DEFAULT_COMBINED_FILTERS)
+  const [stagedFilters, setStagedFilters] = useState<CombinedFilterState>(DEFAULT_COMBINED_FILTERS)
+  const [appliedFilters, setAppliedFilters] = useState<CombinedFilterState>(DEFAULT_COMBINED_FILTERS)
+  const [searchQuery, setSearchQuery] = useState("")
   const [toast, setToast] = useState<string | null>(null)
   const [filterCollapsed, setFilterCollapsed] = useState(false)
 
@@ -2000,20 +2110,77 @@ export default function DiscoverPage() {
   const visibleOpps = OPPORTUNITIES.filter((o) => !hiddenOppIds.has(o.id))
   const visibleFunders = DISCOVER_FUNDERS.filter((f) => !hiddenFunderIds.has(f.id))
 
+  // ── Applied-filter + search derived results ──
+  const activeInit = Object.entries(appliedFilters.initiatives).filter(([, v]) => v).map(([k]) => k)
+  const activeFocus = Object.entries(appliedFilters.focusAreas).filter(([, v]) => v).map(([k]) => k)
+  const activeGeo = Object.entries(appliedFilters.geography).filter(([, v]) => v).map(([k]) => k)
+  const activeTypes = Object.entries(appliedFilters.funderTypes).filter(([, v]) => v).map(([k]) => k)
+  const q = searchQuery.trim().toLowerCase()
+
+  const filteredOpps = visibleOpps.filter((opp) => {
+    if (activeInit.length > 0 && !opp.initiativeTags.some((t) => activeInit.includes(t))) return false
+    if (activeFocus.length > 0 && !activeFocus.some((f) => opp.focusAreaLabel.includes(f) || opp.meta.toLowerCase().includes(f.toLowerCase()))) return false
+    if (q && !opp.grantName.toLowerCase().includes(q) && !opp.funder.toLowerCase().includes(q) && !opp.aboutGrant.toLowerCase().includes(q) && !opp.meta.toLowerCase().includes(q)) return false
+    return true
+  })
+
+  const filteredFunders = visibleFunders.filter((funder) => {
+    if (activeInit.length > 0 && !funder.initiatives.some((i) => activeInit.includes(i.name))) return false
+    if (activeFocus.length > 0 && !funder.focusAreas.some((a) => activeFocus.includes(a))) return false
+    if (activeTypes.length > 0 && !activeTypes.includes(funder.type)) return false
+    if (appliedFilters.acceptsUnsolicited && !funder.acceptsUnsolicited) return false
+    if (activeGeo.length > 0 && !activeGeo.some((g) => funder.geography.toLowerCase().includes(g.toLowerCase()))) return false
+    if (q && !funder.name.toLowerCase().includes(q) && !funder.focusAreas.join(" ").toLowerCase().includes(q) && !funder.description.toLowerCase().includes(q)) return false
+    return true
+  })
+
+  // ── Applied filter chips ──
+  const filterChips: { label: string; key: string; onRemove: () => void }[] = []
+  for (const [k, v] of Object.entries(appliedFilters.initiatives)) {
+    if (v) filterChips.push({ label: k, key: `init:${k}`, onRemove: () => removeChip({ ...appliedFilters, initiatives: { ...appliedFilters.initiatives, [k]: false } }) })
+  }
+  for (const [k, v] of Object.entries(appliedFilters.focusAreas)) {
+    if (v) filterChips.push({ label: k, key: `focus:${k}`, onRemove: () => removeChip({ ...appliedFilters, focusAreas: { ...appliedFilters.focusAreas, [k]: false } }) })
+  }
+  for (const [k, v] of Object.entries(appliedFilters.geography)) {
+    if (v) filterChips.push({ label: k, key: `geo:${k}`, onRemove: () => removeChip({ ...appliedFilters, geography: { ...appliedFilters.geography, [k]: false } }) })
+  }
+  if (appliedFilters.deadline) {
+    const deadlineLabel = appliedFilters.deadline === "next-6" ? "Next 6 months" : "Next 12 months"
+    filterChips.push({ label: deadlineLabel, key: "deadline", onRemove: () => removeChip({ ...appliedFilters, deadline: null }) })
+  }
+  for (const [k, v] of Object.entries(appliedFilters.funderTypes)) {
+    if (v) filterChips.push({ label: k, key: `type:${k}`, onRemove: () => removeChip({ ...appliedFilters, funderTypes: { ...appliedFilters.funderTypes, [k as FunderTypeFilter]: false } }) })
+  }
+  if (appliedFilters.acceptsUnsolicited) {
+    filterChips.push({ label: "Accepts unsolicited", key: "unsolicited", onRemove: () => removeChip({ ...appliedFilters, acceptsUnsolicited: false }) })
+  }
+
   const selectedOpp =
-    visibleOpps.find((o) => o.id === selectedId) ??
-    visibleOpps[0] ??
+    filteredOpps.find((o) => o.id === selectedId) ??
+    filteredOpps[0] ??
     OPPORTUNITIES[0]
 
   const selectedFunder =
-    visibleFunders.find((f) => f.id === selectedFunderId) ??
-    visibleFunders[0] ??
+    filteredFunders.find((f) => f.id === selectedFunderId) ??
+    filteredFunders[0] ??
     DISCOVER_FUNDERS[0]
 
   function handleTabSwitch(tab: ActiveTab) {
     if (tab === activeTab) return
     setActiveTab(tab)
     setShowPopover(false)
+    // Carry over initiatives/focus/geo; reset tab-specific filters; discard staged
+    const carried: CombinedFilterState = {
+      initiatives: appliedFilters.initiatives,
+      focusAreas: appliedFilters.focusAreas,
+      geography: appliedFilters.geography,
+      deadline: null,
+      funderTypes: Object.fromEntries(FUNDER_TYPES.map((k) => [k, false])) as Record<FunderTypeFilter, boolean>,
+      acceptsUnsolicited: false,
+    }
+    setAppliedFilters(carried)
+    setStagedFilters(carried)
     // Reset right panel to first card of the new tab
     if (tab === "funders") {
       const first = DISCOVER_FUNDERS.find((f) => !hiddenFunderIds.has(f.id))
@@ -2120,22 +2287,20 @@ export default function DiscoverPage() {
     setToast("Engagement created")
   }
 
-  // ── Clear filters ──
+  // ── Filter actions ──
+
+  function handleApplyFilters() {
+    setAppliedFilters(stagedFilters)
+  }
 
   function handleClearFilters() {
-    setFilters({
-      focusAreas: Object.fromEntries(
-        Object.keys(DEFAULT_COMBINED_FILTERS.focusAreas).map((k) => [k, false])
-      ),
-      geography: Object.fromEntries(
-        Object.keys(DEFAULT_COMBINED_FILTERS.geography).map((k) => [k, false])
-      ),
-      deadline: null,
-      funderTypes: Object.fromEntries(
-        FUNDER_TYPES.map((k) => [k, false])
-      ) as Record<FunderTypeFilter, boolean>,
-      acceptsUnsolicited: false,
-    })
+    setStagedFilters(EMPTY_COMBINED_FILTERS)
+    setAppliedFilters(EMPTY_COMBINED_FILTERS)
+  }
+
+  function removeChip(updated: CombinedFilterState) {
+    setAppliedFilters(updated)
+    setStagedFilters(updated)
   }
 
   return (
@@ -2175,9 +2340,11 @@ export default function DiscoverPage() {
         {/* Filter Sidebar */}
         <FilterSidebar
           activeTab={activeTab}
-          filters={filters}
-          onChange={setFilters}
-          onClear={handleClearFilters}
+          stagedFilters={stagedFilters}
+          appliedFilters={appliedFilters}
+          onStagedChange={setStagedFilters}
+          onApply={handleApplyFilters}
+          onClearAll={handleClearFilters}
           collapsed={filterCollapsed}
           onToggleCollapse={handleToggleFilter}
         />
@@ -2202,13 +2369,13 @@ export default function DiscoverPage() {
               alignItems: "center",
               justifyContent: "space-between",
               backgroundColor: "#FFFFFF",
-              borderBottom: "1px solid var(--border-color)",
+              borderBottom: "1px solid var(--border-default)",
             }}
           >
             <span style={{ fontSize: 13, color: "var(--ink-secondary)", lineHeight: "16px" }}>
               {activeTab === "opportunities"
-                ? `${visibleOpps.length} opportunities matching your initiatives`
-                : `${visibleFunders.length} funders matching your initiatives`}
+                ? `${filteredOpps.length} opportunities matching your initiatives`
+                : `${filteredFunders.length} funders matching your initiatives`}
             </span>
             <button
               type="button"
@@ -2219,7 +2386,7 @@ export default function DiscoverPage() {
                 borderRadius: "var(--radius-button)",
                 padding: "6px 12px",
                 backgroundColor: "#FFFFFF",
-                border: "1px solid var(--border-color)",
+                border: "1px solid var(--border-default)",
                 fontSize: 13,
                 color: "var(--ink)",
                 cursor: "pointer",
@@ -2233,6 +2400,121 @@ export default function DiscoverPage() {
             </button>
           </div>
 
+          {/* Search bar */}
+          <div
+            style={{
+              flexShrink: 0,
+              padding: "10px 20px",
+              borderBottom: "1px solid var(--border-default)",
+              backgroundColor: "#FFFFFF",
+            }}
+          >
+            <div style={{ position: "relative" }}>
+              <div
+                style={{
+                  position: "absolute",
+                  left: 11,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  pointerEvents: "none",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                <Search size={14} color="var(--ink-tertiary)" />
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search opportunities and funders..."
+                style={{
+                  width: "100%",
+                  paddingLeft: 34,
+                  paddingRight: 12,
+                  paddingTop: 7,
+                  paddingBottom: 7,
+                  fontSize: 13,
+                  fontFamily: "var(--font-inter), system-ui, sans-serif",
+                  color: "var(--ink)",
+                  backgroundColor: "var(--canvas)",
+                  border: "1px solid var(--border-default)",
+                  borderRadius: "var(--radius-input)",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Applied filter chips */}
+          {filterChips.length > 0 && (
+            <div
+              style={{
+                flexShrink: 0,
+                padding: "8px 20px",
+                borderBottom: "1px solid var(--border-default)",
+                backgroundColor: "#FFFFFF",
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 6,
+                alignItems: "center",
+              }}
+            >
+              {filterChips.map((chip) => (
+                <span
+                  key={chip.key}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "4px 8px 4px 10px",
+                    borderRadius: "var(--radius-pill)",
+                    backgroundColor: "var(--plum-tint)",
+                    fontSize: 12,
+                    fontWeight: 500,
+                    color: "var(--plum-soft)",
+                    lineHeight: "16px",
+                  }}
+                >
+                  {chip.label}
+                  <button
+                    type="button"
+                    onClick={chip.onRemove}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      padding: 0,
+                      color: "var(--plum-soft)",
+                    }}
+                  >
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+              {filterChips.length > 1 && (
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    color: "var(--slate-secondary)",
+                    padding: "4px 2px",
+                    textDecoration: "underline",
+                  }}
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Cards */}
           <div
             style={{
@@ -2245,7 +2527,7 @@ export default function DiscoverPage() {
             }}
           >
             {activeTab === "opportunities"
-              ? visibleOpps.map((opp) => {
+              ? filteredOpps.map((opp) => {
                   const isDismissing = dismissingOppIds.has(opp.id)
                   return (
                     <div
@@ -2267,7 +2549,7 @@ export default function DiscoverPage() {
                     </div>
                   )
                 })
-              : visibleFunders.map((funder) => {
+              : filteredFunders.map((funder) => {
                   const isDismissing = dismissingFunderIds.has(funder.id)
                   return (
                     <div

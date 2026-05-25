@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Inter, Lora, Inclusive_Sans } from "next/font/google"
 import "./globals.css"
+import { PasscodeGate } from "@/components/PasscodeGate"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -35,7 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${lora.variable} ${inclusiveSans.variable} font-sans antialiased`}>
-        {children}
+        <PasscodeGate>{children}</PasscodeGate>
       </body>
     </html>
   )

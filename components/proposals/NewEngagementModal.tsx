@@ -18,11 +18,12 @@ interface Props {
   open: boolean
   onClose: () => void
   onCreate: (data: NewEngagementData) => void
+  lockedFunderName?: string
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-export function NewEngagementModal({ open, onClose, onCreate }: Props) {
+export function NewEngagementModal({ open, onClose, onCreate, lockedFunderName }: Props) {
   const [funderQuery, setFunderQuery] = useState("")
   const [selectedFunder, setSelectedFunder] = useState<PlatformFunder | null>(null)
   const [manualMode, setManualMode] = useState(false)
@@ -42,6 +43,15 @@ export function NewEngagementModal({ open, onClose, onCreate }: Props) {
     setShowDropdown(false)
     onClose()
   }, [onClose])
+
+  // Pre-fill funder when modal opens with a locked funder name
+  useEffect(() => {
+    if (open && lockedFunderName) {
+      setManualMode(true)
+      setManualFunderName(lockedFunderName)
+      setEngagementName((prev) => prev || lockedFunderName)
+    }
+  }, [open, lockedFunderName])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -165,7 +175,22 @@ export function NewEngagementModal({ open, onClose, onCreate }: Props) {
           <div style={{ marginBottom: 18 }}>
             <label style={labelStyle}>Funder</label>
 
-            {manualMode ? (
+            {lockedFunderName ? (
+              /* Locked funder — pre-selected from context */
+              <div
+                style={{
+                  ...inputStyle,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  backgroundColor: "var(--canvas)",
+                  cursor: "default",
+                }}
+              >
+                <span style={{ fontWeight: 500, color: "var(--ink)" }}>{lockedFunderName}</span>
+                <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>Pre-selected</span>
+              </div>
+            ) : manualMode ? (
               /* Manual entry mode */
               <div>
                 <input
