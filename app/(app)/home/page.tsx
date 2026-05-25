@@ -416,7 +416,7 @@ export default function HomeDashboard() {
                 {IN_PROGRESS_PROPOSALS.map((p, i) => (
                   <div
                     key={i}
-                    onClick={() => router.push("/editor")}
+                    onClick={() => router.push("/proposals/equitable-futures-2026-draft")}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--slate-tint)"; (e.currentTarget as HTMLDivElement).style.borderRadius = "6px" }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
                     style={{

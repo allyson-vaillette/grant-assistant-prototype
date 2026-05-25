@@ -408,7 +408,7 @@ function OverviewTab({
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button
                     type="button"
-                    onClick={() => router.push("/editor")}
+                    onClick={() => router.push(`/proposals/${p.id === "draft-1" ? "equitable-futures-2026-draft" : p.id}`)}
                     style={ghostBtnStyle}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
