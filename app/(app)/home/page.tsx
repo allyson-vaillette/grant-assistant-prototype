@@ -405,6 +405,8 @@ export default function HomeDashboard() {
   const [completionNote, setCompletionNote] = useState("")
   const [completionFile, setCompletionFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [nudgingTaskId, setNudgingTaskId] = useState<string | null>(null)
+  const [nudgeNote, setNudgeNote] = useState("")
 
   const dueTodayCount = tasks.filter((t) => t.dueCategory === "today" && !t.done).length
   const allDone = tasks.every((t) => t.done)
@@ -431,6 +433,11 @@ export default function HomeDashboard() {
       setTasks((prev) => prev.filter((t) => t.id !== id))
       setCollapsing((prev) => { const n = new Set(prev); n.delete(id); return n })
     }, 600)
+  }
+
+  function handleSendNudge() {
+    setNudgingTaskId(null)
+    setNudgeNote("")
   }
 
   return (
@@ -715,28 +722,83 @@ export default function HomeDashboard() {
                   <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>Nothing pending with the team.</p>
                 </div>
               ) : (
-                TEAM_TASKS.slice(0, 7).map((task, i) => (
-                  <div
-                    key={task.id}
-                    onMouseEnter={() => setHoveredTeamTask(task.id)}
-                    onMouseLeave={() => setHoveredTeamTask(null)}
-                    onClick={() => router.push("/opportunity/equitable-futures")}
-                    style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 18px", borderBottom: i < Math.min(TEAM_TASKS.length, 7) - 1 ? "1px solid var(--border-default)" : "none", cursor: "pointer", backgroundColor: hoveredTeamTask === task.id ? "var(--canvas)" : "transparent", transition: "background-color 150ms" }}
-                  >
-                    <div style={{ width: 18, height: 18, flexShrink: 0, borderRadius: "50%", border: "1.5px solid var(--border-default)", backgroundColor: "transparent" }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: "0 0 2px 0", fontSize: 13, fontWeight: 500, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.name}</p>
-                      <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "14px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.opportunity} · {task.engagement}</p>
+                TEAM_TASKS.slice(0, 7).map((task, i) => {
+                  const isNudging = nudgingTaskId === task.id
+                  const isHovered = hoveredTeamTask === task.id
+                  return (
+                    <div
+                      key={task.id}
+                      style={{
+                        borderBottom: i < Math.min(TEAM_TASKS.length, 7) - 1 ? "1px solid var(--border-default)" : "none",
+                        overflow: "hidden",
+                        maxHeight: isNudging ? 180 : 100,
+                        transition: "max-height 0.2s ease, background-color 150ms",
+                        backgroundColor: isHovered || isNudging ? "var(--canvas)" : "transparent",
+                      }}
+                    >
+                      <div
+                        onMouseEnter={() => setHoveredTeamTask(task.id)}
+                        onMouseLeave={() => setHoveredTeamTask(null)}
+                        onClick={() => !isNudging && router.push("/opportunity/equitable-futures")}
+                        style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 18px", cursor: isNudging ? "default" : "pointer" }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: "0 0 2px 0", fontSize: 13, fontWeight: 500, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.name}</p>
+                          <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "14px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.opportunity} · {task.engagement}</p>
+                        </div>
+                        <AvatarChip assignee={task.assignee} />
+                        <span style={{ flexShrink: 0, borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 500, ...dueBadgeStyle(task.dueCategory) }}>
+                          {task.dueLabel}
+                        </span>
+                        <span style={{ flexShrink: 0, borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 600, border: "1px solid var(--border-default)", backgroundColor: task.status === "In Progress" ? "var(--slate-tint)" : "var(--canvas)", color: task.status === "In Progress" ? "var(--slate-primary)" : "var(--ink-tertiary)" }}>
+                          {task.status}
+                        </span>
+                        {(isHovered || isNudging) && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setNudgingTaskId(isNudging ? null : task.id); setNudgeNote("") }}
+                            title="Send nudge"
+                            style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: isNudging ? "var(--slate-tint)" : "transparent", cursor: "pointer", transition: "background-color 150ms" }}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 15, color: isNudging ? "var(--slate-primary)" : "var(--ink-tertiary)", lineHeight: 1, userSelect: "none" }}>campaign</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {isNudging && (
+                        <div onClick={(e) => e.stopPropagation()} style={{ padding: "0 18px 14px 18px" }}>
+                          <div style={{ borderTop: "1px solid var(--border-default)", paddingTop: 10, display: "flex", flexDirection: "column", gap: 9 }}>
+                            <input
+                              type="text"
+                              value={nudgeNote}
+                              onChange={(e) => setNudgeNote(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter") handleSendNudge(); if (e.key === "Escape") setNudgingTaskId(null) }}
+                              placeholder="Just checking in"
+                              autoFocus
+                              style={{ width: "100%", padding: "5px 9px", borderRadius: 7, border: "1px solid var(--border-default)", fontSize: 12, color: "var(--ink)", outline: "none", backgroundColor: "var(--surface-white)", fontFamily: "inherit", boxSizing: "border-box" }}
+                            />
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <button
+                                type="button"
+                                onClick={handleSendNudge}
+                                style={{ padding: "5px 14px", borderRadius: 7, border: "none", backgroundColor: "var(--slate-primary)", color: "#FFFFFF", fontSize: 12, fontWeight: 500, cursor: "pointer" }}
+                              >
+                                Send nudge
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setNudgingTaskId(null)}
+                                style={{ background: "none", border: "none", fontSize: 12, color: "var(--ink-secondary)", cursor: "pointer", padding: "5px 0" }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <AvatarChip assignee={task.assignee} />
-                    <span style={{ flexShrink: 0, borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 500, ...dueBadgeStyle(task.dueCategory) }}>
-                      {task.dueLabel}
-                    </span>
-                    <span style={{ flexShrink: 0, borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 600, border: "1px solid var(--border-default)", backgroundColor: task.status === "In Progress" ? "var(--slate-tint)" : "var(--canvas)", color: task.status === "In Progress" ? "var(--slate-primary)" : "var(--ink-tertiary)" }}>
-                      {task.status}
-                    </span>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
           </div>
