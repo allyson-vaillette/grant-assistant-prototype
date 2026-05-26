@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState, useRef, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import React, { useState, useRef, useEffect, useCallback, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Search, Plus, X, ExternalLink, Pencil } from "lucide-react"
 import { NewEngagementModal, type NewEngagementData } from "@/components/proposals/NewEngagementModal"
 
@@ -931,13 +931,35 @@ function NewOpportunityModal({
   )
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────
+// ── Stage filter config ────────────────────────────────────────────────────
 
-export default function PortfolioPage() {
+const STAGE_FILTER_OPTIONS: { label: string; value: OpportunityStage | null }[] = [
+  { label: "All",           value: null        },
+  { label: "Under review",  value: "Tracking"  },
+  { label: "In progress",   value: "Active"    },
+  { label: "Submitted",     value: "Submitted" },
+  { label: "Awarded",       value: "Awarded"   },
+]
+
+// ── Page (wrapped in Suspense for useSearchParams) ─────────────────────────
+
+export default function PortfolioPageWrapper() {
+  return (
+    <Suspense>
+      <PortfolioPage />
+    </Suspense>
+  )
+}
+
+function PortfolioPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [engagements, setEngagements] = useState<Engagement[]>(INITIAL_ENGAGEMENTS)
   const [selectedId, setSelectedId] = useState("ford")
   const [search, setSearch] = useState("")
+  const [stageFilter, setStageFilter] = useState<OpportunityStage | null>(
+    (searchParams.get("stage") as OpportunityStage | null) ?? null
+  )
   const [showAddNote, setShowAddNote] = useState(false)
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [hoveredNoteId, setHoveredNoteId] = useState<string | null>(null)
@@ -946,11 +968,32 @@ export default function PortfolioPage() {
   const [showNewEngagementModal, setShowNewEngagementModal] = useState(false)
 
   const selected = engagements.find((e) => e.id === selectedId) ?? engagements[0]
-  const filtered = engagements.filter((e) =>
+
+  const filteredByStage = stageFilter
+    ? engagements.filter((e) => e.opportunities.some((o) => o.stage === stageFilter))
+    : engagements
+
+  const filtered = filteredByStage.filter((e) =>
     e.name.toLowerCase().includes(search.toLowerCase())
   )
+
+  const displayedOpps = stageFilter
+    ? selected.opportunities.filter((o) => o.stage === stageFilter)
+    : selected.opportunities
+
   const oppCount = selected.opportunities.length
   const funder = FUNDERS[selectedId]
+
+  // When stage filter activates, auto-select first matching engagement
+  useEffect(() => {
+    if (stageFilter) {
+      const currentHasMatch = engagements.find((e) => e.id === selectedId)?.opportunities.some((o) => o.stage === stageFilter)
+      if (!currentHasMatch) {
+        const firstMatch = engagements.find((e) => e.opportunities.some((o) => o.stage === stageFilter))
+        if (firstMatch) setSelectedId(firstMatch.id)
+      }
+    }
+  }, [stageFilter]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset note UI when switching engagements
   useEffect(() => {
@@ -1117,6 +1160,7 @@ export default function PortfolioPage() {
               padding: "8px 10px",
               backgroundColor: "var(--surface-white)",
               border: "1px solid var(--border-default)",
+              marginBottom: 8,
             }}
           >
             <Search size={13} color="var(--ink-tertiary)" style={{ flexShrink: 0 }} />
@@ -1127,6 +1171,33 @@ export default function PortfolioPage() {
               onChange={(e) => setSearch(e.target.value)}
               style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 13, color: "var(--ink)" }}
             />
+          </div>
+
+          {/* Stage filter pills */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {STAGE_FILTER_OPTIONS.map(({ label, value }) => {
+              const active = stageFilter === value
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => setStageFilter(value)}
+                  style={{
+                    padding: "3px 10px",
+                    borderRadius: 20,
+                    border: active ? "1px solid var(--slate-primary)" : "1px solid var(--border-default)",
+                    backgroundColor: active ? "var(--slate-tint)" : "transparent",
+                    fontSize: 11,
+                    fontWeight: active ? 600 : 400,
+                    color: active ? "var(--slate-primary)" : "var(--ink-secondary)",
+                    cursor: "pointer",
+                    transition: "background-color 150ms, border-color 150ms",
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -1291,7 +1362,7 @@ export default function PortfolioPage() {
               marginBottom: 28,
             }}
           >
-            {selected.opportunities.length === 0 ? (
+            {displayedOpps.length === 0 ? (
               <div
                 style={{
                   padding: "28px 20px",
@@ -1301,9 +1372,11 @@ export default function PortfolioPage() {
                   lineHeight: "19px",
                 }}
               >
-                No opportunities yet. Click &lsquo;New opportunity&rsquo; to add one.
+                {stageFilter
+                  ? `No ${stageFilter.toLowerCase()} opportunities for this engagement.`
+                  : "No opportunities yet. Click ‘New opportunity’ to add one."}
               </div>
-            ) : selected.opportunities.map((opp, i) => {
+            ) : displayedOpps.map((opp, i) => {
               const dotColor = STAGE_DOT[opp.stage]
               const badge = STAGE_BADGE[opp.stage]
               return (
@@ -1324,7 +1397,7 @@ export default function PortfolioPage() {
                     alignItems: "center",
                     justifyContent: "space-between",
                     padding: "14px 18px",
-                    borderBottom: i < selected.opportunities.length - 1 ? "1px solid var(--border-default)" : "none",
+                    borderBottom: i < displayedOpps.length - 1 ? "1px solid var(--border-default)" : "none",
                     cursor: "pointer",
                     transition: "background-color 150ms",
                     gap: 12,
