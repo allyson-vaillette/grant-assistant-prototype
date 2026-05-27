@@ -693,7 +693,7 @@ function FunderPanel({
   onClose,
   engagement,
   funder,
-  onSelectEngagement,
+  onSelectEngagement: _onSelectEngagement,
 }: {
   open: boolean
   onClose: () => void
@@ -712,7 +712,6 @@ function FunderPanel({
   const activeOppCount = engagement.opportunities.filter(
     (o) => o.stage === "Active" || o.stage === "Submitted"
   ).length
-  const mostRecentNote = engagement.notes[0]
   const engBadge = ENG_BADGE[engagement.status]
 
   return (
@@ -722,7 +721,7 @@ function FunderPanel({
         style={{
           position: "fixed",
           inset: 0,
-          backgroundColor: "rgba(42,42,42,0.35)",
+          backgroundColor: "rgba(28,24,64,0.18)",
           zIndex: 150,
           opacity: open ? 1 : 0,
           pointerEvents: open ? "auto" : "none",
@@ -868,96 +867,106 @@ function FunderPanel({
             </>
           )}
 
-          {/* History section */}
-          <p style={{ ...sectionLabel, marginBottom: 14 }}>Your history with this funder</p>
+          {/* Our relationship section */}
+          <p style={{ ...sectionLabel, marginBottom: 14 }}>Our relationship</p>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-            <div style={{ borderRadius: 10, padding: "12px 14px", backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)" }}>
-              <p style={{ margin: "0 0 3px", fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+          {/* Status + summary stats */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <span
+              style={{
+                display: "inline-block",
+                borderRadius: 20,
+                padding: "3px 10px",
+                fontSize: 12,
+                fontWeight: 500,
+                backgroundColor: engBadge.bg,
+                color: engBadge.color,
+              }}
+            >
+              {engagement.status}
+            </span>
+            <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>
+              {engagement.notes[0]?.author ?? "Taylor S."}
+            </span>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+            <div style={{ borderRadius: 10, padding: "10px 12px", backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)" }}>
+              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
                 Total awarded
               </p>
-              <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.02em" }}>
+              <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.02em" }}>
                 {engagement.stats.awardedLifetime}
               </p>
             </div>
-            <div style={{ borderRadius: 10, padding: "12px 14px", backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)" }}>
-              <p style={{ margin: "0 0 3px", fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
-                Active opportunities
+            <div style={{ borderRadius: 10, padding: "10px 12px", backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)" }}>
+              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+                Active opps
               </p>
-              <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.02em" }}>
+              <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.02em" }}>
                 {activeOppCount}
               </p>
             </div>
           </div>
 
-          {mostRecentNote && (
-            <div
-              style={{
-                marginBottom: 16,
-                padding: "12px 14px",
-                borderRadius: 10,
-                backgroundColor: "var(--canvas)",
-                border: "1px solid var(--border-default)",
-              }}
-            >
-              <p style={{ margin: "0 0 3px", fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
-                Most recent contact
-              </p>
-              <p style={{ margin: "0 0 5px", fontSize: 11, color: "var(--ink-tertiary)" }}>{mostRecentNote.date}</p>
-              <p style={{ margin: 0, fontSize: 13, color: "var(--ink)", lineHeight: "18px" }}>
-                {mostRecentNote.text.length > 100
-                  ? `${mostRecentNote.text.slice(0, 100)}…`
-                  : mostRecentNote.text}
-              </p>
+          {/* Notes */}
+          {engagement.notes.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+                  Notes
+                </span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                {engagement.notes.slice(0, 2).map((note) => (
+                  <div key={note.id} style={{ padding: "9px 12px", borderRadius: 8, backgroundColor: "#FFFFFF", border: "1px solid var(--border-default)" }}>
+                    <p style={{ margin: "0 0 3px", fontSize: 12, color: "var(--ink)", lineHeight: "17px" }}>
+                      {note.text.length > 90 ? `${note.text.slice(0, 90)}…` : note.text}
+                    </p>
+                    <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>{note.date}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
-          <p style={{ ...sectionLabel, marginBottom: 10 }}>Engagements</p>
-          <div style={{ borderRadius: 10, border: "1px solid var(--border-default)", overflow: "hidden" }}>
-            <button
-              type="button"
-              onClick={() => {
-                onSelectEngagement(engagement.id)
-                onClose()
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                width: "100%",
-                padding: "12px 16px",
-                border: "none",
-                backgroundColor: "transparent",
-                cursor: "pointer",
-                textAlign: "left",
-                transition: "background-color 150ms",
-                gap: 10,
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {engagement.name}
-                </span>
-                <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
-                  {engagement.stats.awardedLifetime} · {engagement.opportunities.length} {engagement.opportunities.length === 1 ? "opportunity" : "opportunities"}
-                </span>
-              </div>
-              <span
-                style={{
-                  flexShrink: 0,
-                  borderRadius: 20,
-                  padding: "2px 9px",
-                  fontSize: 11,
-                  fontWeight: 500,
-                  backgroundColor: engBadge.bg,
-                  color: engBadge.color,
-                }}
-              >
-                {engagement.status}
-              </span>
-            </button>
+          {/* Engagement history */}
+          <div>
+            <span style={{ display: "block", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)", marginBottom: 8 }}>
+              Engagement history
+            </span>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {engagement.opportunities.slice(0, 5).map((opp, i, arr) => (
+                <div
+                  key={opp.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    padding: "8px 0",
+                    borderBottom: i < arr.length - 1 ? "1px solid var(--border-default)" : "none",
+                  }}
+                >
+                  <span style={{ fontSize: 12, color: "var(--ink)", flex: 1, lineHeight: "16px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {opp.name}
+                  </span>
+                  <span
+                    style={{
+                      borderRadius: 20,
+                      padding: "2px 8px",
+                      backgroundColor: STAGE_BADGE[opp.stage]?.bg ?? "#EBF0F5",
+                      fontSize: 11,
+                      fontWeight: 500,
+                      color: STAGE_BADGE[opp.stage]?.color ?? "#4A6080",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {opp.stage}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

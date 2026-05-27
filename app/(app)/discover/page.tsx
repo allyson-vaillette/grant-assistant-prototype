@@ -1352,12 +1352,14 @@ function DetailPanel({
   onTrackClick,
   onCancelPopover,
   onSelectEngagement,
+  onViewFunderProfile,
 }: {
   opp: Opportunity
   showPopover: boolean
   onTrackClick: () => void
   onCancelPopover: () => void
   onSelectEngagement: () => void
+  onViewFunderProfile?: () => void
 }) {
   const [methodologyOpen, setMethodologyOpen] = useState(false)
 
@@ -1396,11 +1398,37 @@ function DetailPanel({
       >
         {/* Header: funder + title + meta tags */}
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6 }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)" }}>
-              {opp.funder}
-            </span>
-            <ExternalLink size={11} color="var(--ink-tertiary)" />
+          <div style={{ marginBottom: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: onViewFunderProfile ? 4 : 0 }}>
+              <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)" }}>
+                {opp.funder}
+              </span>
+              <ExternalLink size={11} color="var(--ink-tertiary)" />
+            </div>
+            {onViewFunderProfile && (
+              <button
+                type="button"
+                onClick={onViewFunderProfile}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 3,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  color: "var(--slate-secondary)",
+                  transition: "color 150ms",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-primary)" }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
+              >
+                View funder profile
+                <ChevronRight size={10} />
+              </button>
+            )}
           </div>
           <h3
             style={{
@@ -1883,10 +1911,12 @@ const FUNDER_EXTENDED: Record<string, FunderExtendedData> = {
 function FunderDetailPanel({
   funder,
   onCreateEngagement,
+  onBack,
 }: {
   funder: DiscoverFunder
   onCreateEngagement: (funderName: string) => void
   onOpportunityClick: (oppId: string) => void
+  onBack?: () => void
 }) {
   const router = useRouter()
   const extended = FUNDER_EXTENDED[funder.id] ?? {}
@@ -1930,6 +1960,42 @@ function FunderDetailPanel({
 
   return (
     <div style={{ width: 320, flexShrink: 0, display: "flex", flexDirection: "column", borderLeft: "1px solid var(--border-color)", backgroundColor: "var(--canvas)", overflow: "hidden" }}>
+      {/* Back nav */}
+      {onBack && (
+        <div style={{ flexShrink: 0, padding: "8px 12px", borderBottom: "1px solid var(--border-color)", backgroundColor: "var(--canvas)" }}>
+          <button
+            type="button"
+            onClick={onBack}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "4px 6px",
+              borderRadius: 6,
+              fontSize: 12,
+              fontWeight: 500,
+              color: "var(--ink-secondary)",
+              transition: "color 150ms, background-color 150ms",
+            }}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLButtonElement
+              el.style.color = "var(--ink)"
+              el.style.backgroundColor = "rgba(28,46,38,0.06)"
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLButtonElement
+              el.style.color = "var(--ink-secondary)"
+              el.style.backgroundColor = "transparent"
+            }}
+          >
+            <ChevronLeft size={13} />
+            Back to opportunity
+          </button>
+        </div>
+      )}
       {/* Scrollable body */}
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 0 20px", display: "flex", flexDirection: "column", gap: 14, minHeight: 0 }}>
 
@@ -2795,6 +2861,7 @@ export default function DiscoverPage() {
 
   // Opportunities state
   const [selectedId, setSelectedId] = useState("petco-love")
+  const [viewFunderFromOpp, setViewFunderFromOpp] = useState(false)
   const [showPopover, setShowPopover] = useState(false)
   const [hiddenOppIds, setHiddenOppIds] = useState<Set<string>>(new Set())
   const [dismissingOppIds, setDismissingOppIds] = useState<Set<string>>(new Set())
@@ -2825,6 +2892,11 @@ export default function DiscoverPage() {
     const stored = localStorage.getItem("discover-filter-collapsed")
     if (stored !== null) setFilterCollapsed(stored === "true")
   }, [])
+
+  useEffect(() => {
+    setViewFunderFromOpp(false)
+    setShowPopover(false)
+  }, [selectedId])
 
   function handleToggleFilter() {
     setFilterCollapsed((v) => {
@@ -2893,11 +2965,14 @@ export default function DiscoverPage() {
     filteredFunders[0] ??
     DISCOVER_FUNDERS[0]
 
+  const oppFunder = DISCOVER_FUNDERS.find((f) => f.name === selectedOpp.funder)
+
   function handleTabSwitch(tab: ActiveTab) {
     if (tab === activeTab) return
     setActiveTab(tab)
     setShowPopover(false)
     setShowHiddenView(false)
+    setViewFunderFromOpp(false)
     // Carry over initiatives/focus/geo; reset tab-specific filters; discard staged
     const carried: CombinedFilterState = {
       initiatives: appliedFilters.initiatives,
@@ -3418,13 +3493,23 @@ export default function DiscoverPage() {
 
         {/* Right panel */}
         {activeTab === "opportunities" ? (
-          <DetailPanel
-            opp={selectedOpp}
-            showPopover={showPopover}
-            onTrackClick={() => setShowPopover((v) => !v)}
-            onCancelPopover={() => setShowPopover(false)}
-            onSelectEngagement={handleSelectEngagement}
-          />
+          viewFunderFromOpp && oppFunder ? (
+            <FunderDetailPanel
+              funder={oppFunder}
+              onCreateEngagement={handleCreateEngagement}
+              onOpportunityClick={handleOpportunityClickFromFunderPanel}
+              onBack={() => setViewFunderFromOpp(false)}
+            />
+          ) : (
+            <DetailPanel
+              opp={selectedOpp}
+              showPopover={showPopover}
+              onTrackClick={() => setShowPopover((v) => !v)}
+              onCancelPopover={() => setShowPopover(false)}
+              onSelectEngagement={handleSelectEngagement}
+              onViewFunderProfile={oppFunder ? () => setViewFunderFromOpp(true) : undefined}
+            />
+          )
         ) : (
           <FunderDetailPanel
             funder={selectedFunder}
