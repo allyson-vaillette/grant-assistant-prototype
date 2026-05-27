@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Plus, Search, SlidersHorizontal, ThumbsDown, X } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Info, Plus, RotateCcw, Search, Share2, SlidersHorizontal, ThumbsDown, X } from "lucide-react"
 import { NewEngagementModal, type NewEngagementData } from "@/components/proposals/NewEngagementModal"
 import { DISCOVER_FUNDERS, type DiscoverFunder } from "@/lib/funders"
 
@@ -15,6 +15,7 @@ type ActiveTab = "opportunities" | "funders"
 interface WhyMatch {
   icon: "check" | "warning"
   text: string
+  category?: "geo" | "focus" | "award" | "eligibility" | "deadline" | "other"
 }
 
 interface Initiative {
@@ -38,6 +39,8 @@ interface Opportunity {
   whyMatches: WhyMatch[]
   aboutGrant: string
   initiatives: Initiative[]
+  fitPct: number
+  successContext?: string
 }
 
 const FUNDER_TYPES = [
@@ -79,11 +82,14 @@ const OPPORTUNITIES: Opportunity[] = [
     amountLabel: "Up to $50,000",
     dueDateLabel: "Due Aug 15, 2026",
     focusAreaLabel: "Animal Welfare",
+    fitPct: 82,
+    successContext: "Petco Love funded roughly 35% of animal welfare applicants nationally last year.",
     whyMatches: [
-      { icon: "check", text: "Focus areas align — Animal Welfare matches your Rescue & Intake and Foster Program initiatives" },
-      { icon: "check", text: "Geography — Petco Love funds nationally, you serve California" },
-      { icon: "check", text: "Eligibility — 501(c)(3) required, organization size fits grant range" },
-      { icon: "warning", text: "Deadline pressure — application due in 93 days, you have no active proposal yet" },
+      { icon: "check", text: "Geography — Petco Love funds nationally, you serve California. Confirmed match.", category: "geo" },
+      { icon: "check", text: "Focus areas align — Animal Welfare matches your Rescue & Intake and Foster Program initiatives", category: "focus" },
+      { icon: "check", text: "Award range — Petco Love typically awards $10K–$50K. Your typical ask is around $40K. Within range.", category: "award" },
+      { icon: "check", text: "Eligibility — 501(c)(3) required, organization size fits grant range", category: "eligibility" },
+      { icon: "warning", text: "Deadline pressure — application due in 93 days, you have no active proposal yet", category: "deadline" },
     ],
     aboutGrant:
       "Petco Love Lost & Found grants support organizations working to reunite lost pets with their families. Funding prioritizes shelters and rescues with proven community impact in underserved areas, with preference for programs serving cats and dogs at scale.",
@@ -105,11 +111,14 @@ const OPPORTUNITIES: Opportunity[] = [
     amountLabel: "Up to $75,000",
     dueDateLabel: "Due Sep 30, 2026",
     focusAreaLabel: "Animal Welfare",
+    fitPct: 74,
+    successContext: "ASPCA Saving Lives funded about 28% of applicants in the shelter operations category last cycle.",
     whyMatches: [
-      { icon: "check", text: "Focus areas align — Animal Welfare is a primary ASPCA funding priority" },
-      { icon: "check", text: "Geography — ASPCA funds nationally, California orgs are eligible" },
-      { icon: "check", text: "Eligibility — 501(c)(3) required, meets organization criteria" },
-      { icon: "warning", text: "Deadline — application due in 138 days, early proposal recommended" },
+      { icon: "check", text: "Geography — ASPCA funds nationally, California orgs are eligible. Confirmed match.", category: "geo" },
+      { icon: "check", text: "Focus areas align — Animal Welfare is a primary ASPCA funding priority", category: "focus" },
+      { icon: "check", text: "Award range — ASPCA typically awards $25K–$75K. Your typical ask is around $60K. Within range.", category: "award" },
+      { icon: "check", text: "Eligibility — 501(c)(3) required, meets organization criteria", category: "eligibility" },
+      { icon: "warning", text: "Deadline — application due in 138 days, early proposal recommended", category: "deadline" },
     ],
     aboutGrant:
       "ASPCA Saving Lives grants fund shelters and rescue organizations focused on reducing euthanasia rates. Grants prioritize organizations with demonstrated data-driven intake reduction programs and strong community partnerships.",
@@ -128,11 +137,14 @@ const OPPORTUNITIES: Opportunity[] = [
     amountLabel: "$50,000–$200,000",
     dueDateLabel: "Due Jul 1, 2026",
     focusAreaLabel: "Community Development",
+    fitPct: 55,
+    successContext: undefined,
     whyMatches: [
-      { icon: "check", text: "Geography — California Wellness exclusively funds California-based organizations" },
-      { icon: "check", text: "Community focus — underserved communities aligns with your service area" },
-      { icon: "warning", text: "Focus area — health and wellness framing required; reframe animal welfare impact accordingly" },
-      { icon: "warning", text: "LOI deadline — letters of inquiry due in 47 days" },
+      { icon: "check", text: "Geography — California Wellness exclusively funds California-based organizations. Confirmed match.", category: "geo" },
+      { icon: "warning", text: "Focus area — health and wellness framing required; reframe animal welfare impact accordingly", category: "focus" },
+      { icon: "check", text: "Award range — California Wellness typically awards $50K–$200K. Your typical ask fits within range.", category: "award" },
+      { icon: "check", text: "Community focus — underserved communities aligns with your service area", category: "eligibility" },
+      { icon: "warning", text: "LOI deadline — letters of inquiry due in 47 days", category: "deadline" },
     ],
     aboutGrant:
       "California Wellness Foundation advances the health and wellness of Californians by making grants to nonprofits addressing the root causes of poor health in underserved communities. Animal welfare programs with strong community health components may be eligible.",
@@ -154,11 +166,14 @@ const OPPORTUNITIES: Opportunity[] = [
     amountLabel: "$10,000–$100,000",
     dueDateLabel: "Rolling",
     focusAreaLabel: "Animal Welfare",
+    fitPct: 71,
+    successContext: "PetSmart Charities approved roughly 22% of Saving Cats & Kittens applications last year.",
     whyMatches: [
-      { icon: "check", text: "Focus areas align — cat and kitten rescue directly matches Rescue & Intake initiative" },
-      { icon: "check", text: "Geography — national funder, California orgs eligible" },
-      { icon: "check", text: "Rolling deadline — apply anytime, no immediate deadline pressure" },
-      { icon: "warning", text: "Cat-specific — program must demonstrate significant cat and kitten focus" },
+      { icon: "check", text: "Geography — national funder, California orgs eligible. Confirmed match.", category: "geo" },
+      { icon: "check", text: "Focus areas align — cat and kitten rescue directly matches Rescue & Intake initiative", category: "focus" },
+      { icon: "check", text: "Award range — PetSmart Charities typically awards $10K–$100K. Your typical ask is within range.", category: "award" },
+      { icon: "check", text: "Rolling deadline — apply anytime, no immediate deadline pressure", category: "deadline" },
+      { icon: "warning", text: "Cat-specific — program must demonstrate significant cat and kitten focus", category: "eligibility" },
     ],
     aboutGrant:
       "PetSmart Charities Saving Cats & Kittens grants support organizations running spay/neuter, foster, and rescue programs specifically for cats and kittens. Grants favor organizations with established trap-neuter-return programs and strong community partnerships.",
@@ -172,6 +187,13 @@ const OPPORTUNITIES: Opportunity[] = [
 const ENGAGEMENTS = [
   { id: "ford", name: "Ford Foundation", status: "Active" as const },
   { id: "petco", name: "Petco Love", status: "New" as const },
+]
+
+const TEAMMATES = [
+  { id: "taylor", name: "Taylor S.", initials: "TS" },
+  { id: "marcus", name: "Marcus R.", initials: "MR" },
+  { id: "jamie",  name: "Jamie K.",  initials: "JK" },
+  { id: "alex",   name: "Alex M.",   initials: "AM" },
 ]
 
 // ── Style constants ────────────────────────────────────────────────────────
@@ -229,8 +251,14 @@ function CheckboxIcon({ checked }: { checked: boolean }) {
 }
 
 function MatchDots({ filled }: { filled: number }) {
+  const [showTip, setShowTip] = useState(false)
+  const tipLabel = filled >= 5 ? "Strong match" : filled >= 4 ? "Good match" : "Partial match"
   return (
-    <div style={{ display: "flex", gap: 3, alignItems: "center", flexShrink: 0 }}>
+    <div
+      style={{ position: "relative", display: "inline-flex", gap: 3, alignItems: "center", flexShrink: 0 }}
+      onMouseEnter={() => setShowTip(true)}
+      onMouseLeave={() => setShowTip(false)}
+    >
       {Array.from({ length: 5 }).map((_, i) => (
         <div
           key={i}
@@ -243,6 +271,28 @@ function MatchDots({ filled }: { filled: number }) {
           }}
         />
       ))}
+      {showTip && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: "calc(100% + 6px)",
+            left: "50%",
+            transform: "translateX(-50%)",
+            backgroundColor: "#1C2E26",
+            color: "#FFFFFF",
+            fontSize: 11,
+            fontWeight: 500,
+            padding: "4px 8px",
+            borderRadius: 6,
+            whiteSpace: "nowrap",
+            zIndex: 100,
+            pointerEvents: "none",
+            boxShadow: "0 2px 8px rgba(28,46,38,0.2)",
+          }}
+        >
+          {tipLabel}
+        </div>
+      )}
     </div>
   )
 }
@@ -255,12 +305,14 @@ function OpportunityCard({
   isNotRelevant,
   onClick,
   onNotRelevant,
+  onShare,
 }: {
   opp: Opportunity
   isSelected: boolean
   isNotRelevant: boolean
   onClick: () => void
   onNotRelevant: () => void
+  onShare: () => void
 }) {
   const [isHovered, setIsHovered] = useState(false)
 
@@ -282,44 +334,77 @@ function OpportunityCard({
         width: "100%",
         padding: "14px 16px 14px 14px",
         borderRadius: 12,
-        backgroundColor: "var(--surface)",
+        backgroundColor: isSelected ? "var(--slate-tint)" : "#FFFFFF",
         border: isSelected
-          ? "1.5px solid rgba(90,138,53,0.3)"
+          ? "1.5px solid var(--slate-secondary)"
           : isHovered
-          ? "1px solid rgba(90,138,53,0.2)"
+          ? "1px solid rgba(74,96,128,0.35)"
           : "1px solid var(--border-default)",
         borderLeft: isSelected
           ? "3px solid var(--slate-secondary)"
           : "3px solid transparent",
-        boxShadow:
-          isSelected || isHovered
-            ? "0px 2px 8px rgba(28,24,64,0.07)"
-            : "0px 1px 3px rgba(28,24,64,0.04)",
+        boxShadow: isSelected
+          ? "0px 3px 10px rgba(28,24,64,0.1)"
+          : isHovered
+          ? "0px 2px 8px rgba(28,24,64,0.07)"
+          : "0px 1px 3px rgba(28,24,64,0.04)",
         cursor: "pointer",
         textAlign: "left",
-        transition: "border-color 150ms ease-in-out, box-shadow 150ms ease-in-out",
+        transition: "border-color 150ms ease-in-out, box-shadow 150ms ease-in-out, background-color 150ms ease-in-out",
       }}
     >
-      {/* Funder + status */}
+      {/* Funder + status + share (hover-revealed) */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
         <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)", lineHeight: "16px" }}>
           {opp.funder}
         </span>
-        <span
-          style={{
-            flexShrink: 0,
-            borderRadius: "var(--radius-pill)",
-            padding: "3px 9px",
-            backgroundColor: statusStyle.bg,
-            fontSize: 11,
-            fontWeight: 500,
-            color: statusStyle.color,
-            letterSpacing: "0.02em",
-            lineHeight: "14px",
-          }}
-        >
-          {opp.status}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          {isHovered && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onShare() }}
+              title="Share this opportunity"
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "2px 4px",
+                borderRadius: 5,
+                display: "flex",
+                alignItems: "center",
+                color: "var(--ink-tertiary)",
+                transition: "color 150ms, background-color 150ms",
+              }}
+              onMouseEnter={(e) => {
+                const el = e.currentTarget as HTMLButtonElement
+                el.style.color = "var(--slate-secondary)"
+                el.style.backgroundColor = "var(--slate-tint)"
+              }}
+              onMouseLeave={(e) => {
+                const el = e.currentTarget as HTMLButtonElement
+                el.style.color = "var(--ink-tertiary)"
+                el.style.backgroundColor = "transparent"
+              }}
+            >
+              <Share2 size={12} />
+            </button>
+          )}
+          <span
+            style={{
+              flexShrink: 0,
+              borderRadius: "var(--radius-pill)",
+              padding: "3px 9px",
+              backgroundColor: statusStyle.bg,
+              fontSize: 11,
+              fontWeight: 500,
+              color: statusStyle.color,
+              letterSpacing: "0.02em",
+              lineHeight: "14px",
+            }}
+          >
+            {opp.status}
+          </span>
+        </div>
       </div>
 
       {/* Grant name */}
@@ -944,6 +1029,243 @@ function NotRelevantModal({
   )
 }
 
+// ── Share Discover Modal ────────────────────────────────────────────────────
+
+function ShareDiscoverModal({
+  oppName,
+  onClose,
+  onShare,
+}: {
+  oppName: string
+  onClose: () => void
+  onShare: (teammate: string) => void
+}) {
+  const [query, setQuery] = useState("")
+  const [selected, setSelected] = useState<typeof TEAMMATES[number] | null>(null)
+  const [note, setNote] = useState("")
+  const [listOpen, setListOpen] = useState(false)
+
+  const filtered = TEAMMATES.filter((t) =>
+    t.name.toLowerCase().includes(query.toLowerCase())
+  )
+
+  function handleSelect(t: typeof TEAMMATES[number]) {
+    setSelected(t)
+    setQuery(t.name)
+    setListOpen(false)
+  }
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        backgroundColor: "rgba(28,24,64,0.35)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 200,
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div
+        style={{
+          width: 400,
+          backgroundColor: "#FFFFFF",
+          borderRadius: 14,
+          boxShadow: "0 16px 48px rgba(28,24,64,0.18)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 0" }}>
+          <div>
+            <h2 style={{ margin: "0 0 2px", fontSize: 17, fontWeight: 600, color: "var(--ink)" }}>
+              Share opportunity
+            </h2>
+            <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "16px" }}>
+              {oppName}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: 28,
+              height: 28,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 6,
+              border: "1px solid var(--border-default)",
+              backgroundColor: "transparent",
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            <X size={14} color="var(--ink-secondary)" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: "20px 24px 0" }}>
+          <div style={{ marginBottom: 16, position: "relative" }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--ink)", marginBottom: 6 }}>
+              Teammate
+            </label>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setSelected(null); setListOpen(true) }}
+              onFocus={() => setListOpen(true)}
+              onBlur={() => setTimeout(() => setListOpen(false), 150)}
+              placeholder="Search by name..."
+              style={{
+                width: "100%",
+                padding: "9px 12px",
+                borderRadius: 9,
+                border: "1px solid var(--border-default)",
+                fontSize: 13,
+                color: "var(--ink)",
+                outline: "none",
+                boxSizing: "border-box" as const,
+              }}
+            />
+            {listOpen && filtered.length > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 4px)",
+                  left: 0,
+                  right: 0,
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid var(--border-default)",
+                  borderRadius: 10,
+                  boxShadow: "0 8px 24px rgba(28,24,64,0.12)",
+                  zIndex: 300,
+                  overflow: "hidden",
+                }}
+              >
+                {filtered.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onMouseDown={() => handleSelect(t)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      width: "100%",
+                      padding: "10px 14px",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      transition: "background-color 100ms",
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+                  >
+                    <div
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: "50%",
+                        background: "var(--gradient-avatar, linear-gradient(135deg, #5B45C8, #6BA8A4))",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <span style={{ fontSize: 9, fontWeight: 700, color: "#FFFFFF", lineHeight: 1 }}>
+                        {t.initials}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 13, color: "var(--ink)" }}>{t.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginBottom: 24 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--ink)", marginBottom: 6 }}>
+              Note{" "}
+              <span style={{ fontWeight: 400, color: "var(--ink-tertiary)" }}>(optional)</span>
+            </label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Add a message..."
+              rows={3}
+              style={{
+                width: "100%",
+                padding: "9px 12px",
+                borderRadius: 9,
+                border: "1px solid var(--border-default)",
+                fontSize: 13,
+                color: "var(--ink)",
+                outline: "none",
+                resize: "none" as const,
+                lineHeight: "19px",
+                boxSizing: "border-box" as const,
+                fontFamily: "inherit",
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "16px 24px 20px",
+            borderTop: "1px solid var(--border-default)",
+          }}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: "8px 18px",
+              borderRadius: 8,
+              border: "1px solid var(--border-default)",
+              backgroundColor: "transparent",
+              fontSize: 13,
+              color: "var(--ink)",
+              cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!selected}
+            onClick={() => { if (selected) { onShare(selected.name); onClose() } }}
+            style={{
+              padding: "8px 18px",
+              borderRadius: 8,
+              border: "none",
+              backgroundColor: selected ? "var(--slate-primary)" : "var(--slate-tint)",
+              fontSize: 13,
+              fontWeight: 500,
+              color: selected ? "#FFFFFF" : "var(--ink-tertiary)",
+              cursor: selected ? "pointer" : "not-allowed",
+              transition: "background-color 150ms",
+            }}
+          >
+            Share
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Toast ───────────────────────────────────────────────────────────────────
 
 function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
@@ -1037,6 +1359,18 @@ function DetailPanel({
   onCancelPopover: () => void
   onSelectEngagement: () => void
 }) {
+  const [methodologyOpen, setMethodologyOpen] = useState(false)
+
+  const CATEGORY_ORDER = ["geo", "focus", "award", "eligibility", "deadline", "other"]
+  const sortedMatches = [...opp.whyMatches].sort((a, b) => {
+    const ai = CATEGORY_ORDER.indexOf(a.category ?? "other")
+    const bi = CATEGORY_ORDER.indexOf(b.category ?? "other")
+    return ai - bi
+  })
+
+  const fitLabel = opp.fitPct >= 75 ? "Strong match" : opp.fitPct >= 60 ? "Good match" : "Partial match"
+  const fitColor = opp.fitPct >= 75 ? "var(--slate-primary)" : opp.fitPct >= 60 ? "var(--slate-secondary)" : "var(--slate)"
+
   return (
     <div
       style={{
@@ -1103,17 +1437,131 @@ function DetailPanel({
 
         <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
 
-        {/* Why this matches */}
+        {/* Fit score + Why this matches */}
         <div>
+          {/* Fit score card */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid var(--border-default)",
+              borderRadius: 10,
+              padding: "12px 14px",
+              marginBottom: 12,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div>
+                <p style={{ margin: "0 0 2px", fontSize: 24, fontWeight: 700, color: fitColor, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                  {opp.fitPct}%
+                </p>
+                <p style={{ margin: 0, fontSize: 11, color: "var(--ink-secondary)", fontWeight: 500 }}>{fitLabel}</p>
+              </div>
+              <div style={{ width: 72, height: 5, borderRadius: 3, backgroundColor: "var(--slate-tint)", overflow: "hidden" }}>
+                <div style={{ height: "100%", borderRadius: 3, backgroundColor: fitColor, width: `${opp.fitPct}%`, transition: "width 300ms ease" }} />
+              </div>
+            </div>
+            <div style={{ position: "relative" }}>
+              <button
+                type="button"
+                onClick={() => setMethodologyOpen((v) => !v)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 3,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "3px 6px",
+                  borderRadius: 5,
+                  fontSize: 11,
+                  color: "var(--ink-tertiary)",
+                  transition: "color 150ms, background-color 150ms",
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.color = "var(--slate-secondary)"
+                  el.style.backgroundColor = "var(--slate-tint)"
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.color = "var(--ink-tertiary)"
+                  el.style.backgroundColor = "transparent"
+                }}
+              >
+                <Info size={11} />
+                How?
+              </button>
+              {methodologyOpen && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 6px)",
+                    right: 0,
+                    width: 240,
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid var(--border-default)",
+                    borderRadius: 10,
+                    boxShadow: "0 8px 24px rgba(28,24,64,0.14)",
+                    padding: "12px 14px",
+                    zIndex: 50,
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <p style={{ margin: "0 0 7px", fontSize: 12, fontWeight: 600, color: "var(--ink)" }}>
+                    How match score is calculated
+                  </p>
+                  <p style={{ margin: "0 0 6px", fontSize: 11, color: "var(--ink-secondary)", lineHeight: "17px" }}>
+                    Grant Assistant analyzes your organization profile and initiative data against the funder&apos;s documented priorities, geographic focus, award range, and eligibility requirements.
+                  </p>
+                  <p style={{ margin: 0, fontSize: 11, color: "var(--ink-secondary)", lineHeight: "17px" }}>
+                    Scores above 70% indicate strong overall fit across four dimensions: geographic match, financial fit, focus area alignment, and eligibility.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
           <p style={sectionLabelStyle}>Why this matches you</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {opp.whyMatches.map((item, i) => (
-              <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+            {sortedMatches.map((item, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "flex-start",
+                  padding: item.category === "geo" && item.icon === "warning" ? "8px 10px" : undefined,
+                  borderRadius: item.category === "geo" && item.icon === "warning" ? 7 : undefined,
+                  backgroundColor: item.category === "geo" && item.icon === "warning" ? "rgba(220,88,36,0.07)" : undefined,
+                  border: item.category === "geo" && item.icon === "warning" ? "1px solid rgba(220,88,36,0.2)" : undefined,
+                }}
+              >
                 {item.icon === "check" ? <CheckCircle /> : <WarningCircle />}
                 <span style={{ fontSize: 12, color: "var(--ink)", lineHeight: "18px" }}>{item.text}</span>
               </div>
             ))}
           </div>
+
+          {/* Funder success context */}
+          {opp.successContext && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: "9px 12px",
+                borderRadius: 8,
+                backgroundColor: "#FFFFFF",
+                border: "1px solid var(--border-default)",
+                fontSize: 12,
+                color: "var(--ink-secondary)",
+                lineHeight: "18px",
+              }}
+            >
+              {opp.successContext}
+            </div>
+          )}
         </div>
 
         <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
@@ -2075,6 +2523,8 @@ export default function DiscoverPage() {
   const [dismissingOppIds, setDismissingOppIds] = useState<Set<string>>(new Set())
   const [notRelevantOppModalFor, setNotRelevantOppModalFor] = useState<string | null>(null)
   const [notRelevantOppIds, setNotRelevantOppIds] = useState<Set<string>>(new Set())
+  const [shareOppId, setShareOppId] = useState<string | null>(null)
+  const [showHiddenView, setShowHiddenView] = useState(false)
 
   // Funders state
   const [selectedFunderId, setSelectedFunderId] = useState<string>(DISCOVER_FUNDERS[0]?.id ?? "")
@@ -2170,6 +2620,7 @@ export default function DiscoverPage() {
     if (tab === activeTab) return
     setActiveTab(tab)
     setShowPopover(false)
+    setShowHiddenView(false)
     // Carry over initiatives/focus/geo; reset tab-specific filters; discard staged
     const carried: CombinedFilterState = {
       initiatives: appliedFilters.initiatives,
@@ -2287,6 +2738,10 @@ export default function DiscoverPage() {
     setToast("Engagement created")
   }
 
+  function handleShareOpp(teammate: string) {
+    setToast(`Opportunity shared with ${teammate}`)
+  }
+
   // ── Filter actions ──
 
   function handleApplyFilters() {
@@ -2372,11 +2827,68 @@ export default function DiscoverPage() {
               borderBottom: "1px solid var(--border-default)",
             }}
           >
-            <span style={{ fontSize: 13, color: "var(--ink-secondary)", lineHeight: "16px" }}>
-              {activeTab === "opportunities"
-                ? `${filteredOpps.length} opportunities matching your initiatives`
-                : `${filteredFunders.length} funders matching your initiatives`}
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {activeTab === "opportunities" && showHiddenView ? (
+                <button
+                  type="button"
+                  onClick={() => setShowHiddenView(false)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    color: "var(--slate-secondary)",
+                    padding: 0,
+                    fontWeight: 500,
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "underline" }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "none" }}
+                >
+                  ‹ Back to opportunities
+                </button>
+              ) : (
+                <span style={{ fontSize: 13, color: "var(--ink-secondary)", lineHeight: "16px" }}>
+                  {activeTab === "opportunities"
+                    ? `${filteredOpps.length} opportunities matching your initiatives`
+                    : `${filteredFunders.length} funders matching your initiatives`}
+                </span>
+              )}
+              {activeTab === "opportunities" && !showHiddenView && hiddenOppIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowHiddenView(true)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    background: "none",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    color: "var(--ink-tertiary)",
+                    padding: "3px 7px",
+                    borderRadius: 6,
+                    border: "1px solid var(--border-default)",
+                    backgroundColor: "var(--canvas)",
+                    transition: "color 150ms, background-color 150ms",
+                  }}
+                  onMouseEnter={(e) => {
+                    const el = e.currentTarget as HTMLButtonElement
+                    el.style.color = "var(--ink-secondary)"
+                    el.style.backgroundColor = "var(--slate-tint)"
+                  }}
+                  onMouseLeave={(e) => {
+                    const el = e.currentTarget as HTMLButtonElement
+                    el.style.color = "var(--ink-tertiary)"
+                    el.style.backgroundColor = "var(--canvas)"
+                  }}
+                >
+                  View hidden ({hiddenOppIds.size})
+                </button>
+              )}
+            </div>
             <button
               type="button"
               style={{
@@ -2527,28 +3039,81 @@ export default function DiscoverPage() {
             }}
           >
             {activeTab === "opportunities"
-              ? filteredOpps.map((opp) => {
-                  const isDismissing = dismissingOppIds.has(opp.id)
-                  return (
-                    <div
-                      key={opp.id}
-                      style={{
-                        opacity: isDismissing ? 0 : 1,
-                        maxHeight: isDismissing ? 0 : "2000px",
-                        overflow: isDismissing ? "hidden" : "visible",
-                        transition: "opacity 200ms ease-in-out, max-height 200ms ease-in-out",
-                      }}
-                    >
-                      <OpportunityCard
-                        opp={opp}
-                        isSelected={opp.id === selectedId}
-                        isNotRelevant={notRelevantOppIds.has(opp.id)}
-                        onClick={() => handleOppCardClick(opp.id)}
-                        onNotRelevant={() => setNotRelevantOppModalFor(opp.id)}
-                      />
-                    </div>
-                  )
-                })
+              ? showHiddenView
+                ? /* Hidden view */
+                  Array.from(hiddenOppIds).map((id) => {
+                    const opp = OPPORTUNITIES.find((o) => o.id === id)
+                    if (!opp) return null
+                    return (
+                      <div key={id} style={{ position: "relative" }}>
+                        <OpportunityCard
+                          opp={opp}
+                          isSelected={opp.id === selectedId}
+                          isNotRelevant={false}
+                          onClick={() => handleOppCardClick(opp.id)}
+                          onNotRelevant={() => {}}
+                          onShare={() => setShareOppId(opp.id)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setHiddenOppIds((prev) => {
+                              const next = new Set(Array.from(prev))
+                              next.delete(id)
+                              return next
+                            })
+                          }}
+                          style={{
+                            position: "absolute",
+                            bottom: 10,
+                            right: 12,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                            background: "none",
+                            border: "1px solid var(--border-default)",
+                            borderRadius: 6,
+                            cursor: "pointer",
+                            padding: "4px 9px",
+                            fontSize: 11,
+                            fontWeight: 500,
+                            color: "var(--slate-secondary)",
+                            backgroundColor: "#FFFFFF",
+                            transition: "background-color 150ms",
+                          }}
+                          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-tint)" }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#FFFFFF" }}
+                        >
+                          <RotateCcw size={10} />
+                          Unhide
+                        </button>
+                      </div>
+                    )
+                  })
+                : /* Normal view */
+                  filteredOpps.map((opp) => {
+                    const isDismissing = dismissingOppIds.has(opp.id)
+                    return (
+                      <div
+                        key={opp.id}
+                        style={{
+                          opacity: isDismissing ? 0 : 1,
+                          maxHeight: isDismissing ? 0 : "2000px",
+                          overflow: isDismissing ? "hidden" : "visible",
+                          transition: "opacity 200ms ease-in-out, max-height 200ms ease-in-out",
+                        }}
+                      >
+                        <OpportunityCard
+                          opp={opp}
+                          isSelected={opp.id === selectedId}
+                          isNotRelevant={notRelevantOppIds.has(opp.id)}
+                          onClick={() => handleOppCardClick(opp.id)}
+                          onNotRelevant={() => setNotRelevantOppModalFor(opp.id)}
+                          onShare={() => setShareOppId(opp.id)}
+                        />
+                      </div>
+                    )
+                  })
               : filteredFunders.map((funder) => {
                   const isDismissing = dismissingFunderIds.has(funder.id)
                   return (
@@ -2605,6 +3170,18 @@ export default function DiscoverPage() {
           onConfirm={handleFunderNotRelevantConfirm}
         />
       )}
+
+      {/* Share modal */}
+      {shareOppId && (() => {
+        const opp = OPPORTUNITIES.find((o) => o.id === shareOppId)
+        return opp ? (
+          <ShareDiscoverModal
+            oppName={opp.grantName}
+            onClose={() => setShareOppId(null)}
+            onShare={(teammate) => { handleShareOpp(teammate); setShareOppId(null) }}
+          />
+        ) : null
+      })()}
 
       {/* ── New Engagement Modal ── */}
       <NewEngagementModal

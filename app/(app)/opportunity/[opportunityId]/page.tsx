@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useParams, useSearchParams, useRouter } from "next/navigation"
 import {
   ChevronDown, Copy, FileText, Plus, Paperclip, Pencil, Trash2, X,
-  Flag, Share2, AlertTriangle, Info, Sparkles, Loader2,
+  Flag, Share2, AlertTriangle, Sparkles, Loader2,
 } from "lucide-react"
 import { NewProposalModal } from "@/components/proposals/NewProposalModal"
 
@@ -125,8 +125,6 @@ const STAGE_ORDER: Stage[] = ["Tracking", "Active", "Submitted", "Awarded", "Rep
 const TERMINAL_STAGES: Stage[] = ["Declined", "Complete"]
 const UNLOCK_STAGES: Stage[] = ["Awarded", "Reporting", "Complete"]
 const LOCKED_TABS: TabId[] = ["budget", "reports"]
-const MATCH_INSIGHTS_STAGES: Stage[] = ["Tracking", "Active", "Submitted", "Awarded", "Reporting"]
-
 function isTabLocked(tabId: TabId, stage: Stage): boolean {
   return LOCKED_TABS.includes(tabId) && !UNLOCK_STAGES.includes(stage)
 }
@@ -387,105 +385,6 @@ function ShareModal({ open, onClose, onShare }: {
           </button>
         </div>
       </div>
-    </div>
-  )
-}
-
-// ── Match Insights Section ─────────────────────────────────────────────────
-
-function FitSignal({ label, match, detail }: { label: string; match: boolean; detail: string }) {
-  return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "10px 12px", borderRadius: 8, backgroundColor: "var(--surface-white)", border: `1px solid ${match ? "var(--border-default)" : "rgba(185,28,28,0.2)"}` }}>
-      <div style={{ flexShrink: 0, marginTop: 1 }}>
-        {match ? (
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <circle cx="7" cy="7" r="6.5" fill="#E0EDE6" stroke="#3C5E4C" strokeWidth="0.5" />
-            <path d="M4.5 7l1.8 1.8L9.5 5.5" stroke="#3C5E4C" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        ) : (
-          <AlertTriangle size={14} color="#8B2020" />
-        )}
-      </div>
-      <div>
-        <p style={{ margin: "0 0 2px", fontSize: 12, fontWeight: 600, color: match ? "var(--evergreen)" : "#8B2020" }}>{label}</p>
-        <p style={{ margin: 0, fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px" }}>{detail}</p>
-      </div>
-    </div>
-  )
-}
-
-function MatchInsightsSection({ proposals }: { proposals: Proposal[] }) {
-  const [methodologyOpen, setMethodologyOpen] = useState(false)
-  const hasProposalStarted = proposals.length > 0
-  const fitPct = 78
-
-  return (
-    <div style={{ backgroundColor: "var(--canvas)", borderBottom: "1px solid var(--border-default)", padding: "20px 32px" }}>
-      {/* Section header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <p style={{ ...sectionLabelStyle, margin: 0 }}>Match insights</p>
-        <div style={{ position: "relative" }}>
-          <button type="button" onClick={() => setMethodologyOpen((v) => !v)}
-            style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 12, color: "var(--slate-secondary)" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "underline" }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "none" }}
-          >
-            <Info size={12} />
-            How is this calculated?
-          </button>
-          {methodologyOpen && (
-            <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, width: 280, backgroundColor: "#FFFFFF", border: "1px solid var(--border-default)", borderRadius: 10, boxShadow: "0 8px 24px rgba(42,42,42,0.14)", padding: "14px 16px", zIndex: 50 }}>
-              <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "var(--ink)" }}>How match score is calculated</p>
-              <p style={{ margin: "0 0 6px", fontSize: 12, color: "var(--ink-secondary)", lineHeight: "18px" }}>
-                Grant Assistant analyzes your organization profile and initiative data against the funder&apos;s documented priorities, geographic focus, award range, and eligibility requirements.
-              </p>
-              <p style={{ margin: 0, fontSize: 12, color: "var(--ink-secondary)", lineHeight: "18px" }}>
-                Scores above 70% indicate strong overall fit across four dimensions: geographic match, financial fit, focus area alignment, and eligibility.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" as const }}>
-        {/* Fit score card */}
-        <div style={{ flexShrink: 0, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)", borderRadius: 12, padding: "16px 20px", minWidth: 160 }}>
-          <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)" }}>Fit score</p>
-          <p style={{ margin: "0 0 12px", fontSize: 34, fontWeight: 700, letterSpacing: "-0.02em", color: "var(--slate-primary)", lineHeight: 1 }}>{fitPct}%</p>
-          <div style={{ height: 6, borderRadius: 3, backgroundColor: "var(--slate-tint)", overflow: "hidden" }}>
-            <div style={{ height: "100%", borderRadius: 3, backgroundColor: "var(--slate-primary)", width: `${fitPct}%` }} />
-          </div>
-          <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--ink-secondary)" }}>Strong match</p>
-        </div>
-
-        {/* Fit signals */}
-        <div style={{ flex: 1, minWidth: 260, display: "flex", flexDirection: "column", gap: 8 }}>
-          <FitSignal
-            label="Geographic fit"
-            match
-            detail="Funder funds in California, New York, and Massachusetts. Your initiative serves California, New York, and Texas. Confirmed match for 2 of 3 regions."
-          />
-          <FitSignal
-            label="Award range"
-            match
-            detail="Funder typically awards $25K–$100K. Your typical ask is around $75K. Within range."
-          />
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "10px 12px", borderRadius: 8, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)" }}>
-            <span style={{ fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px" }}>
-              Ford Foundation approved roughly <strong style={{ color: "var(--ink)" }}>30%</strong> of applications in this program area last year.
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Deadline pressure warning — only when no proposal started */}
-      {!hasProposalStarted && (
-        <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 8, backgroundColor: "#FDE8E8", border: "1px solid rgba(185,28,28,0.2)" }}>
-          <AlertTriangle size={14} color="#8B2020" style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 13, color: "#8B2020" }}>Deadline in 20 days. No proposal started yet.</span>
-        </div>
-      )}
     </div>
   )
 }
@@ -1090,7 +989,6 @@ function OpportunityDetailContent() {
   const [lockedHover, setLockedHover] = useState<TabId | null>(null)
   const [lessons, setLessons] = useState<LessonsLearned>({ worked: "", didntWork: "", tryNext: "" })
 
-  const showMatchInsights = MATCH_INSIGHTS_STAGES.includes(stage)
   const showCoaching = stage === "Declined"
 
   const attentionFlag: "overdue" | "attention" | null = (() => {
@@ -1231,8 +1129,7 @@ function OpportunityDetailContent() {
         </div>
       </div>
 
-      {/* Match Insights / Coaching band */}
-      {showMatchInsights && <MatchInsightsSection proposals={proposals} />}
+      {/* Coaching band (Declined only) */}
       {showCoaching && <CoachingSection lessons={lessons} onLessonsChange={setLessons} />}
 
       {/* Tab content */}
