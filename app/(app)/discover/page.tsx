@@ -1660,280 +1660,557 @@ function DetailPanel({
   )
 }
 
+// ── Funder Extended Data ────────────────────────────────────────────────────
+
+interface FunderWhatTheyFund {
+  locations: string[]
+  orgTypes: string[]
+  programTypes: string[]
+  typicalGrantRange: string
+}
+
+interface FunderGivingHistory {
+  statLine: string
+  trendNote: string
+  pastGrantees?: { name: string; amount: string }[]
+}
+
+interface FunderLeadershipContact {
+  name: string
+  title: string
+}
+
+type RelationshipStatus = "New" | "Cultivating" | "Established" | "Lapsed"
+
+interface FunderRelationshipData {
+  status: RelationshipStatus
+  owner: string
+  contacts: { name: string; role: string }[]
+  notes: { preview: string; date: string }[]
+  engagements: { name: string; stage: string }[]
+}
+
+interface FunderExtendedData {
+  whatTheyFund?: FunderWhatTheyFund
+  givingHistory?: FunderGivingHistory
+  leadership?: FunderLeadershipContact[]
+  relationship?: FunderRelationshipData
+}
+
+const RELATIONSHIP_BADGE: Record<RelationshipStatus, { bg: string; color: string }> = {
+  New:         { bg: "#EBF0F5", color: "#4A6080" },
+  Cultivating: { bg: "#FEF3DC", color: "#C47A10" },
+  Established: { bg: "#E0EDE6", color: "#3C5E4C" },
+  Lapsed:      { bg: "#F5F5F6", color: "#8A8A99" },
+}
+
+const FUNDER_EXTENDED: Record<string, FunderExtendedData> = {
+  "petco-love-funder": {
+    whatTheyFund: {
+      locations: ["National (U.S.)"],
+      orgTypes: ["501(c)(3) shelters and rescues", "Humane societies", "Spay/neuter clinics"],
+      programTypes: ["Animal rescue and reunification", "Spay/neuter programs", "Community pet services"],
+      typicalGrantRange: "$5,000 – $50,000 typical award",
+    },
+    givingHistory: {
+      statLine: "Awarded $2.3M across 84 grants in 2023",
+      trendNote: "Giving has remained stable over the past 3 years",
+      pastGrantees: [
+        { name: "Austin Pets Alive!", amount: "$40,000" },
+        { name: "San Diego Humane Society", amount: "$35,000" },
+        { name: "Best Friends Animal Society", amount: "$50,000" },
+      ],
+    },
+    leadership: [
+      { name: "Susanne Kogut", title: "President" },
+      { name: "Kim Bemoore", title: "Grants Manager" },
+    ],
+    relationship: {
+      status: "Cultivating",
+      owner: "Taylor S.",
+      contacts: [
+        { name: "Kim Bemoore", role: "Grants Manager" },
+        { name: "Jamie Ortega", role: "Program Officer" },
+      ],
+      notes: [
+        { preview: "Had a great call with Kim — she mentioned they're prioritizing spay/neuter this cycle.", date: "May 12, 2026" },
+        { preview: "Sent follow-up email after the Animal Welfare Summit.", date: "Apr 4, 2026" },
+      ],
+      engagements: [
+        { name: "Petco Love Lost & Found Grant 2026", stage: "Active" },
+      ],
+    },
+  },
+  "aspca-funder": {
+    whatTheyFund: {
+      locations: ["National (U.S.)"],
+      orgTypes: ["Animal shelters", "Rescue organizations", "Community programs"],
+      programTypes: ["Intake reduction", "Foster network expansion", "Community cat management"],
+      typicalGrantRange: "$5,000 – $75,000 typical award",
+    },
+    givingHistory: {
+      statLine: "Awarded $4.1M across 120 grants in 2023",
+      trendNote: "Giving has increased steadily over the past 3 years",
+      pastGrantees: [
+        { name: "KC Pet Project", amount: "$75,000" },
+        { name: "Humane Society of Memphis", amount: "$55,000" },
+        { name: "Nevada Humane Society", amount: "$60,000" },
+      ],
+    },
+    leadership: [
+      { name: "Matthew Bershadker", title: "President & CEO" },
+      { name: "Gail Buchwald", title: "Senior VP, Companion Animals" },
+    ],
+  },
+  "maddies-fund": {
+    whatTheyFund: {
+      locations: ["National (U.S.)"],
+      orgTypes: ["Shelters", "Rescue coalitions", "Veterinary programs"],
+      programTypes: ["No-kill lifesaving", "Data-driven intake reduction", "Coalition building"],
+      typicalGrantRange: "$25,000 – $200,000 typical award",
+    },
+    givingHistory: {
+      statLine: "Awarded $7.8M across 63 grants in 2023",
+      trendNote: "Giving has declined slightly over the past 2 years",
+      pastGrantees: [
+        { name: "Humane Society of Silicon Valley", amount: "$150,000" },
+        { name: "Animal Care Centers of NYC", amount: "$200,000" },
+        { name: "Stray Cat Alliance", amount: "$85,000" },
+      ],
+    },
+    leadership: [
+      { name: "Rich Avanzino", title: "President" },
+      { name: "Tawnya Mann", title: "Program Officer" },
+    ],
+  },
+  "found-animals": {
+    whatTheyFund: {
+      locations: ["Los Angeles County", "Southern California"],
+      orgTypes: ["501(c)(3) nonprofits", "Animal welfare organizations"],
+      programTypes: ["Spay/neuter services", "Microchipping", "Community education"],
+      typicalGrantRange: "$10,000 – $75,000 typical award",
+    },
+    givingHistory: {
+      statLine: "Awarded $1.2M across 28 grants in 2023",
+      trendNote: "Giving has remained stable over the past 2 years",
+      pastGrantees: [
+        { name: "Downtown Dog Rescue", amount: "$60,000" },
+        { name: "Rescue From the Hart", amount: "$45,000" },
+      ],
+    },
+    leadership: [
+      { name: "Gary Michelson", title: "Founder" },
+      { name: "Michelle Sobel", title: "Executive Director" },
+    ],
+  },
+  "petsmart-charities-funder": {
+    whatTheyFund: {
+      locations: ["National (U.S.)", "Canada"],
+      orgTypes: ["Animal shelters", "Rescue groups", "Humane societies"],
+      programTypes: ["Cat & kitten rescue", "TNR programs", "Adoption programs", "Spay/neuter"],
+      typicalGrantRange: "$10,000 – $100,000 typical award",
+    },
+    givingHistory: {
+      statLine: "Awarded $5.6M across 212 grants in 2023",
+      trendNote: "Giving has grown significantly over the past 3 years",
+      pastGrantees: [
+        { name: "Alley Cat Allies", amount: "$100,000" },
+        { name: "Animal Humane Society", amount: "$80,000" },
+        { name: "Tree House Humane Society", amount: "$65,000" },
+      ],
+    },
+    leadership: [
+      { name: "Aimee Gilbreath", title: "President" },
+      { name: "Dan Cooney", title: "Head of Grantmaking" },
+    ],
+  },
+  "hsus": {
+    whatTheyFund: {
+      locations: ["National (U.S.)"],
+      orgTypes: ["Shelters", "Rescue organizations", "Advocacy groups"],
+      programTypes: ["Shelter reform", "Anti-cruelty programs", "Adoption promotion"],
+      typicalGrantRange: "$5,000 – $30,000 typical award",
+    },
+    givingHistory: {
+      statLine: "Awarded $890K across 47 grants in 2023",
+      trendNote: "Giving has declined over the past 3 years",
+    },
+  },
+  "ca-wellness-funder": {
+    whatTheyFund: {
+      locations: ["California only"],
+      orgTypes: ["Nonprofits serving underserved communities", "Health advocacy organizations"],
+      programTypes: ["Community health programs", "Mental health services", "Reproductive health"],
+      typicalGrantRange: "$50,000 – $200,000 typical award",
+    },
+    givingHistory: {
+      statLine: "Awarded $18.4M across 93 grants in 2023",
+      trendNote: "Giving has remained stable over the past 3 years",
+      pastGrantees: [
+        { name: "Community Health Initiative of CA", amount: "$175,000" },
+        { name: "Esperanza Health Center", amount: "$150,000" },
+      ],
+    },
+    leadership: [
+      { name: "Judy Belk", title: "President & CEO" },
+      { name: "Karen Jones", title: "Director of Programs" },
+    ],
+  },
+  "north-shore": {
+    whatTheyFund: {
+      locations: ["National (U.S.)"],
+      orgTypes: ["Animal shelters", "Rescue organizations"],
+      programTypes: ["No-kill lifesaving", "Shelter capacity building", "Rescue coordination"],
+      typicalGrantRange: "$10,000 – $50,000 typical award",
+    },
+    givingHistory: {
+      statLine: "Awarded $1.6M across 44 grants in 2023",
+      trendNote: "Giving has declined over the past 2 years",
+      pastGrantees: [
+        { name: "Lehigh Valley Humane Society", amount: "$45,000" },
+        { name: "Paws New York", amount: "$40,000" },
+      ],
+    },
+    leadership: [
+      { name: "Joanne Yohannan", title: "Senior Vice President" },
+      { name: "Aileen Gabbey", title: "Grants Director" },
+    ],
+  },
+}
+
 // ── Funder Detail Panel ─────────────────────────────────────────────────────
 
 function FunderDetailPanel({
   funder,
   onCreateEngagement,
-  onOpportunityClick,
 }: {
   funder: DiscoverFunder
   onCreateEngagement: (funderName: string) => void
   onOpportunityClick: (oppId: string) => void
 }) {
-  const hasExistingEngagement = ENGAGEMENTS.some(
-    (e) => e.name.toLowerCase() === funder.name.toLowerCase()
+  const router = useRouter()
+  const extended = FUNDER_EXTENDED[funder.id] ?? {}
+  const isTracked = !!extended.relationship
+
+  const [openSections, setOpenSections] = useState({
+    locations: true,
+    orgTypes: true,
+    programTypes: true,
+    leadership: true,
+  })
+  const [relStatus, setRelStatus] = useState<RelationshipStatus>(
+    extended.relationship?.status ?? "New"
   )
+  const [relStatusOpen, setRelStatusOpen] = useState(false)
+
+  useEffect(() => {
+    setOpenSections({ locations: true, orgTypes: true, programTypes: true, leadership: true })
+    setRelStatus(FUNDER_EXTENDED[funder.id]?.relationship?.status ?? "New")
+    setRelStatusOpen(false)
+  }, [funder.id])
+
+  function toggleSect(key: keyof typeof openSections) {
+    setOpenSections((s) => ({ ...s, [key]: !s[key] }))
+  }
+
+  const wtf = extended.whatTheyFund
+  const gh = extended.givingHistory
+  const leadership = extended.leadership
+  const rel = extended.relationship
+
+  const outlineChip: React.CSSProperties = {
+    borderRadius: "var(--radius-pill)",
+    padding: "3px 9px",
+    backgroundColor: "#FFFFFF",
+    border: "1px solid var(--border-default)",
+    fontSize: 11,
+    fontWeight: 500,
+    color: "var(--ink-secondary)",
+  }
 
   return (
-    <div
-      style={{
-        width: 320,
-        flexShrink: 0,
-        display: "flex",
-        flexDirection: "column",
-        borderLeft: "1px solid var(--border-color)",
-        backgroundColor: "var(--canvas)",
-        overflow: "hidden",
-      }}
-    >
+    <div style={{ width: 320, flexShrink: 0, display: "flex", flexDirection: "column", borderLeft: "1px solid var(--border-color)", backgroundColor: "var(--canvas)", overflow: "hidden" }}>
       {/* Scrollable body */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "20px 20px 0 20px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 14,
-          minHeight: 0,
-        }}
-      >
-        {/* Header */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 0 20px", display: "flex", flexDirection: "column", gap: 14, minHeight: 0 }}>
+
+        {/* ── Header ── */}
         <div>
-          <a
-            href={funder.website}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 5,
-              textDecoration: "none",
-              marginBottom: 8,
-            }}
-          >
-            <h3
-              style={{
-                margin: 0,
-                fontSize: 17,
-                fontWeight: 600,
-                letterSpacing: "-0.025em",
-                lineHeight: "22px",
-                color: "var(--ink)",
-                fontFamily: "var(--font-lora)",
-              }}
-            >
-              {funder.name}
-            </h3>
-            <ExternalLink size={13} color="var(--ink-tertiary)" style={{ flexShrink: 0 }} />
-          </a>
-          <div>
-            <span
-              style={{
-                display: "inline-block",
-                borderRadius: "var(--radius-pill)",
-                padding: "4px 10px",
-                backgroundColor: "var(--slate-tint)",
-                fontSize: 12,
-                fontWeight: 500,
-                color: "var(--slate-primary)",
-              }}
-            >
+          <h3 style={{ margin: "0 0 8px 0", fontSize: 17, fontWeight: 600, letterSpacing: "-0.025em", lineHeight: "22px", color: "var(--ink)", fontFamily: "var(--font-lora)" }}>
+            {funder.name}
+          </h3>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <span style={{ display: "inline-block", borderRadius: "var(--radius-pill)", padding: "4px 10px", backgroundColor: "var(--slate-tint)", fontSize: 12, fontWeight: 500, color: "var(--slate-primary)" }}>
               {funder.type}
             </span>
+            <a href={funder.website} target="_blank" rel="noopener noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none", fontSize: 12, color: "var(--slate-secondary)" }}
+            >
+              Website <ExternalLink size={11} />
+            </a>
           </div>
         </div>
 
         <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
 
-        {/* Details */}
+        {/* ── About ── */}
         <div>
-          <p style={sectionLabelStyle}>Focus areas</p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
-            {funder.focusAreas.map((area) => (
-              <span
-                key={area}
-                style={{
-                  borderRadius: "var(--radius-pill)",
-                  padding: "4px 10px",
-                  backgroundColor: "var(--slate-tint)",
-                  fontSize: 12,
-                  fontWeight: 500,
-                  color: "var(--slate-primary)",
-                }}
-              >
-                {area}
-              </span>
-            ))}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-            {[
-              { label: "Geography", value: funder.geography },
-              { label: "Funding range", value: funder.fundingRange },
-              { label: "Unsolicited applications", value: funder.acceptsUnsolicited ? "Yes" : "No" },
-            ].map(({ label, value }) => (
-              <div key={label} style={{ fontSize: 12, color: "var(--ink)", lineHeight: "16px" }}>
-                <span style={{ color: "var(--ink-tertiary)", fontWeight: 500 }}>{label}: </span>
-                {value}
-              </div>
-            ))}
-          </div>
+          <p style={sectionLabelStyle}>About</p>
+          <p style={{ fontSize: 12, color: "var(--ink)", lineHeight: "19px", margin: 0 }}>{funder.description}</p>
         </div>
 
-        {/* Description */}
-        <p style={{ fontSize: 12, color: "var(--ink)", lineHeight: "19px", margin: 0 }}>
-          {funder.description}
-        </p>
-
-        <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
-
-        {/* Why this matches */}
-        <div>
-          <p style={sectionLabelStyle}>Why this matches you</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {funder.whyMatches.map((item, i) => (
-              <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                {item.icon === "check" ? <CheckCircle /> : <WarningCircle />}
-                <span style={{ fontSize: 12, color: "var(--ink)", lineHeight: "18px" }}>{item.text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
-
-        {/* Your initiatives */}
-        <div>
-          <p style={sectionLabelStyle}>Your initiatives</p>
-          <div>
-            {funder.initiatives.map((init, i) => (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "9px 0",
-                  borderBottom:
-                    i < funder.initiatives.length - 1
-                      ? "1px solid var(--border-color)"
-                      : "none",
-                }}
-              >
-                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{init.name}</span>
-                <span
-                  style={{
-                    fontSize: 12,
-                    color: init.match === "Partial match" ? "var(--slate)" : "var(--slate-secondary)",
-                  }}
-                >
-                  {init.match}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Known opportunities */}
-        {funder.knownOpportunities.length > 0 && (
+        {/* ── Alignment ── */}
+        {funder.whyMatches.length > 0 && (
           <>
             <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
-            <div style={{ paddingBottom: 20 }}>
-              <p style={sectionLabelStyle}>Open opportunities</p>
-              <div>
-                {funder.knownOpportunities.map((opp, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => onOpportunityClick(opp.id)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      width: "100%",
-                      padding: "8px 0",
-                      background: "none",
-                      border: "none",
-                      borderBottom:
-                        i < funder.knownOpportunities.length - 1
-                          ? "1px solid var(--border-color)"
-                          : "none",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      gap: 8,
-                    }}
-                    onMouseEnter={(e) => {
-                      ;(e.currentTarget as HTMLButtonElement).style.opacity = "0.7"
-                    }}
-                    onMouseLeave={(e) => {
-                      ;(e.currentTarget as HTMLButtonElement).style.opacity = "1"
-                    }}
-                  >
-                    <span style={{ fontSize: 13, color: "var(--ink)", fontWeight: 500, lineHeight: "16px" }}>
-                      {opp.name}
-                    </span>
-                    <span
-                      style={{
-                        flexShrink: 0,
-                        borderRadius: "var(--radius-pill)",
-                        padding: "2px 8px",
-                        backgroundColor: "var(--slate-tint)",
-                        fontSize: 11,
-                        fontWeight: 500,
-                        color: "var(--slate-primary)",
-                      }}
-                    >
-                      {opp.deadline}
-                    </span>
-                  </button>
+            <div>
+              <p style={sectionLabelStyle}>Alignment with your organization</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {funder.whyMatches.map((item, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    {item.icon === "check" ? <CheckCircle /> : <WarningCircle />}
+                    <span style={{ fontSize: 12, color: "var(--ink)", lineHeight: "18px" }}>{item.text}</span>
+                  </div>
                 ))}
               </div>
             </div>
           </>
         )}
-        {funder.knownOpportunities.length === 0 && <div style={{ paddingBottom: 8 }} />}
+
+        {/* ── What They Fund ── */}
+        {wtf && (
+          <>
+            <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+            <div>
+              <p style={sectionLabelStyle}>What they fund</p>
+              <p style={{ margin: "0 0 12px", fontSize: 12, color: "var(--ink-secondary)", fontWeight: 500 }}>{wtf.typicalGrantRange}</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+
+                {/* Locations */}
+                <div>
+                  <button type="button" onClick={() => toggleSect("locations")}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "none", border: "none", padding: "0 0 6px", cursor: "pointer" }}
+                  >
+                    <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)" }}>Locations funded</span>
+                    <ChevronDown size={11} color="var(--ink-tertiary)" style={{ transform: openSections.locations ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 150ms", flexShrink: 0 }} />
+                  </button>
+                  {openSections.locations && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                      {wtf.locations.map((loc) => <span key={loc} style={outlineChip}>{loc}</span>)}
+                    </div>
+                  )}
+                </div>
+
+                {/* Org types */}
+                <div>
+                  <button type="button" onClick={() => toggleSect("orgTypes")}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "none", border: "none", padding: "0 0 6px", cursor: "pointer" }}
+                  >
+                    <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)" }}>Types of organizations funded</span>
+                    <ChevronDown size={11} color="var(--ink-tertiary)" style={{ transform: openSections.orgTypes ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 150ms", flexShrink: 0 }} />
+                  </button>
+                  {openSections.orgTypes && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                      {wtf.orgTypes.map((ot) => <span key={ot} style={outlineChip}>{ot}</span>)}
+                    </div>
+                  )}
+                </div>
+
+                {/* Program types */}
+                <div>
+                  <button type="button" onClick={() => toggleSect("programTypes")}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "none", border: "none", padding: "0 0 6px", cursor: "pointer" }}
+                  >
+                    <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)" }}>Types of programs funded</span>
+                    <ChevronDown size={11} color="var(--ink-tertiary)" style={{ transform: openSections.programTypes ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 150ms", flexShrink: 0 }} />
+                  </button>
+                  {openSections.programTypes && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                      {wtf.programTypes.map((pt) => <span key={pt} style={outlineChip}>{pt}</span>)}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── Giving History ── */}
+        {gh && (
+          <>
+            <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+            <div>
+              <p style={sectionLabelStyle}>Giving history</p>
+              <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{gh.statLine}</p>
+              <p style={{ margin: gh.pastGrantees ? "0 0 14px" : 0, fontSize: 12, color: "var(--ink-secondary)", lineHeight: "18px", fontStyle: "italic" }}>{gh.trendNote}</p>
+              {gh.pastGrantees && gh.pastGrantees.length > 0 && (
+                <div>
+                  <p style={{ fontSize: 9, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)", margin: "0 0 8px" }}>Past grantee snapshot</p>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    {gh.pastGrantees.map((g, i) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: i < gh.pastGrantees!.length - 1 ? "1px solid var(--border-color)" : "none" }}>
+                        <span style={{ fontSize: 12, color: "var(--ink)" }}>{g.name}</span>
+                        <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)", flexShrink: 0, marginLeft: 8 }}>{g.amount}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* ── Leadership ── */}
+        {leadership && leadership.length > 0 && (
+          <>
+            <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+            <div>
+              <button type="button" onClick={() => toggleSect("leadership")}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", marginBottom: openSections.leadership ? 10 : 0 }}
+              >
+                <p style={{ ...sectionLabelStyle, margin: 0 }}>Leadership</p>
+                <ChevronDown size={11} color="var(--ink-tertiary)" style={{ transform: openSections.leadership ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 150ms", flexShrink: 0 }} />
+              </button>
+              {openSections.leadership && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                  {leadership.map((c, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{c.name}</span>
+                      <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>{c.title}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* ── Our Relationship ── */}
+        <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+        <div style={{ paddingBottom: 20 }}>
+          <p style={sectionLabelStyle}>Our relationship</p>
+
+          {isTracked && rel ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+              {/* Status chip + owner */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <div style={{ position: "relative" }}>
+                  <button type="button" onClick={() => setRelStatusOpen((v) => !v)}
+                    style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, backgroundColor: RELATIONSHIP_BADGE[relStatus].bg, color: RELATIONSHIP_BADGE[relStatus].color, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 500 }}
+                  >
+                    {relStatus}
+                    <ChevronDown size={10} color={RELATIONSHIP_BADGE[relStatus].color} style={{ transform: relStatusOpen ? "rotate(180deg)" : "none", transition: "transform 150ms" }} />
+                  </button>
+                  {relStatusOpen && (
+                    <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, backgroundColor: "#FFFFFF", border: "1px solid var(--border-default)", borderRadius: 8, boxShadow: "0 8px 24px rgba(28,24,64,0.12)", zIndex: 30, overflow: "hidden", minWidth: 130 }}>
+                      {(["New", "Cultivating", "Established", "Lapsed"] as RelationshipStatus[]).filter((s) => s !== relStatus).map((s) => (
+                        <button key={s} type="button" onClick={() => { setRelStatus(s); setRelStatusOpen(false) }}
+                          style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
+                          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+                        >
+                          <span style={{ borderRadius: 20, padding: "2px 8px", backgroundColor: RELATIONSHIP_BADGE[s].bg, color: RELATIONSHIP_BADGE[s].color, fontSize: 11, fontWeight: 500 }}>{s}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>{rel.owner}</span>
+              </div>
+
+              {/* Contacts */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
+                  <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)" }}>Contacts</span>
+                  <button type="button" style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 500, color: "var(--slate-secondary)", padding: 0 }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "underline" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "none" }}
+                  >+ Add</button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {rel.contacts.map((c, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)" }}>{c.name}</span>
+                      <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>{c.role}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
+                  <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)" }}>Notes</span>
+                  <button type="button" style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 500, color: "var(--slate-secondary)", padding: 0 }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "underline" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "none" }}
+                  >+ Add note</button>
+                </div>
+                {rel.notes.length === 0 ? (
+                  <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", fontStyle: "italic" }}>No notes yet</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                    {rel.notes.slice(0, 2).map((note, i) => (
+                      <div key={i} style={{ padding: "9px 12px", borderRadius: 8, backgroundColor: "#FFFFFF", border: "1px solid var(--border-default)" }}>
+                        <p style={{ margin: "0 0 3px", fontSize: 12, color: "var(--ink)", lineHeight: "17px" }}>{note.preview}</p>
+                        <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>{note.date}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Engagement history */}
+              {rel.engagements.length > 0 && (
+                <div>
+                  <span style={{ display: "block", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)", marginBottom: 7 }}>Engagement history</span>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    {rel.engagements.map((eng, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 0", borderBottom: i < rel.engagements.length - 1 ? "1px solid var(--border-color)" : "none" }}>
+                        <span style={{ fontSize: 12, color: "var(--ink)", flex: 1, lineHeight: "16px" }}>{eng.name}</span>
+                        <span style={{ borderRadius: 20, padding: "2px 8px", backgroundColor: "#EBF0F5", fontSize: 11, fontWeight: 500, color: "#4A6080", flexShrink: 0 }}>{eng.stage}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          ) : (
+            /* State A: not yet tracked */
+            <button type="button" onClick={() => onCreateEngagement(funder.name)}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", padding: "9px 0", borderRadius: 10, backgroundColor: "var(--slate-primary)", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#FFFFFF", transition: "background-color 150ms" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-secondary)" }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
+            >
+              <Plus size={13} color="#FFFFFF" />
+              Track This Funder
+            </button>
+          )}
+        </div>
+
       </div>
 
-      {/* Sticky footer: Create engagement */}
-      <div
-        style={{
-          flexShrink: 0,
-          borderTop: "1px solid var(--border-color)",
-          padding: "14px 20px",
-          backgroundColor: "var(--canvas)",
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => onCreateEngagement(funder.name)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            width: "100%",
-            height: 40,
-            borderRadius: 10,
-            backgroundColor: "var(--slate-primary)",
-            border: "none",
-            cursor: "pointer",
-            marginBottom: hasExistingEngagement ? 8 : 0,
-            transition: "background-color 150ms",
-          }}
+      {/* ── Sticky footer ── */}
+      <div style={{ flexShrink: 0, borderTop: "1px solid var(--border-color)", padding: "14px 20px", backgroundColor: "var(--canvas)" }}>
+        <button type="button"
+          onClick={() => isTracked ? router.push("/portfolio") : onCreateEngagement(funder.name)}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", height: 40, borderRadius: 10, backgroundColor: "var(--slate-primary)", border: "none", cursor: "pointer", marginBottom: isTracked ? 8 : 0, transition: "background-color 150ms" }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-secondary)" }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
         >
-          <Plus size={15} color="#FFFFFF" style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF", lineHeight: "18px" }}>
-            Create new engagement
-          </span>
+          {isTracked ? (
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF", lineHeight: "18px" }}>View in Portfolio</span>
+          ) : (
+            <>
+              <Plus size={15} color="#FFFFFF" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF", lineHeight: "18px" }}>Track This Funder</span>
+            </>
+          )}
         </button>
-
-        {hasExistingEngagement && (
-          <p style={{ fontSize: 12, color: "var(--ink-tertiary)", textAlign: "center", margin: 0 }}>
-            Already have an engagement with this funder
-          </p>
+        {isTracked && (
+          <p style={{ fontSize: 12, color: "var(--ink-tertiary)", textAlign: "center", margin: 0 }}>Already in your portfolio</p>
         )}
       </div>
     </div>
