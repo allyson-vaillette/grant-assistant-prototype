@@ -1747,7 +1747,7 @@ function PortfolioPage() {
             const isSelected = eng.id === selectedId
             const summary = deriveEngagementSummary(eng)
             const noteCount = eng.notes.length
-            const fileCount = eng.fileCount ?? 0
+            const fileCount = eng.attachments.length
             const hasIndicators = noteCount > 0 || fileCount > 0
             return (
               <button
@@ -2038,7 +2038,7 @@ function PortfolioPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
             <MiniStat label="In pursuit" value={selected.stats.inPursuit} />
             <MiniStat label="Awaiting decision" value={selected.stats.awaiting} />
-            <MiniStat label="Awarded (lifetime)" value={selected.stats.awardedLifetime} />
+            <AwardedMiniStat value={selected.stats.awardedLifetime} history={selected.awardHistory} />
             <MiniStat
               label="Open tasks"
               value={String(selected.stats.openTasks)}
