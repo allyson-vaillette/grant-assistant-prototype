@@ -1339,7 +1339,7 @@ function PortfolioPage() {
   const [showExplainerBanner, setShowExplainerBanner] = useState(false)
   const [showDetailHelpPopover, setShowDetailHelpPopover] = useState(false)
   const [historyExpanded, setHistoryExpanded] = useState(false)
-  const [showAddAttachment, setShowAddAttachment] = useState(false)
+  const [_showAddAttachment, setShowAddAttachment] = useState(false)
   const [attachmentDragOver, setAttachmentDragOver] = useState(false)
   const attachmentInputRef = useRef<HTMLInputElement>(null)
 
@@ -1358,10 +1358,6 @@ function PortfolioPage() {
   const filtered = filteredByStage.filter((e) =>
     e.name.toLowerCase().includes(search.toLowerCase())
   )
-
-  const displayedOpps = stageFilter
-    ? selected.opportunities.filter((o) => o.stage === stageFilter)
-    : selected.opportunities
 
   const oppCount = selected.opportunities.length
   const funder = FUNDERS[selectedId]
