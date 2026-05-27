@@ -2,13 +2,13 @@
 
 import React, { useState, useRef, useEffect, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Search, Plus, X, ExternalLink, Pencil } from "lucide-react"
+import { Search, Plus, X, ExternalLink, Pencil, MessageSquare, Paperclip, HelpCircle, AlertCircle } from "lucide-react"
 import { NewEngagementModal, type NewEngagementData } from "@/components/proposals/NewEngagementModal"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type EngagementStatus = "Active" | "Lapsed" | "Closed"
-type OpportunityStage = "Active" | "Submitted" | "Tracking" | "Awarded"
+type OpportunityStage = "Active" | "Submitted" | "Tracking" | "Awarded" | "Reporting" | "Complete" | "Declined" | "Abandoned"
 
 interface Opportunity {
   id: string
@@ -17,6 +17,8 @@ interface Opportunity {
   amount: string
   deadline?: string
   sub: string
+  noteCount?: number
+  oppFileCount?: number
 }
 
 interface Note {
@@ -26,20 +28,36 @@ interface Note {
   author: string
 }
 
+interface EngagementAttachment {
+  id: string
+  filename: string
+  label?: string
+  fileType: "pdf" | "docx" | "image" | "sheet" | "other"
+  uploadDate: string
+  uploader: string
+}
+
 interface Engagement {
   id: string
   name: string
   status: EngagementStatus
   sinceDateLabel: string
   totalAwarded: string
+  lapsedOrClosedSince?: string
+  fileCount?: number
+  overdueItem?: boolean
   opportunities: Opportunity[]
   notes: Note[]
+  attachments: EngagementAttachment[]
+  awardHistory: { year: number; amount: number }[]
   stats: {
     inPursuit: string
     awaiting: string
     awardedLifetime: string
     openTasks: number
     openTasksAlert?: string
+    awardedLastYear?: string
+    lastAwardedLabel?: string
   }
 }
 
@@ -121,6 +139,8 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
     status: "Active",
     sinceDateLabel: "Since March 2023",
     totalAwarded: "$195,000 awarded",
+    fileCount: 5,
+    overdueItem: false,
     opportunities: [
       {
         id: "equitable-futures",
@@ -129,6 +149,8 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
         amount: "$75,000",
         deadline: "Due Jun 15, 2026",
         sub: "1 draft · 3 tasks open",
+        noteCount: 2,
+        oppFileCount: 3,
       },
       {
         id: "community-voice",
@@ -136,6 +158,8 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
         stage: "Submitted",
         amount: "$120,000",
         sub: "Submitted Mar 2, 2026",
+        noteCount: 1,
+        oppFileCount: 1,
       },
       {
         id: "civic-engagement",
@@ -144,6 +168,31 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
         amount: "$50,000",
         deadline: "Deadline Sep 1, 2026",
         sub: "No proposals yet",
+      },
+      {
+        id: "ford-justice-2024",
+        name: "Justice Initiative 2024",
+        stage: "Complete",
+        amount: "$75,000",
+        sub: "Awarded Dec 2024 · Final report submitted",
+        noteCount: 3,
+        oppFileCount: 5,
+      },
+      {
+        id: "ford-justice-2023",
+        name: "Equitable Cities Fund 2023",
+        stage: "Complete",
+        amount: "$120,000",
+        sub: "Awarded Nov 2023 · Final report submitted",
+        noteCount: 2,
+        oppFileCount: 4,
+      },
+      {
+        id: "ford-arts-2022",
+        name: "Community Arts Partnership",
+        stage: "Declined",
+        amount: "$50,000",
+        sub: "Declined Feb 2022",
       },
     ],
     notes: [
@@ -160,12 +209,36 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
         author: "Taylor S.",
       },
     ],
+    attachments: [
+      {
+        id: "ford-att-1",
+        filename: "Ford Foundation MOU 2023.pdf",
+        fileType: "pdf",
+        uploadDate: "Mar 15, 2023",
+        uploader: "Taylor S.",
+      },
+      {
+        id: "ford-att-2",
+        filename: "Dana Reeves Contact Notes.docx",
+        fileType: "docx",
+        uploadDate: "Apr 12, 2026",
+        uploader: "Taylor S.",
+      },
+    ],
+    awardHistory: [
+      { year: 2022, amount: 0 },
+      { year: 2023, amount: 120000 },
+      { year: 2024, amount: 75000 },
+      { year: 2025, amount: 0 },
+      { year: 2026, amount: 0 },
+    ],
     stats: {
       inPursuit: "$125,000",
       awaiting: "$120,000",
       awardedLifetime: "$195,000",
       openTasks: 3,
       openTasksAlert: "1 due today",
+      awardedLastYear: "$75,000",
     },
   },
   {
@@ -174,6 +247,8 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
     status: "Active",
     sinceDateLabel: "Since Jan 2024",
     totalAwarded: "$0 awarded",
+    fileCount: 2,
+    overdueItem: false,
     opportunities: [
       {
         id: "kresge-housing",
@@ -182,6 +257,7 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
         amount: "$90,000",
         deadline: "Due Jun 9, 2026",
         sub: "1 draft · 1 task open",
+        noteCount: 1,
       },
       {
         id: "kresge-community",
@@ -200,6 +276,14 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
         author: "Taylor S.",
       },
     ],
+    attachments: [],
+    awardHistory: [
+      { year: 2022, amount: 0 },
+      { year: 2023, amount: 0 },
+      { year: 2024, amount: 0 },
+      { year: 2025, amount: 0 },
+      { year: 2026, amount: 0 },
+    ],
     stats: { inPursuit: "$90,000", awaiting: "$0", awardedLifetime: "$0", openTasks: 1 },
   },
   {
@@ -208,13 +292,33 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
     status: "Lapsed",
     sinceDateLabel: "Since Sep 2022",
     totalAwarded: "$45,000 awarded",
+    lapsedOrClosedSince: "Feb 2025",
+    fileCount: 3,
+    overdueItem: true,
     opportunities: [
       {
         id: "casey-youth",
-        name: "Youth Services Grant",
+        name: "Youth Services Grant 2026",
         stage: "Submitted",
         amount: "$45,000",
         sub: "Submitted Jan 15, 2026 · Awaiting decision",
+        noteCount: 1,
+      },
+      {
+        id: "casey-family-2022",
+        name: "Family Stability Fund 2022",
+        stage: "Complete",
+        amount: "$45,000",
+        sub: "Awarded Sep 2022 · Final report submitted",
+        noteCount: 2,
+        oppFileCount: 3,
+      },
+      {
+        id: "casey-workforce",
+        name: "Workforce Initiative",
+        stage: "Declined",
+        amount: "$60,000",
+        sub: "Declined Mar 2024",
       },
     ],
     notes: [
@@ -225,7 +329,29 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
         author: "Taylor S.",
       },
     ],
-    stats: { inPursuit: "$0", awaiting: "$45,000", awardedLifetime: "$45,000", openTasks: 0 },
+    attachments: [
+      {
+        id: "casey-att-1",
+        filename: "Casey Foundation Grant Agreement 2022.pdf",
+        fileType: "pdf",
+        uploadDate: "Sep 12, 2022",
+        uploader: "Taylor S.",
+      },
+    ],
+    awardHistory: [
+      { year: 2022, amount: 45000 },
+      { year: 2023, amount: 0 },
+      { year: 2024, amount: 0 },
+      { year: 2025, amount: 0 },
+      { year: 2026, amount: 0 },
+    ],
+    stats: {
+      inPursuit: "$0",
+      awaiting: "$45,000",
+      awardedLifetime: "$45,000",
+      openTasks: 0,
+      lastAwardedLabel: "Sep 2022",
+    },
   },
   {
     id: "rwj",
@@ -233,6 +359,8 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
     status: "Active",
     sinceDateLabel: "Since Jun 2023",
     totalAwarded: "$80,000 awarded",
+    fileCount: 4,
+    overdueItem: false,
     opportunities: [
       {
         id: "rwj-health",
@@ -241,6 +369,8 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
         amount: "$120,000",
         deadline: "Due Jul 1, 2026",
         sub: "2 drafts · 1 task open",
+        noteCount: 2,
+        oppFileCount: 1,
       },
       {
         id: "rwj-community",
@@ -248,6 +378,7 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
         stage: "Submitted",
         amount: "$80,000",
         sub: "Submitted Feb 20, 2026",
+        noteCount: 1,
       },
       {
         id: "rwj-youth",
@@ -265,6 +396,22 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
         deadline: "Deadline Dec 15, 2026",
         sub: "No proposals yet",
       },
+      {
+        id: "rwj-health-2023",
+        name: "Health Systems Grant 2023",
+        stage: "Complete",
+        amount: "$80,000",
+        sub: "Awarded Jun 2023 · Final report submitted",
+        noteCount: 1,
+        oppFileCount: 4,
+      },
+      {
+        id: "rwj-mental-health",
+        name: "Mental Health Access Pilot",
+        stage: "Declined",
+        amount: "$50,000",
+        sub: "Declined Nov 2024",
+      },
     ],
     notes: [
       {
@@ -274,7 +421,29 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
         author: "Taylor S.",
       },
     ],
-    stats: { inPursuit: "$120,000", awaiting: "$80,000", awardedLifetime: "$80,000", openTasks: 1 },
+    attachments: [
+      {
+        id: "rwj-att-1",
+        filename: "RWJF Program Officer Notes Q1 2026.pdf",
+        fileType: "pdf",
+        uploadDate: "Apr 3, 2026",
+        uploader: "Taylor S.",
+      },
+    ],
+    awardHistory: [
+      { year: 2022, amount: 0 },
+      { year: 2023, amount: 80000 },
+      { year: 2024, amount: 0 },
+      { year: 2025, amount: 0 },
+      { year: 2026, amount: 0 },
+    ],
+    stats: {
+      inPursuit: "$120,000",
+      awaiting: "$80,000",
+      awardedLifetime: "$80,000",
+      openTasks: 1,
+      awardedLastYear: "$80,000",
+    },
   },
   {
     id: "kellogg",
@@ -282,6 +451,8 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
     status: "Active",
     sinceDateLabel: "Since Feb 2024",
     totalAwarded: "$95,000 awarded",
+    fileCount: 2,
+    overdueItem: true,
     opportunities: [
       {
         id: "kellogg-food",
@@ -290,6 +461,7 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
         amount: "$70,000",
         deadline: "Due Sep 30, 2026",
         sub: "1 draft",
+        noteCount: 1,
       },
       {
         id: "kellogg-early",
@@ -297,6 +469,17 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
         stage: "Submitted",
         amount: "$95,000",
         sub: "Submitted Apr 1, 2026",
+        noteCount: 1,
+        oppFileCount: 2,
+      },
+      {
+        id: "kellogg-early-child",
+        name: "Early Childhood Initiative 2025",
+        stage: "Awarded",
+        amount: "$95,000",
+        sub: "Awarded Jan 2025 · Reporting period active",
+        noteCount: 2,
+        oppFileCount: 3,
       },
     ],
     notes: [
@@ -307,7 +490,21 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
         author: "Taylor S.",
       },
     ],
-    stats: { inPursuit: "$70,000", awaiting: "$95,000", awardedLifetime: "$95,000", openTasks: 0 },
+    attachments: [],
+    awardHistory: [
+      { year: 2022, amount: 0 },
+      { year: 2023, amount: 0 },
+      { year: 2024, amount: 0 },
+      { year: 2025, amount: 95000 },
+      { year: 2026, amount: 0 },
+    ],
+    stats: {
+      inPursuit: "$70,000",
+      awaiting: "$95,000",
+      awardedLifetime: "$95,000",
+      openTasks: 0,
+      awardedLastYear: "$95,000",
+    },
   },
   {
     id: "macarthur",
@@ -315,6 +512,8 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
     status: "Active",
     sinceDateLabel: "Since Nov 2024",
     totalAwarded: "$0 awarded",
+    fileCount: 0,
+    overdueItem: false,
     opportunities: [
       {
         id: "macarthur-100",
@@ -323,6 +522,7 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
         amount: "$100,000",
         deadline: "Due Aug 15, 2026",
         sub: "1 draft · 2 tasks open",
+        noteCount: 1,
       },
     ],
     notes: [
@@ -332,6 +532,14 @@ const INITIAL_ENGAGEMENTS: Engagement[] = [
         date: "Mar 28, 2026",
         author: "Taylor S.",
       },
+    ],
+    attachments: [],
+    awardHistory: [
+      { year: 2022, amount: 0 },
+      { year: 2023, amount: 0 },
+      { year: 2024, amount: 0 },
+      { year: 2025, amount: 0 },
+      { year: 2026, amount: 0 },
     ],
     stats: { inPursuit: "$100,000", awaiting: "$0", awardedLifetime: "$0", openTasks: 2 },
   },
@@ -344,6 +552,10 @@ const STAGE_DOT: Record<OpportunityStage, string> = {
   Submitted: "#AD9DAE",
   Tracking:  "#A6B3C5",
   Awarded:   "#4A7A5E",
+  Reporting: "#D19A66",
+  Complete:  "#4A7A5E",
+  Declined:  "#C4C4C4",
+  Abandoned: "#C4C4C4",
 }
 
 const STAGE_BADGE: Record<OpportunityStage, { bg: string; color: string }> = {
@@ -351,6 +563,10 @@ const STAGE_BADGE: Record<OpportunityStage, { bg: string; color: string }> = {
   Submitted: { bg: "#F2EDF3", color: "#7A5F7E" },
   Tracking:  { bg: "#F5F5F6", color: "#8A8A99" },
   Awarded:   { bg: "#EBF5EF", color: "#2E6B47" },
+  Reporting: { bg: "#F5EAD8", color: "#8A5A2A" },
+  Complete:  { bg: "#EBF5EF", color: "#2E6B47" },
+  Declined:  { bg: "#F5F5F6", color: "#8A8A99" },
+  Abandoned: { bg: "#F5F5F6", color: "#8A8A99" },
 }
 
 const ENG_BADGE: Record<EngagementStatus, { bg: string; color: string }> = {
@@ -941,6 +1157,154 @@ const STAGE_FILTER_OPTIONS: { label: string; value: OpportunityStage | null }[] 
   { label: "Awarded",       value: "Awarded"   },
 ]
 
+// ── Opportunity stage groups ───────────────────────────────────────────────
+
+const IN_PROGRESS_STAGES: OpportunityStage[] = ["Tracking", "Active", "Submitted"]
+const AWARDED_STAGES: OpportunityStage[] = ["Awarded", "Reporting"]
+const HISTORY_STAGES: OpportunityStage[] = ["Complete", "Declined", "Abandoned"]
+
+// ── Engagement explainer ───────────────────────────────────────────────────
+
+const ENGAGEMENT_EXPLAINER =
+  "An Engagement is your ongoing relationship with a funder, separate from any single grant. It groups all opportunities, proposals, and reports tied to that funder over time."
+
+function detailSubtitle(eng: Engagement): string {
+  if (eng.status === "Lapsed") {
+    return `Lapsed since ${eng.lapsedOrClosedSince ?? eng.sinceDateLabel.replace("Since ", "")}`
+  }
+  if (eng.status === "Closed") {
+    return `Closed ${eng.lapsedOrClosedSince ?? eng.sinceDateLabel.replace("Since ", "")}`
+  }
+  return `Active since ${eng.sinceDateLabel.replace("Since ", "")}`
+}
+
+function deriveEngagementSummary(eng: Engagement): string {
+  if (eng.status === "Closed") {
+    return `Closed ${eng.lapsedOrClosedSince ?? eng.sinceDateLabel.replace("Since ", "")}`
+  }
+  if (eng.status === "Lapsed") {
+    return `Lapsed since ${eng.lapsedOrClosedSince ?? eng.sinceDateLabel.replace("Since ", "")}`
+  }
+  const inPursuitCount = eng.opportunities.filter(
+    (o) => o.stage === "Active" || o.stage === "Tracking"
+  ).length
+  const awaitingCount = eng.opportunities.filter((o) => o.stage === "Submitted").length
+  const segments: string[] = []
+  if (inPursuitCount > 0) segments.push(`${inPursuitCount} in pursuit`)
+  if (awaitingCount > 0) segments.push(`${awaitingCount} awaiting decision`)
+  if (eng.stats.awardedLastYear) {
+    segments.push(`${eng.stats.awardedLastYear} awarded last year`)
+  } else if (eng.stats.lastAwardedLabel) {
+    segments.push(`Last awarded ${eng.stats.lastAwardedLabel}`)
+  }
+  return segments.join(" · ") || "No active opportunities"
+}
+
+// ── Award history spark bars ───────────────────────────────────────────────
+
+function AwardHistoryBar({ history }: { history: { year: number; amount: number }[] }) {
+  const maxAmount = Math.max(...history.map((h) => h.amount))
+  if (maxAmount === 0) return null
+  return (
+    <div
+      title="Award history by year"
+      style={{
+        display: "flex",
+        alignItems: "flex-end",
+        gap: 3,
+        height: 20,
+        marginTop: 7,
+      }}
+    >
+      {history.map((h) => {
+        const pct = h.amount / maxAmount
+        const barH = Math.max(3, Math.round(pct * 18))
+        return (
+          <div
+            key={h.year}
+            title={`${h.year}: ${h.amount > 0 ? `$${(h.amount / 1000).toFixed(0)}K` : "No award"}`}
+            style={{
+              flex: 1,
+              height: barH,
+              borderRadius: 2,
+              backgroundColor: h.amount > 0 ? "var(--slate-secondary)" : "var(--border-default)",
+              transition: "background-color 150ms",
+              cursor: "default",
+            }}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
+function AwardedMiniStat({ value, history }: { value: string; history: { year: number; amount: number }[] }) {
+  const hasAwards = history.some((h) => h.amount > 0)
+  return (
+    <div
+      style={{
+        borderRadius: 10,
+        padding: "12px 14px",
+        backgroundColor: "var(--surface-white)",
+        border: "1px solid var(--border-default)",
+      }}
+    >
+      <p
+        style={{
+          margin: "0 0 4px",
+          fontSize: 10,
+          fontWeight: 500,
+          letterSpacing: "0.07em",
+          textTransform: "uppercase" as const,
+          color: "var(--ink-tertiary)",
+        }}
+      >
+        Awarded (lifetime)
+      </p>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 20,
+          fontWeight: 700,
+          color: "var(--ink)",
+          letterSpacing: "-0.02em",
+          lineHeight: "1",
+        }}
+      >
+        {value}
+      </p>
+      {hasAwards ? (
+        <AwardHistoryBar history={history} />
+      ) : (
+        <p style={{ margin: "5px 0 0", fontSize: 11, color: "var(--ink-tertiary)" }}>No awards yet</p>
+      )}
+    </div>
+  )
+}
+
+// ── Attachment file type icon ──────────────────────────────────────────────
+
+function FileTypeIcon({ type }: { type: EngagementAttachment["fileType"] }) {
+  const color =
+    type === "pdf" ? "#B91C1C"
+    : type === "docx" ? "#1D4ED8"
+    : type === "sheet" ? "#15803D"
+    : type === "image" ? "#7C3AED"
+    : "var(--ink-tertiary)"
+  return (
+    <span
+      className="material-symbols-outlined"
+      style={{ fontSize: 18, color, flexShrink: 0, lineHeight: 1, fontVariationSettings: "'FILL' 0" }}
+    >
+      {type === "pdf" ? "picture_as_pdf"
+       : type === "docx" ? "description"
+       : type === "sheet" ? "table_chart"
+       : type === "image" ? "image"
+       : "attach_file"}
+    </span>
+  )
+}
+
 // ── Page (wrapped in Suspense for useSearchParams) ─────────────────────────
 
 export default function PortfolioPageWrapper() {
@@ -954,18 +1318,36 @@ export default function PortfolioPageWrapper() {
 function PortfolioPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  const VALID_STAGES: OpportunityStage[] = ["Active", "Submitted", "Tracking", "Awarded"]
+  const stageParamRaw = searchParams.get("stage")
+  const initialStage = stageParamRaw
+    ? (VALID_STAGES.find((s) => s.toLowerCase() === stageParamRaw.toLowerCase()) ?? null)
+    : null
+
   const [engagements, setEngagements] = useState<Engagement[]>(INITIAL_ENGAGEMENTS)
   const [selectedId, setSelectedId] = useState("ford")
   const [search, setSearch] = useState("")
-  const [stageFilter, setStageFilter] = useState<OpportunityStage | null>(
-    (searchParams.get("stage") as OpportunityStage | null) ?? null
-  )
+  const [stageFilter, setStageFilter] = useState<OpportunityStage | null>(initialStage)
   const [showAddNote, setShowAddNote] = useState(false)
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [hoveredNoteId, setHoveredNoteId] = useState<string | null>(null)
   const [showFunderPanel, setShowFunderPanel] = useState(false)
   const [showNewOpportunityModal, setShowNewOpportunityModal] = useState(false)
   const [showNewEngagementModal, setShowNewEngagementModal] = useState(false)
+  const [showHelpPopover, setShowHelpPopover] = useState(false)
+  const [showExplainerBanner, setShowExplainerBanner] = useState(false)
+  const [showDetailHelpPopover, setShowDetailHelpPopover] = useState(false)
+  const [historyExpanded, setHistoryExpanded] = useState(false)
+  const [showAddAttachment, setShowAddAttachment] = useState(false)
+  const [attachmentDragOver, setAttachmentDragOver] = useState(false)
+  const attachmentInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!localStorage.getItem("engagement-explainer-dismissed")) {
+      setShowExplainerBanner(true)
+    }
+  }, [])
 
   const selected = engagements.find((e) => e.id === selectedId) ?? engagements[0]
 
@@ -995,11 +1377,14 @@ function PortfolioPage() {
     }
   }, [stageFilter]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Reset note UI when switching engagements
+  // Reset note/detail UI when switching engagements
   useEffect(() => {
     setShowAddNote(false)
     setEditingNoteId(null)
     setShowFunderPanel(false)
+    setHistoryExpanded(false)
+    setShowAddAttachment(false)
+    setShowDetailHelpPopover(false)
   }, [selectedId])
 
   function handleAddNote(text: string) {
@@ -1053,18 +1438,68 @@ function PortfolioPage() {
     const sinceDateLabel = `Since ${now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`
     const id = `eng-${Date.now()}`
     const displayName = data.engagementName.trim() || data.funderName.trim()
+    const currentYear = new Date().getFullYear()
     const newEng: Engagement = {
       id,
       name: displayName,
       status: data.status as EngagementStatus,
       sinceDateLabel,
       totalAwarded: "$0 awarded",
+      fileCount: 0,
+      overdueItem: false,
       opportunities: [],
       notes: [],
+      attachments: [],
+      awardHistory: [
+        { year: currentYear - 4, amount: 0 },
+        { year: currentYear - 3, amount: 0 },
+        { year: currentYear - 2, amount: 0 },
+        { year: currentYear - 1, amount: 0 },
+        { year: currentYear, amount: 0 },
+      ],
       stats: { inPursuit: "$0", awaiting: "$0", awardedLifetime: "$0", openTasks: 0 },
     }
     setEngagements((prev) => [newEng, ...prev])
     setSelectedId(id)
+  }
+
+  function handleAttachmentSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? ""
+    let fileType: EngagementAttachment["fileType"] = "other"
+    if (ext === "pdf") fileType = "pdf"
+    else if (ext === "docx" || ext === "doc") fileType = "docx"
+    else if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) fileType = "image"
+    else if (["xlsx", "xls", "csv"].includes(ext)) fileType = "sheet"
+    const now = new Date()
+    const dateStr = now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    const newAtt: EngagementAttachment = {
+      id: `att-${Date.now()}`,
+      filename: file.name,
+      fileType,
+      uploadDate: dateStr,
+      uploader: "Taylor S.",
+    }
+    setEngagements((prev) =>
+      prev.map((e) => e.id === selectedId ? { ...e, attachments: [newAtt, ...e.attachments] } : e)
+    )
+    if (e.target) e.target.value = ""
+  }
+
+  function handleAttachmentDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setAttachmentDragOver(false)
+    const file = e.dataTransfer.files[0]
+    if (!file) return
+    const fakeEvent = { target: { files: [file], value: "" } } as unknown as React.ChangeEvent<HTMLInputElement>
+    handleAttachmentSelect(fakeEvent)
+  }
+
+  function handleRemoveAttachment(attId: string) {
+    setEngagements((prev) =>
+      prev.map((e) => e.id === selectedId ? { ...e, attachments: e.attachments.filter((a) => a.id !== attId) } : e)
+    )
   }
 
   const handleCancelAddNote = useCallback(() => setShowAddNote(false), [])
@@ -1113,18 +1548,72 @@ function PortfolioPage() {
         {/* List header */}
         <div style={{ padding: "16px 16px 10px", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <h2
-              style={{
-                margin: 0,
-                fontSize: 18,
-                fontWeight: 500,
-                color: "var(--ink)",
-                fontFamily: "var(--font-lora)",
-                letterSpacing: "-0.01em",
-              }}
-            >
-              Engagements
-            </h2>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: 18,
+                  fontWeight: 500,
+                  color: "var(--ink)",
+                  fontFamily: "var(--font-lora)",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                Engagements
+              </h2>
+              {/* Help icon + popover */}
+              <div style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowHelpPopover((v) => !v)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 20,
+                    height: 20,
+                    borderRadius: "50%",
+                    border: "none",
+                    backgroundColor: "transparent",
+                    cursor: "pointer",
+                    padding: 0,
+                    color: "var(--ink-tertiary)",
+                    transition: "color 150ms",
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-secondary)" }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
+                  aria-label="What is an Engagement?"
+                >
+                  <HelpCircle size={14} />
+                </button>
+                {showHelpPopover && (
+                  <>
+                    <div
+                      style={{ position: "fixed", inset: 0, zIndex: 300 }}
+                      onClick={() => setShowHelpPopover(false)}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "calc(100% + 8px)",
+                        left: 0,
+                        width: 272,
+                        backgroundColor: "#FFFFFF",
+                        borderRadius: 10,
+                        border: "1px solid var(--border-default)",
+                        boxShadow: "0 8px 24px rgba(28,24,64,0.12)",
+                        padding: "14px 16px",
+                        zIndex: 301,
+                      }}
+                    >
+                      <p style={{ margin: 0, fontSize: 13, color: "var(--ink)", lineHeight: "19px" }}>
+                        {ENGAGEMENT_EXPLAINER}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
             <button
               type="button"
               onClick={() => setShowNewEngagementModal(true)}
@@ -1181,7 +1670,16 @@ function PortfolioPage() {
                 <button
                   key={label}
                   type="button"
-                  onClick={() => setStageFilter(value)}
+                  onClick={() => {
+                    setStageFilter(value)
+                    const params = new URLSearchParams(Array.from(searchParams.entries()))
+                    if (value) {
+                      params.set("stage", value)
+                    } else {
+                      params.delete("stage")
+                    }
+                    router.replace(`?${params.toString()}`, { scroll: false })
+                  }}
                   style={{
                     padding: "3px 10px",
                     borderRadius: 20,
@@ -1201,11 +1699,56 @@ function PortfolioPage() {
           </div>
         </div>
 
+        {/* First-encounter explainer banner */}
+        {showExplainerBanner && (
+          <div
+            style={{
+              margin: "0 8px 4px",
+              padding: "10px 32px 10px 12px",
+              borderRadius: 8,
+              backgroundColor: "var(--slate-tint)",
+              border: "1px solid var(--slate-light)",
+              position: "relative",
+              flexShrink: 0,
+            }}
+          >
+            <p style={{ margin: 0, fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px" }}>
+              {ENGAGEMENT_EXPLAINER}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setShowExplainerBanner(false)
+                localStorage.setItem("engagement-explainer-dismissed", "1")
+              }}
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 2,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--ink-tertiary)",
+              }}
+              aria-label="Dismiss"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
+
         {/* Engagement list */}
         <div className="flex-1 overflow-y-auto" style={{ padding: "0 8px 16px 8px" }}>
           {filtered.map((eng) => {
             const isSelected = eng.id === selectedId
-            const badge = ENG_BADGE[eng.status]
+            const summary = deriveEngagementSummary(eng)
+            const noteCount = eng.notes.length
+            const fileCount = eng.fileCount ?? 0
+            const hasIndicators = noteCount > 0 || fileCount > 0
             return (
               <button
                 key={eng.id}
@@ -1213,8 +1756,7 @@ function PortfolioPage() {
                 onClick={() => setSelectedId(eng.id)}
                 style={{
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
+                  flexDirection: "column",
                   width: "100%",
                   padding: "10px 12px",
                   marginBottom: 2,
@@ -1233,8 +1775,9 @@ function PortfolioPage() {
                   if (!isSelected) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"
                 }}
               >
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {/* Row top: name dot + name + overdue flag */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
                     <div
                       style={{
                         width: 8,
@@ -1244,29 +1787,101 @@ function PortfolioPage() {
                         flexShrink: 0,
                       }}
                     />
-                    <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", lineHeight: "16px" }}>
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 500,
+                        color: "var(--ink)",
+                        lineHeight: "16px",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {eng.name}
                     </span>
                   </div>
-                  <p style={{ margin: "2px 0 0 16px", fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "14px" }}>
-                    {eng.opportunities.length} {eng.opportunities.length === 1 ? "opportunity" : "opportunities"}
-                  </p>
+                  {eng.overdueItem && (
+                    <span
+                      style={{
+                        flexShrink: 0,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 3,
+                        borderRadius: 20,
+                        padding: "1px 7px",
+                        fontSize: 10,
+                        fontWeight: 500,
+                        backgroundColor: "var(--error-light)",
+                        color: "var(--error)",
+                        lineHeight: "14px",
+                      }}
+                    >
+                      <AlertCircle size={10} style={{ flexShrink: 0 }} />
+                      Overdue
+                    </span>
+                  )}
                 </div>
-                <span
+
+                {/* Row bottom: derived summary + indicators */}
+                <div
                   style={{
-                    flexShrink: 0,
-                    borderRadius: 20,
-                    padding: "2px 8px",
-                    fontSize: 10,
-                    fontWeight: 500,
-                    backgroundColor: badge.bg,
-                    color: badge.color,
-                    letterSpacing: "0.03em",
-                    lineHeight: "12px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginTop: 3,
+                    paddingLeft: 14,
+                    gap: 6,
                   }}
                 >
-                  {eng.status}
-                </span>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 11,
+                      color: "var(--ink-secondary)",
+                      lineHeight: "15px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      flex: 1,
+                      minWidth: 0,
+                    }}
+                  >
+                    {summary}
+                  </p>
+                  {hasIndicators && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                      {noteCount > 0 && (
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 2,
+                            fontSize: 10,
+                            color: "var(--ink-tertiary)",
+                          }}
+                        >
+                          <MessageSquare size={10} />
+                          {noteCount}
+                        </span>
+                      )}
+                      {fileCount > 0 && (
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 2,
+                            fontSize: 10,
+                            color: "var(--ink-tertiary)",
+                          }}
+                        >
+                          <Paperclip size={10} />
+                          {fileCount}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </button>
             )
           })}
@@ -1286,20 +1901,76 @@ function PortfolioPage() {
             backgroundColor: "var(--surface-white)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: 22,
-                fontWeight: 500,
-                letterSpacing: "-0.02em",
-                color: "var(--ink)",
-                fontFamily: "var(--font-lora)",
-                lineHeight: "28px",
-              }}
-            >
-              {selected.name}
-            </h1>
+          {/* Name row */}
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: 22,
+                  fontWeight: 500,
+                  letterSpacing: "-0.02em",
+                  color: "var(--ink)",
+                  fontFamily: "var(--font-lora)",
+                  lineHeight: "28px",
+                }}
+              >
+                {selected.name}
+              </h1>
+              {/* Help icon */}
+              <div style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowDetailHelpPopover((v) => !v)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 22,
+                    height: 22,
+                    borderRadius: "50%",
+                    border: "none",
+                    backgroundColor: "transparent",
+                    cursor: "pointer",
+                    padding: 0,
+                    color: "var(--ink-tertiary)",
+                    transition: "color 150ms",
+                    marginTop: 2,
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-secondary)" }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
+                  aria-label="What is an Engagement?"
+                >
+                  <HelpCircle size={15} />
+                </button>
+                {showDetailHelpPopover && (
+                  <>
+                    <div
+                      style={{ position: "fixed", inset: 0, zIndex: 300 }}
+                      onClick={() => setShowDetailHelpPopover(false)}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "calc(100% + 8px)",
+                        left: 0,
+                        width: 288,
+                        backgroundColor: "#FFFFFF",
+                        borderRadius: 10,
+                        border: "1px solid var(--border-default)",
+                        boxShadow: "0 8px 24px rgba(28,24,64,0.12)",
+                        padding: "14px 16px",
+                        zIndex: 301,
+                      }}
+                    >
+                      <p style={{ margin: 0, fontSize: 13, color: "var(--ink)", lineHeight: "19px" }}>
+                        {ENGAGEMENT_EXPLAINER}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <GhostButton onClick={() => setShowFunderPanel(true)}>View funder</GhostButton>
               <SlateButton onClick={() => setShowNewOpportunityModal(true)}>
@@ -1309,10 +1980,36 @@ function PortfolioPage() {
             </div>
           </div>
 
-          {/* Chips */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {/* Subtitle + overdue flag */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "18px" }}>
+              {detailSubtitle(selected)}
+            </p>
+            {selected.overdueItem && (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  borderRadius: 20,
+                  padding: "2px 9px",
+                  fontSize: 11,
+                  fontWeight: 500,
+                  backgroundColor: "var(--error-light)",
+                  color: "var(--error)",
+                  lineHeight: "16px",
+                  flexShrink: 0,
+                }}
+              >
+                <AlertCircle size={11} style={{ flexShrink: 0 }} />
+                Needs attention
+              </span>
+            )}
+          </div>
+
+          {/* Chips — status chip removed */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             {[
-              { label: selected.status },
               { label: `${oppCount} ${oppCount === 1 ? "opportunity" : "opportunities"}` },
               { label: selected.sinceDateLabel },
               { label: selected.totalAwarded },
@@ -1350,38 +2047,35 @@ function PortfolioPage() {
           </div>
         </div>
 
-        {/* Opportunities */}
+        {/* Opportunities — grouped */}
         <div style={{ padding: "20px 28px" }}>
           <p style={sectionLabel}>Opportunities</p>
-          <div
-            style={{
-              borderRadius: "var(--radius-card)",
-              border: "1px solid var(--border-default)",
-              overflow: "hidden",
-              backgroundColor: "var(--surface-white)",
-              marginBottom: 28,
-            }}
-          >
-            {displayedOpps.length === 0 ? (
-              <div
-                style={{
-                  padding: "28px 20px",
-                  textAlign: "center",
-                  color: "var(--ink-tertiary)",
-                  fontSize: 13,
-                  lineHeight: "19px",
-                }}
-              >
-                {stageFilter
-                  ? `No ${stageFilter.toLowerCase()} opportunities for this engagement.`
-                  : "No opportunities yet. Click ‘New opportunity’ to add one."}
-              </div>
-            ) : displayedOpps.map((opp, i) => {
+          {selected.opportunities.length === 0 ? (
+            <div
+              style={{
+                padding: "28px 20px",
+                textAlign: "center",
+                color: "var(--ink-tertiary)",
+                fontSize: 13,
+                lineHeight: "19px",
+                borderRadius: "var(--radius-card)",
+                border: "1px solid var(--border-default)",
+                marginBottom: 28,
+              }}
+            >
+              No opportunities yet. Click &lsquo;New opportunity&rsquo; to add one.
+            </div>
+          ) : (() => {
+            const inProgressOpps = selected.opportunities.filter((o) => IN_PROGRESS_STAGES.includes(o.stage))
+            const awardedOpps = selected.opportunities.filter((o) => AWARDED_STAGES.includes(o.stage))
+            const historyOpps = selected.opportunities.filter((o) => HISTORY_STAGES.includes(o.stage))
+
+            function OppRow({ opp, isLast }: { opp: Opportunity; isLast: boolean }) {
               const dotColor = STAGE_DOT[opp.stage]
               const badge = STAGE_BADGE[opp.stage]
+              const hasIndicators = (opp.noteCount ?? 0) > 0 || (opp.oppFileCount ?? 0) > 0
               return (
                 <div
-                  key={opp.id}
                   onClick={() => {
                     const qp = new URLSearchParams({
                       name: opp.name,
@@ -1396,8 +2090,8 @@ function PortfolioPage() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    padding: "14px 18px",
-                    borderBottom: i < displayedOpps.length - 1 ? "1px solid var(--border-default)" : "none",
+                    padding: "12px 18px",
+                    borderBottom: !isLast ? "1px solid var(--border-default)" : "none",
                     cursor: "pointer",
                     transition: "background-color 150ms",
                     gap: 12,
@@ -1408,8 +2102,8 @@ function PortfolioPage() {
                   <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
                     <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: dotColor, flexShrink: 0 }} />
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 14, fontWeight: 500, color: "var(--ink)" }}>{opp.name}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{opp.name}</span>
                         <span
                           style={{
                             flexShrink: 0,
@@ -1424,18 +2118,118 @@ function PortfolioPage() {
                           {opp.stage}
                         </span>
                       </div>
-                      <p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--ink-tertiary)" }}>
+                      <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--ink-tertiary)" }}>
                         {opp.deadline ? `${opp.deadline} · ` : ""}{opp.sub}
                       </p>
                     </div>
                   </div>
-                  <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 500, color: "var(--ink)", lineHeight: "18px" }}>
-                    {opp.amount}
-                  </span>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", lineHeight: "18px" }}>
+                      {opp.amount}
+                    </span>
+                    {hasIndicators && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        {(opp.noteCount ?? 0) > 0 && (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 2, fontSize: 10, color: "var(--ink-tertiary)" }}>
+                            <MessageSquare size={10} />
+                            {opp.noteCount}
+                          </span>
+                        )}
+                        {(opp.oppFileCount ?? 0) > 0 && (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 2, fontSize: 10, color: "var(--ink-tertiary)" }}>
+                            <Paperclip size={10} />
+                            {opp.oppFileCount}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )
-            })}
-          </div>
+            }
+
+            function GroupHeader({
+              label,
+              count,
+              collapsible,
+              expanded,
+              onToggle,
+            }: {
+              label: string
+              count: number
+              collapsible?: boolean
+              expanded?: boolean
+              onToggle?: () => void
+            }) {
+              return (
+                <div
+                  onClick={collapsible ? onToggle : undefined}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "7px 18px",
+                    backgroundColor: "var(--canvas)",
+                    borderBottom: "1px solid var(--border-default)",
+                    cursor: collapsible ? "pointer" : "default",
+                    userSelect: "none",
+                  }}
+                >
+                  <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)" }}>
+                    {label} ({count})
+                  </span>
+                  {collapsible && (
+                    <span style={{ fontSize: 16, color: "var(--ink-tertiary)", lineHeight: 1, transition: "transform 150ms", transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}>
+                      ▾
+                    </span>
+                  )}
+                </div>
+              )
+            }
+
+            return (
+              <div
+                style={{
+                  borderRadius: "var(--radius-card)",
+                  border: "1px solid var(--border-default)",
+                  overflow: "hidden",
+                  backgroundColor: "var(--surface-white)",
+                  marginBottom: 28,
+                }}
+              >
+                {inProgressOpps.length > 0 && (
+                  <>
+                    <GroupHeader label="In progress" count={inProgressOpps.length} />
+                    {inProgressOpps.map((opp, i) => (
+                      <OppRow key={opp.id} opp={opp} isLast={i === inProgressOpps.length - 1 && awardedOpps.length === 0 && historyOpps.length === 0} />
+                    ))}
+                  </>
+                )}
+                {awardedOpps.length > 0 && (
+                  <>
+                    <GroupHeader label="Awarded" count={awardedOpps.length} />
+                    {awardedOpps.map((opp, i) => (
+                      <OppRow key={opp.id} opp={opp} isLast={i === awardedOpps.length - 1 && historyOpps.length === 0} />
+                    ))}
+                  </>
+                )}
+                {historyOpps.length > 0 && (
+                  <>
+                    <GroupHeader
+                      label="History"
+                      count={historyOpps.length}
+                      collapsible
+                      expanded={historyExpanded}
+                      onToggle={() => setHistoryExpanded((v) => !v)}
+                    />
+                    {historyExpanded && historyOpps.map((opp, i) => (
+                      <OppRow key={opp.id} opp={opp} isLast={i === historyOpps.length - 1} />
+                    ))}
+                  </>
+                )}
+              </div>
+            )
+          })()}
 
           {/* Notes */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -1573,6 +2367,151 @@ function PortfolioPage() {
                 )}
               </div>
             ))}
+          </div>
+
+          {/* ── Attachments ── */}
+          <div style={{ marginTop: 32 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <p style={{ ...sectionLabel, margin: 0 }}>Attachments</p>
+              <>
+                <input
+                  ref={attachmentInputRef}
+                  type="file"
+                  style={{ display: "none" }}
+                  onChange={handleAttachmentSelect}
+                />
+                <button
+                  type="button"
+                  onClick={() => attachmentInputRef.current?.click()}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: "0 2px",
+                    fontSize: 12,
+                    fontWeight: 500,
+                    color: "var(--plum-soft)",
+                    cursor: "pointer",
+                    lineHeight: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "underline" }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "none" }}
+                >
+                  Add file
+                </button>
+              </>
+            </div>
+
+            {/* Drop zone (shown when no attachments) */}
+            {selected.attachments.length === 0 ? (
+              <div
+                onDragOver={(e) => { e.preventDefault(); setAttachmentDragOver(true) }}
+                onDragLeave={() => setAttachmentDragOver(false)}
+                onDrop={handleAttachmentDrop}
+                onClick={() => attachmentInputRef.current?.click()}
+                style={{
+                  borderRadius: 10,
+                  border: `2px dashed ${attachmentDragOver ? "var(--slate-primary)" : "var(--border-default)"}`,
+                  backgroundColor: attachmentDragOver ? "var(--slate-tint)" : "transparent",
+                  padding: "24px 20px",
+                  textAlign: "center",
+                  cursor: "pointer",
+                  transition: "border-color 150ms, background-color 150ms",
+                }}
+              >
+                <Paperclip size={18} color="var(--ink-tertiary)" style={{ margin: "0 auto 8px", display: "block" }} />
+                <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 500, color: "var(--ink-secondary)" }}>
+                  Drop files here or click to upload
+                </p>
+                <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)" }}>
+                  Add documents related to this funder relationship — agreements, MOUs, meeting notes, and more.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div
+                  style={{
+                    borderRadius: 10,
+                    border: "1px solid var(--border-default)",
+                    overflow: "hidden",
+                    backgroundColor: "var(--surface-white)",
+                  }}
+                >
+                  {selected.attachments.map((att, i) => (
+                    <div
+                      key={att.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "12px 16px",
+                        borderBottom: i < selected.attachments.length - 1 ? "1px solid var(--border-default)" : "none",
+                        transition: "background-color 150ms",
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--canvas)" }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
+                    >
+                      <FileTypeIcon type={att.fileType} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 500, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {att.filename}
+                        </p>
+                        <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
+                          {att.uploadDate} · {att.uploader}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAttachment(att.id)}
+                        style={{
+                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: 24,
+                          height: 24,
+                          borderRadius: 6,
+                          border: "none",
+                          backgroundColor: "transparent",
+                          cursor: "pointer",
+                          color: "var(--ink-tertiary)",
+                          opacity: 0.6,
+                          transition: "opacity 150ms",
+                        }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "1" }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "0.6" }}
+                        aria-label={`Remove ${att.filename}`}
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {/* Drop zone appended below existing files */}
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setAttachmentDragOver(true) }}
+                  onDragLeave={() => setAttachmentDragOver(false)}
+                  onDrop={handleAttachmentDrop}
+                  onClick={() => attachmentInputRef.current?.click()}
+                  style={{
+                    marginTop: 8,
+                    borderRadius: 10,
+                    border: `2px dashed ${attachmentDragOver ? "var(--slate-primary)" : "var(--border-default)"}`,
+                    backgroundColor: attachmentDragOver ? "var(--slate-tint)" : "transparent",
+                    padding: "12px 20px",
+                    textAlign: "center",
+                    cursor: "pointer",
+                    transition: "border-color 150ms, background-color 150ms",
+                  }}
+                >
+                  <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)" }}>
+                    Drop a file or click to add more
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
