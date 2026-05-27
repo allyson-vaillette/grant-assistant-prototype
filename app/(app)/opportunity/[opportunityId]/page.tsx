@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useParams, useSearchParams, useRouter } from "next/navigation"
 import {
   ChevronDown, Copy, FileText, Plus, Paperclip, Pencil, Trash2, X,
-  Flag, Share2, AlertTriangle, Sparkles, Loader2,
+  Flag, Share2, Sparkles, Loader2,
 } from "lucide-react"
 import { NewProposalModal } from "@/components/proposals/NewProposalModal"
 
