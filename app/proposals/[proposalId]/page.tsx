@@ -10,9 +10,9 @@
  * same gradient-ai-sidebar for the left nav rail.
  */
 
-import React, { useState, useRef, Suspense } from "react"
+import React, { useState, useRef, useEffect, Suspense } from "react"
 import Link from "next/link"
-import { useParams, useSearchParams } from "next/navigation"
+import { useParams, useSearchParams, useRouter } from "next/navigation"
 import {
   Bold,
   Italic,
@@ -221,9 +221,14 @@ function NavItem({
 function ProposalEditorContent() {
   const routeParams = useParams()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const proposalId = routeParams.proposalId as string
 
   const isKnown = proposalId === "equitable-futures-2026-draft"
+
+  useEffect(() => {
+    if (isKnown) router.replace("/editor")
+  }, [isKnown, router])
   const documentTitle = isKnown ? "Equitable Futures Grant 2026" : (searchParams.get("name") ?? "New Proposal")
   const opportunityName = isKnown ? "Equitable Futures Grant 2026" : (searchParams.get("opportunityName") ?? "")
   const opportunityId = isKnown ? "equitable-futures" : (searchParams.get("opportunityId") ?? "")
