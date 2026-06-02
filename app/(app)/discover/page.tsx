@@ -334,9 +334,9 @@ function OpportunityCard({
         width: "100%",
         padding: "14px 16px 14px 14px",
         borderRadius: 12,
-        backgroundColor: isSelected ? "var(--slate-tint)" : "#FFFFFF",
+        backgroundColor: "#FFFFFF",
         border: isSelected
-          ? "1.5px solid var(--slate-primary)"
+          ? "1px solid rgba(74, 96, 128, 0.2)"
           : isHovered
           ? "1px solid rgba(74,96,128,0.35)"
           : "1px solid var(--border-default)",
@@ -344,7 +344,7 @@ function OpportunityCard({
           ? "3px solid var(--slate-primary)"
           : "3px solid transparent",
         boxShadow: isSelected
-          ? "0px 3px 10px rgba(28,24,64,0.1)"
+          ? "0px 2px 8px rgba(28,24,64,0.08)"
           : isHovered
           ? "0px 2px 8px rgba(28,24,64,0.07)"
           : "0px 1px 3px rgba(28,24,64,0.04)",
@@ -1472,8 +1472,8 @@ function DetailPanel({
               display: "flex",
               flexDirection: "column",
               gap: 10,
-              backgroundColor: "#FFFFFF",
-              boxShadow: "var(--shadow-card)",
+              backgroundColor: "var(--surface-canvas)",
+              border: "var(--border-subtle)",
               borderRadius: 10,
               padding: "14px 14px 12px",
               marginBottom: 12,

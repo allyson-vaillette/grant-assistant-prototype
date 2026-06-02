@@ -12,7 +12,7 @@
     /* ── Surfaces ── */
     --canvas:         #F9F6F1;   /* warm cream — app bg */
     --surface-canvas: #F9F6F1;   /* base cream, page and list background */
-    --surface-raised: #FDFCF9;   /* warm white, one step up — detail panels */
+    --surface-raised: #FFFFFF;   /* pure white — detail panels, foreground layer above cream canvas */
     --surface-beige:  #F0E6D2;   /* secondary panels, tinted sections */
     --surface-white:  #FFFFFF;   /* cards, detail panes */
     --charcoal:       #2A2A2A;   /* strong text, shadow tinting */
@@ -57,7 +57,7 @@
     --gradient-avatar:     linear-gradient(135deg, #4A6080, #7B5E7C);
 
     /* ── Elevation — layered warm-tinted shadows ── */
-    --shadow-panel:      -2px 0 12px rgba(42, 42, 42, 0.05);  /* left-casting edge for right detail panel */
+    --shadow-panel:      -3px 0 16px rgba(42, 42, 42, 0.07);  /* left-casting edge for right detail panel */
     --shadow-card:       0 1px 2px rgba(42,42,42,0.04), 0 2px 8px rgba(42,42,42,0.05);
     --elevation-card:    0 1px 2px rgba(33,29,24,0.04), 0 10px 24px rgba(33,29,24,0.08);
     --elevation-raised:  0 2px 4px rgba(33,29,24,0.05), 0 18px 40px rgba(33,29,24,0.12);
