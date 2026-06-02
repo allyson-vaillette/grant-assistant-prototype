@@ -10,11 +10,12 @@
 @layer base {
   :root {
     /* ── Surfaces ── */
-    --canvas:         #F9F6F1;   /* warm cream — app bg */
-    --surface-canvas: #F9F6F1;   /* base cream, page and list background */
-    --surface-raised: #FFFFFF;   /* pure white — detail panels, foreground layer above cream canvas */
-    --surface-beige:  #F0E6D2;   /* secondary panels, tinted sections */
-    --surface-white:  #FFFFFF;   /* cards, detail panes */
+    --canvas:         #F7F7F4;   /* page background, faintly warm near-white */
+    --surface:        #FFFFFF;   /* working surface: cards, search, chips, panels */
+    --surface-sunk:   #FBFBF9;   /* quiet inset for asides / secondary regions */
+    --surface-canvas: #F7F7F4;   /* alias for --canvas, kept for compatibility */
+    --surface-raised: #FFFFFF;   /* alias for --surface, kept for compatibility */
+    --surface-white:  #FFFFFF;   /* alias for --surface, kept for compatibility */
     --charcoal:       #2A2A2A;   /* strong text, shadow tinting */
 
     /* ── Primary accent — Slate Blue ── */
@@ -39,8 +40,10 @@
     --error-light:  #FDE8E8;
 
     /* ── Borders ── */
-    --border-default: #8B8598;  /* 3:1 on cream and white — inputs and meaningful UI affordances */
-    --border-subtle:  1px solid rgba(42, 42, 42, 0.08);  /* card outlines, dividers, row separators */
+    --hair:           rgba(42, 42, 42, 0.06);   /* true hairline, default border */
+    --hair-2:         rgba(42, 42, 42, 0.10);   /* slightly stronger, inputs/edges */
+    --border-default: #8B8598;  /* 3:1 on white — inputs and meaningful UI affordances */
+    --border-subtle:  1px solid var(--hair);    /* card outlines, dividers, row separators */
 
     /* ── Ink — text hierarchy ── */
     --ink:           #2A2A2A;   /* primary text (charcoal) */
@@ -56,12 +59,14 @@
     --gradient-ai-rail:    linear-gradient(180deg, #1B3060 0%, #4C1E5C 100%);
     --gradient-avatar:     linear-gradient(135deg, #4A6080, #7B5E7C);
 
-    /* ── Elevation — layered warm-tinted shadows ── */
-    --shadow-panel:      -3px 0 16px rgba(42, 42, 42, 0.07);  /* left-casting edge for right detail panel */
-    --shadow-card:       0 1px 2px rgba(42,42,42,0.04), 0 2px 8px rgba(42,42,42,0.05);
-    --elevation-card:    0 1px 2px rgba(33,29,24,0.04), 0 10px 24px rgba(33,29,24,0.08);
-    --elevation-raised:  0 2px 4px rgba(33,29,24,0.05), 0 18px 40px rgba(33,29,24,0.12);
-    --elevation-overlay: 0 8px 16px rgba(33,29,24,0.10), 0 30px 60px rgba(33,29,24,0.18);
+    /* ── Elevation — charcoal-tinted shadows ── */
+    --lift-1:         0 1px 2px rgba(42, 42, 42, 0.04);
+    --lift-2:         0 1px 2px rgba(42, 42, 42, 0.04), 0 4px 10px rgba(42, 42, 42, 0.05);
+    --shadow-panel:   -1px 0 0 var(--hair), -10px 0 22px rgba(42, 42, 42, 0.035);
+    --shadow-card:    var(--lift-2);
+    --elevation-card: var(--lift-2);
+    --elevation-raised:  0 2px 4px rgba(42,42,42,0.05), 0 18px 40px rgba(42,42,42,0.10);
+    --elevation-overlay: 0 8px 16px rgba(42,42,42,0.08), 0 30px 60px rgba(42,42,42,0.15);
 
     /* ── Radius ── */
     --radius-pill:       20px;
@@ -74,7 +79,7 @@
     /* ────────────────────────────────────────────
        shadcn/ui compatibility (HSL channel values)
        ──────────────────────────────────────────── */
-    --background:              38 38% 96%;   /* canvas */
+    --background:              60 7% 97%;    /* canvas #F7F7F4 */
     --foreground:              0 0% 16%;     /* ink / charcoal */
     --card:                    0 0% 100%;    /* surface-white */
     --card-foreground:         0 0% 16%;

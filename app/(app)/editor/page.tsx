@@ -301,7 +301,7 @@ function SubmitForReviewModal({ onClose, onConfirm }: { onClose: () => void; onC
 
 function Toast({ msg, visible }: { msg: string; visible: boolean }) {
   return (
-    <div style={{ position: "fixed", bottom: 24, left: "50%", transform: `translateX(-50%) translateY(${visible ? 0 : 8}px)`, opacity: visible ? 1 : 0, transition: "transform 0.2s ease, opacity 0.2s ease", backgroundColor: "#FFFFFF", border: "var(--border-subtle)", borderRadius: 12, padding: "10px 20px", boxShadow: "var(--elevation-card)", fontSize: 13, color: "var(--ink)", zIndex: 150, pointerEvents: "none", whiteSpace: "nowrap" }}>
+    <div style={{ position: "fixed", bottom: 24, left: "50%", transform: `translateX(-50%) translateY(${visible ? 0 : 8}px)`, opacity: visible ? 1 : 0, transition: "transform 0.2s ease, opacity 0.2s ease", backgroundColor: "#FFFFFF", border: "1px solid var(--hair)", borderRadius: 12, padding: "10px 20px", boxShadow: "var(--lift-1)", fontSize: 13, color: "var(--ink)", zIndex: 150, pointerEvents: "none", whiteSpace: "nowrap" }}>
       {msg}
     </div>
   )
@@ -437,7 +437,7 @@ export default function EditorPage() {
   const bodyH = "calc(100vh - 44px - 40px)"
 
   return (
-    <div className="flex flex-col flex-1" style={{ overflow: "hidden", minHeight: 0, backgroundColor: "var(--surface-white)" }}>
+    <div className="flex flex-col flex-1" style={{ overflow: "hidden", minHeight: 0, backgroundColor: "var(--surface)" }}>
       <Toast msg={toast.msg} visible={toast.visible} />
       {showSubmitModal && (
         <SubmitForReviewModal
@@ -453,9 +453,9 @@ export default function EditorPage() {
       )}
 
       {/* Top bar */}
-      <div style={{ flexShrink: 0, height: 44, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", backgroundColor: "var(--surface-white)", borderBottom: "var(--border-subtle)" }}>
+      <div style={{ flexShrink: 0, height: 44, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", backgroundColor: "var(--surface)", borderBottom: "var(--border-subtle)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <NextLink href="/opportunity/equitable-futures" style={{ width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", textDecoration: "none", flexShrink: 0 }}>
+          <NextLink href="/opportunity/equitable-futures" style={{ width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--hair)", backgroundColor: "var(--surface)", textDecoration: "none", flexShrink: 0 }}>
             <ChevronLeft size={13} color="var(--ink-secondary)" />
           </NextLink>
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--ink-tertiary)" }}>
@@ -497,7 +497,7 @@ export default function EditorPage() {
       </div>
 
       {/* Toolbar */}
-      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 2, padding: "0 20px", height: 40, backgroundColor: "var(--surface-white)", borderBottom: "var(--border-subtle)" }}>
+      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 2, padding: "0 20px", height: 40, backgroundColor: "var(--surface)", borderBottom: "var(--border-subtle)" }}>
         {[Bold, Italic, Underline].map((Icon, i) => (
           <button key={i} type="button" style={toolbarBtn} onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }} onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}><Icon size={13} color="var(--ink-secondary)" /></button>
         ))}
@@ -572,7 +572,7 @@ export default function EditorPage() {
             </div>
           )}
 
-          <div style={{ maxWidth: 720, margin: "0 auto", padding: "40px 40px 120px 40px", backgroundColor: "var(--surface-white)", minHeight: "100%", boxShadow: "0 0 0 1px rgba(42,42,42,0.04)" }}>
+          <div style={{ maxWidth: 720, margin: "0 auto", padding: "40px 40px 120px 40px", backgroundColor: "var(--surface)", minHeight: "100%", boxShadow: "0 0 0 1px rgba(42,42,42,0.04)" }}>
             {/* Doc header */}
             <div style={{ marginBottom: 32 }}>
               <h1 style={{ margin: "0 0 6px", fontSize: 28, fontWeight: 500, color: "var(--ink)", fontFamily: "var(--font-lora)", letterSpacing: "-0.02em" }}>Equitable Futures Grant 2026</h1>
@@ -616,7 +616,7 @@ export default function EditorPage() {
         </div>
 
         {/* Right: AI panel */}
-        <div style={{ width: 340, flexShrink: 0, borderLeft: "var(--border-subtle)", backgroundColor: "var(--canvas)", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+        <div style={{ width: 340, flexShrink: 0, borderLeft: "1px solid var(--hair)", backgroundColor: "var(--canvas)", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
           {/* AI panel header band */}
           <div style={{ flexShrink: 0, background: "var(--gradient-ai-hero)", padding: "10px 16px 10px", display: "flex", alignItems: "center", gap: 8 }}>
             <span className="material-symbols-outlined" style={{ fontSize: 16, color: "rgba(255,255,255,0.85)", fontVariationSettings: "'FILL' 1" }}>auto_fix_high</span>
@@ -639,7 +639,7 @@ export default function EditorPage() {
           {/* Scope toggle — AI Assistant tab only */}
           {aiTab === "assistant" && (
             <div style={{ flexShrink: 0, padding: "10px 16px 8px", borderBottom: "var(--border-subtle)", backgroundColor: "var(--canvas)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 0, borderRadius: 8, border: "var(--border-subtle)", overflow: "hidden", backgroundColor: "var(--surface-white)", marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 0, borderRadius: 8, border: "1px solid var(--hair-2)", overflow: "hidden", backgroundColor: "var(--surface)", marginBottom: 8 }}>
                 {(["section", "document"] as Scope[]).map((s) => (
                   <button key={s} type="button" onClick={() => setScope(s)} style={{ flex: 1, padding: "6px 0", fontSize: 12, fontWeight: scope === s ? 600 : 400, color: scope === s ? "var(--slate-primary)" : "var(--ink-secondary)", backgroundColor: scope === s ? "var(--slate-tint)" : "transparent", border: "none", cursor: "pointer", transition: "background-color 150ms, color 150ms" }}>
                     {s === "section" ? "This section" : "Whole document"}
@@ -676,7 +676,7 @@ export default function EditorPage() {
                         <span style={{ fontSize: 8, fontWeight: 700, color: "#FFF" }}>GA</span>
                       </div>
                     )}
-                    <div style={{ flex: 1, padding: "10px 12px", borderRadius: 10, backgroundColor: msg.role === "ai" ? "var(--surface-white)" : "var(--slate-tint)", border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", lineHeight: "19px" }}>
+                    <div style={{ flex: 1, padding: "10px 12px", borderRadius: 10, backgroundColor: msg.role === "ai" ? "var(--surface)" : "var(--slate-tint)", border: "1px solid var(--hair)", fontSize: 13, color: "var(--ink)", lineHeight: "19px" }}>
                       {msg.text}
                     </div>
                   </div>
@@ -686,7 +686,7 @@ export default function EditorPage() {
                     <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--gradient-avatar)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <span style={{ fontSize: 8, fontWeight: 700, color: "#FFF" }}>GA</span>
                     </div>
-                    <div style={{ padding: "10px 14px", borderRadius: 10, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)" }}>
+                    <div style={{ padding: "10px 14px", borderRadius: 10, backgroundColor: "var(--surface)", border: "1px solid var(--hair)" }}>
                       <span style={{ fontSize: 18, color: "var(--ink-tertiary)", letterSpacing: 2 }}>···</span>
                     </div>
                   </div>
@@ -698,7 +698,7 @@ export default function EditorPage() {
             {aiTab === "suggestions" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {AI_SUGGESTION[activeId] ? (
-                  <div style={{ borderRadius: 10, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", overflow: "hidden" }}>
+                  <div style={{ borderRadius: 10, border: "1px solid var(--hair)", backgroundColor: "var(--surface)", overflow: "hidden" }}>
                     <div style={{ padding: "10px 14px", borderBottom: "1px solid rgba(255,255,255,0.12)", background: "var(--gradient-ai-cta)", display: "flex", alignItems: "center", gap: 6 }}>
                       <span className="material-symbols-outlined" style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", fontVariationSettings: "'FILL' 1" }}>auto_fix_high</span>
                       <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "#FFFFFF" }}>Suggested content</span>
@@ -745,7 +745,7 @@ export default function EditorPage() {
                   <p style={{ margin: "0 0 8px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Uploaded documents</p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {UPLOADED_DOCS.map((doc) => (
-                      <div key={doc.name} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)" }}>
+                      <div key={doc.name} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, backgroundColor: "var(--surface)", border: "1px solid var(--hair)" }}>
                         <MIcon name="description" size={16} color="var(--slate-secondary)" style={{ flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ margin: 0, fontSize: 12, fontWeight: 500, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</p>
@@ -765,7 +765,7 @@ export default function EditorPage() {
                 {/* Base context items */}
                 <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Working from</p>
                 {CONTEXT_ITEMS_BASE.map(({ label, value }) => (
-                  <div key={label} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "10px 12px", borderRadius: 8, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)" }}>
+                  <div key={label} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "10px 12px", borderRadius: 8, backgroundColor: "var(--surface)", border: "1px solid var(--hair)" }}>
                     <div>
                       <p style={{ margin: "0 0 2px", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>{label}</p>
                       <p style={{ margin: 0, fontSize: 13, color: "var(--ink)", lineHeight: "17px" }}>{value}</p>
@@ -780,7 +780,7 @@ export default function EditorPage() {
           {/* Chat input (only on assistant tab) */}
           {aiTab === "assistant" && (
             <div style={{ flexShrink: 0, borderTop: "var(--border-subtle)", padding: "10px 16px", backgroundColor: "var(--canvas)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 9, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 9, backgroundColor: "var(--surface)", border: "1px solid var(--hair-2)", boxShadow: "var(--lift-1)" }}>
                 <input
                   type="text"
                   value={chatInput}

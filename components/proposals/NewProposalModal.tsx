@@ -133,7 +133,7 @@ function UploadRow({
         gap: 10,
         padding: "10px 12px",
         borderRadius: 8,
-        backgroundColor: "var(--surface-white)",
+        backgroundColor: "var(--surface)",
         border: "var(--border-subtle)",
       }}
     >
@@ -498,7 +498,7 @@ export function NewProposalModal({ open, onClose, opportunityName, opportunityId
                     padding: "9px 12px",
                     borderRadius: 9,
                     border: "var(--border-subtle)",
-                    backgroundColor: "var(--surface-white)",
+                    backgroundColor: "var(--surface)",
                     fontSize: 13,
                     color: "var(--ink)",
                     outline: "none",
@@ -643,7 +643,7 @@ const inputStyle: React.CSSProperties = {
   padding: "9px 12px",
   borderRadius: 9,
   border: "1px solid var(--border-default)",
-  backgroundColor: "var(--surface-white)",
+  backgroundColor: "var(--surface)",
   fontSize: 13,
   color: "var(--ink)",
   outline: "none",

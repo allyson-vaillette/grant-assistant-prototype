@@ -273,7 +273,7 @@ function ProposalEditorContent() {
         flexDirection: "column",
         height: "100vh",
         overflow: "hidden",
-        backgroundColor: "var(--surface-white)",
+        backgroundColor: "var(--surface)",
       }}
     >
       <Toast msg={toast.msg} visible={toast.visible} />
@@ -287,7 +287,7 @@ function ProposalEditorContent() {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "0 20px",
-          backgroundColor: "var(--surface-white)",
+          backgroundColor: "var(--surface)",
           borderBottom: "var(--border-subtle)",
           position: "relative",
         }}
@@ -401,7 +401,7 @@ function ProposalEditorContent() {
           gap: 2,
           padding: "0 20px",
           height: 40,
-          backgroundColor: "var(--surface-white)",
+          backgroundColor: "var(--surface)",
           borderBottom: "var(--border-subtle)",
         }}
       >
@@ -584,7 +584,7 @@ function ProposalEditorContent() {
               maxWidth: 720,
               margin: "0 auto",
               padding: "40px 40px 120px",
-              backgroundColor: "var(--surface-white)",
+              backgroundColor: "var(--surface)",
               minHeight: "100%",
               boxShadow: "0 0 0 1px rgba(42,42,42,0.04)",
             }}
@@ -839,7 +839,7 @@ function ProposalEditorContent() {
                       style={{
                         padding: "10px 14px",
                         borderRadius: 10,
-                        backgroundColor: "var(--surface-white)",
+                        backgroundColor: "var(--surface)",
                         boxShadow: "var(--shadow-card)",
                       }}
                     >
@@ -898,7 +898,7 @@ function ProposalEditorContent() {
                       gap: 10,
                       padding: "10px 12px",
                       borderRadius: 8,
-                      backgroundColor: "var(--surface-white)",
+                      backgroundColor: "var(--surface)",
                       boxShadow: "var(--shadow-card)",
                     }}
                   >
@@ -969,7 +969,7 @@ function ProposalEditorContent() {
                   gap: 8,
                   padding: "8px 12px",
                   borderRadius: 9,
-                  backgroundColor: "var(--surface-white)",
+                  backgroundColor: "var(--surface)",
                   boxShadow: "var(--shadow-card)",
                 }}
               >

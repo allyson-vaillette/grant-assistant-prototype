@@ -305,17 +305,17 @@ function PipelineBar({ stages, onStageClick }: { stages: PipelineStage[]; onStag
             onClick={() => onStageClick(stage.stageFilter)}
             style={{
               width: "100%",
-              border: "none",
               borderRadius: "var(--radius-card)",
               overflow: "hidden",
-              background: hovered === i ? "var(--canvas)" : "var(--surface-white)",
+              background: "#FFFFFF",
               cursor: "pointer",
               textAlign: "left",
-              transition: "background-color 150ms, box-shadow 150ms",
+              transition: "background-color 150ms, box-shadow 150ms, border-color 150ms",
               display: "flex",
               flexDirection: "column",
               padding: 0,
-              boxShadow: "var(--elevation-card)",
+              border: hovered === i ? "1px solid var(--hair-2)" : "1px solid var(--hair)",
+              boxShadow: hovered === i ? "var(--lift-1)" : "none",
             }}
           >
             {/* Accent bar — overflow:hidden clips corners flush with card radius */}
@@ -366,7 +366,7 @@ function PipelineBar({ stages, onStageClick }: { stages: PipelineStage[]; onStag
                     style={{
                       display: "flex", alignItems: "center", justifyContent: "space-between",
                       gap: 8, padding: "6px 4px", margin: "0 -4px",
-                      borderBottom: j < stage.hoverItems.length - 1 ? "var(--border-subtle)" : "none",
+                      borderBottom: j < stage.hoverItems.length - 1 ? "1px solid var(--hair)" : "none",
                       cursor: "pointer", transition: "background-color 100ms",
                     }}
                   >
@@ -477,7 +477,7 @@ export default function HomeDashboard() {
                     onClick={() => router.push("/portfolio?stage=Awarded")}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--slate-tint)"; (e.currentTarget as HTMLDivElement).style.borderRadius = "6px" }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "6px 4px", margin: "0 -4px", borderBottom: i < AWARDED_ENGAGEMENTS.length - 1 ? "var(--border-subtle)" : "none", cursor: "pointer", transition: "background-color 100ms" }}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "6px 4px", margin: "0 -4px", borderBottom: i < AWARDED_ENGAGEMENTS.length - 1 ? "1px solid var(--hair)" : "none", cursor: "pointer", transition: "background-color 100ms" }}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontSize: 12, fontWeight: 500, color: "var(--ink)", lineHeight: "15px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.engagement}</p>
@@ -491,7 +491,7 @@ export default function HomeDashboard() {
           >
             <div
               onClick={() => router.push("/portfolio?stage=Awarded")}
-              style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", border: "none", boxShadow: "var(--elevation-card)", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", gap: 16 }}
+              style={{ borderRadius: "var(--radius-card)", backgroundColor: "#FFFFFF", border: "1px solid var(--hair)", boxShadow: "none", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", gap: 16 }}
             >
               <div>
                 <p style={labelStyle}>Awarded rolling 12 months</p>
@@ -544,7 +544,7 @@ export default function HomeDashboard() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
 
           {/* My tasks */}
-          <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", overflow: "hidden", boxShadow: "var(--elevation-card)" }}>
+          <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "#FFFFFF", overflow: "hidden", border: "1px solid var(--hair)", boxShadow: "none" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "var(--border-subtle)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>My tasks</span>
@@ -619,7 +619,7 @@ export default function HomeDashboard() {
                                 type="date"
                                 value={completionDate}
                                 onChange={(e) => setCompletionDate(e.target.value)}
-                                style={{ flex: 1, padding: "5px 9px", borderRadius: 7, border: "var(--border-subtle)", fontSize: 12, color: "var(--ink)", outline: "none", backgroundColor: "var(--surface-white)", fontFamily: "inherit" }}
+                                style={{ flex: 1, padding: "5px 9px", borderRadius: 7, border: "1px solid var(--hair-2)", fontSize: 12, color: "var(--ink)", outline: "none", backgroundColor: "var(--surface)", fontFamily: "inherit" }}
                               />
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -629,7 +629,7 @@ export default function HomeDashboard() {
                                 value={completionNote}
                                 onChange={(e) => setCompletionNote(e.target.value)}
                                 placeholder="What happened?"
-                                style={{ flex: 1, padding: "5px 9px", borderRadius: 7, border: "var(--border-subtle)", fontSize: 12, color: "var(--ink)", outline: "none", backgroundColor: "var(--surface-white)", fontFamily: "inherit" }}
+                                style={{ flex: 1, padding: "5px 9px", borderRadius: 7, border: "1px solid var(--hair-2)", fontSize: 12, color: "var(--ink)", outline: "none", backgroundColor: "var(--surface)", fontFamily: "inherit" }}
                               />
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -673,7 +673,7 @@ export default function HomeDashboard() {
           </div>
 
           {/* Upcoming deadlines */}
-          <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", overflow: "hidden", boxShadow: "var(--elevation-card)" }}>
+          <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "#FFFFFF", overflow: "hidden", border: "1px solid var(--hair)", boxShadow: "none" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "var(--border-subtle)" }}>
               <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>Upcoming deadlines</span>
               <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: "50%", backgroundColor: "var(--slate-tint)", fontSize: 11, fontWeight: 600, color: "var(--slate-primary)" }}>
@@ -711,7 +711,7 @@ export default function HomeDashboard() {
 
         {/* ── Pending with team ── */}
         <div style={{ marginBottom: 28 }}>
-          <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", overflow: "hidden", boxShadow: "var(--elevation-card)" }}>
+          <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "#FFFFFF", overflow: "hidden", border: "1px solid var(--hair)", boxShadow: "none" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "var(--border-subtle)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>Pending with team</span>
@@ -782,7 +782,7 @@ export default function HomeDashboard() {
                               onKeyDown={(e) => { if (e.key === "Enter") handleSendNudge(); if (e.key === "Escape") setNudgingTaskId(null) }}
                               placeholder="Just checking in"
                               autoFocus
-                              style={{ width: "100%", padding: "5px 9px", borderRadius: 7, border: "var(--border-subtle)", fontSize: 12, color: "var(--ink)", outline: "none", backgroundColor: "var(--surface-white)", fontFamily: "inherit", boxSizing: "border-box" }}
+                              style={{ width: "100%", padding: "5px 9px", borderRadius: 7, border: "1px solid var(--hair-2)", fontSize: 12, color: "var(--ink)", outline: "none", backgroundColor: "var(--surface)", fontFamily: "inherit", boxSizing: "border-box" }}
                             />
                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                               <button
@@ -827,9 +827,9 @@ function QuickAction({ icon, iconBg, label, sub, onClick }: {
     <button
       type="button"
       onClick={onClick}
-      style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10, padding: "16px", borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", border: "var(--border-subtle)", cursor: "pointer", textAlign: "left", transition: "box-shadow 150ms", boxShadow: "var(--elevation-card)" }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "var(--elevation-raised)" }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "var(--elevation-card)" }}
+      style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10, padding: "16px", borderRadius: "var(--radius-card)", backgroundColor: "#FFFFFF", border: "1px solid var(--hair)", cursor: "pointer", textAlign: "left", transition: "box-shadow 150ms, border-color 150ms", boxShadow: "none" }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "var(--lift-1)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--hair-2)" }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "none"; (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--hair)" }}
     >
       <div style={{ width: 36, height: 36, borderRadius: 9, background: iconBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
         {icon}

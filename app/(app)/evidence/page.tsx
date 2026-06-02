@@ -193,19 +193,19 @@ function EvidenceRow({
         margin: "0 8px",
         padding: "12px 14px",
         borderRadius: 10,
-        backgroundColor: isSelected ? "#FFFFFF" : "transparent",
-        border: isSelected ? "var(--border-subtle)" : "1px solid transparent",
-        borderLeft: isSelected ? "3px solid var(--slate-primary)" : "3px solid transparent",
-        boxShadow: isSelected ? "0px 1px 4px rgba(28,24,64,0.06)" : "none",
+        backgroundColor: "#FFFFFF",
+        border: isSelected ? "none" : "1px solid var(--hair)",
+        borderLeft: isSelected ? "3px solid var(--slate-primary)" : "1px solid var(--hair)",
+        boxShadow: isSelected ? "var(--lift-2)" : "none",
         cursor: "pointer",
         textAlign: "left",
-        transition: "background-color 150ms",
+        transition: "background-color 150ms, box-shadow 150ms",
       }}
       onMouseEnter={(e) => {
-        if (!isSelected) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.5)"
+        if (!isSelected) (e.currentTarget as HTMLButtonElement).style.boxShadow = "var(--lift-1)"
       }}
       onMouseLeave={(e) => {
-        if (!isSelected) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"
+        if (!isSelected) (e.currentTarget as HTMLButtonElement).style.boxShadow = "none"
       }}
     >
       {/* Title + usage */}
@@ -268,7 +268,7 @@ function DetailPanel({ item }: { item: EvidenceItem }) {
         overflowY: "auto",
         padding: "28px 40px",
         backgroundColor: "#FFFFFF",
-        borderLeft: "var(--border-subtle)",
+        boxShadow: "var(--shadow-panel)",
         display: "flex",
         flexDirection: "column",
         gap: 0,
@@ -315,7 +315,7 @@ function DetailPanel({ item }: { item: EvidenceItem }) {
                 cursor: "pointer",
                 transition: "background-color 150ms",
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
             >
               Edit
@@ -583,7 +583,7 @@ export default function EvidencePage() {
           style={{
             width: 268,
             flexShrink: 0,
-            backgroundColor: "#F3F0EA",
+            backgroundColor: "var(--canvas)",
             borderRight: "var(--border-subtle)",
             overflowY: "auto",
             display: "flex",
@@ -599,8 +599,9 @@ export default function EvidencePage() {
                 gap: 8,
                 padding: "8px 12px",
                 borderRadius: "var(--radius-input)",
-                backgroundColor: "#FFFFFF",
-                boxShadow: "var(--shadow-card)",
+                backgroundColor: "var(--surface)",
+                border: "1px solid var(--hair-2)",
+                boxShadow: "var(--lift-1)",
               }}
             >
               <Search size={13} color="var(--ink-tertiary)" style={{ flexShrink: 0 }} />

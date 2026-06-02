@@ -636,8 +636,8 @@ function NoteEditor({
           width: "100%",
           padding: "9px 12px",
           borderRadius: 8,
-          border: "1px solid var(--border-default)",
-          backgroundColor: "var(--surface-white)",
+          border: "1px solid var(--hair-2)",
+          backgroundColor: "var(--surface)",
           fontSize: 13,
           color: "var(--ink)",
           outline: "none",
@@ -891,7 +891,7 @@ function FunderPanel({
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-            <div style={{ borderRadius: 10, padding: "10px 12px", backgroundColor: "var(--surface-white)", boxShadow: "var(--shadow-card)" }}>
+            <div style={{ borderRadius: 10, padding: "10px 12px", backgroundColor: "var(--surface-sunk)", border: "1px solid var(--hair)" }}>
               <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
                 Total awarded
               </p>
@@ -899,7 +899,7 @@ function FunderPanel({
                 {engagement.stats.awardedLifetime}
               </p>
             </div>
-            <div style={{ borderRadius: 10, padding: "10px 12px", backgroundColor: "var(--surface-white)", boxShadow: "var(--shadow-card)" }}>
+            <div style={{ borderRadius: 10, padding: "10px 12px", backgroundColor: "var(--surface-sunk)", border: "1px solid var(--hair)" }}>
               <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
                 Active opps
               </p>
@@ -919,7 +919,7 @@ function FunderPanel({
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 {engagement.notes.slice(0, 2).map((note) => (
-                  <div key={note.id} style={{ padding: "9px 12px", borderRadius: 8, backgroundColor: "var(--surface-white)", boxShadow: "var(--shadow-card)" }}>
+                  <div key={note.id} style={{ padding: "9px 12px", borderRadius: 8, backgroundColor: "var(--surface-sunk)", border: "1px solid var(--hair)" }}>
                     <p style={{ margin: "0 0 3px", fontSize: 12, color: "var(--ink)", lineHeight: "17px" }}>
                       {note.text.length > 90 ? `${note.text.slice(0, 90)}…` : note.text}
                     </p>
@@ -1254,8 +1254,8 @@ function AwardedMiniStat({ value, history }: { value: string; history: { year: n
       style={{
         borderRadius: 10,
         padding: "12px 14px",
-        backgroundColor: "var(--surface-white)",
-        boxShadow: "var(--shadow-card)",
+        backgroundColor: "var(--surface-sunk)",
+        border: "1px solid var(--hair)",
       }}
     >
       <p
@@ -1653,8 +1653,9 @@ function PortfolioPage() {
               gap: 8,
               borderRadius: 9,
               padding: "8px 10px",
-              backgroundColor: "var(--surface-white)",
-              border: "var(--border-subtle)",
+              backgroundColor: "var(--surface)",
+              border: "1px solid var(--hair-2)",
+              boxShadow: "var(--lift-1)",
               marginBottom: 8,
             }}
           >
@@ -1766,19 +1767,26 @@ function PortfolioPage() {
                   width: "100%",
                   padding: "10px 12px",
                   marginBottom: 2,
-                  borderRadius: isSelected ? "0 12px 12px 0" : 8,
-                  backgroundColor: isSelected ? "var(--slate-tint)" : "transparent",
-                  borderLeft: isSelected ? "2px solid var(--slate-primary)" : "2px solid transparent",
-                  border: isSelected ? undefined : "1px solid transparent",
+                  borderRadius: 8,
+                  backgroundColor: isSelected ? "#FFFFFF" : "#FFFFFF",
+                  border: isSelected ? "none" : "1px solid var(--hair)",
+                  borderLeft: isSelected ? "3px solid var(--slate-primary)" : undefined,
+                  boxShadow: isSelected ? "var(--lift-2)" : "none",
                   cursor: "pointer",
                   textAlign: "left",
-                  transition: "background-color 150ms",
+                  transition: "background-color 150ms, box-shadow 150ms, border-color 150ms",
                 }}
                 onMouseEnter={(e) => {
-                  if (!isSelected) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(74,96,128,0.06)"
+                  if (!isSelected) {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--hair-2)"
+                    ;(e.currentTarget as HTMLButtonElement).style.boxShadow = "var(--lift-1)"
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  if (!isSelected) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"
+                  if (!isSelected) {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--hair)"
+                    ;(e.currentTarget as HTMLButtonElement).style.boxShadow = "none"
+                  }
                 }}
               >
                 {/* Row top: name dot + name + overdue flag */}
@@ -1897,14 +1905,14 @@ function PortfolioPage() {
       {/* ── Right pane ── */}
       <div
         className="flex-1 overflow-y-auto"
-        style={{ backgroundColor: "var(--surface-white)", minHeight: 0 }}
+        style={{ backgroundColor: "var(--surface)", minHeight: 0 }}
       >
         {/* White header zone */}
         <div
           style={{
             padding: "20px 28px 16px",
             borderBottom: "var(--border-subtle)",
-            backgroundColor: "var(--surface-white)",
+            backgroundColor: "var(--surface)",
           }}
         >
           {/* Name row */}
@@ -2050,7 +2058,7 @@ function PortfolioPage() {
               onClick={() => setOpenTasksExpanded(v => !v)}
               style={{ padding: 0, border: "none", background: "none", cursor: "pointer", textAlign: "left", borderRadius: 10 }}
             >
-              <div style={{ borderRadius: 10, padding: "12px 14px", backgroundColor: openTasksExpanded ? "var(--slate-tint)" : "var(--surface-white)", border: openTasksExpanded ? "1px solid var(--slate-secondary)" : "none", boxShadow: openTasksExpanded ? "none" : "var(--shadow-card)", transition: "background-color 150ms, border-color 150ms, box-shadow 150ms" }}>
+              <div style={{ borderRadius: 10, padding: "12px 14px", backgroundColor: openTasksExpanded ? "var(--slate-tint)" : "var(--surface-sunk)", border: openTasksExpanded ? "1px solid var(--slate-secondary)" : "1px solid var(--hair)", transition: "background-color 150ms, border-color 150ms" }}>
                 <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)" }}>Open tasks</p>
                 <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.02em" }}>{String(selected.stats.openTasks)}</p>
                 {selected.stats.openTasksAlert && <p style={{ margin: "3px 0 0", fontSize: 11, color: "var(--terracotta)" }}>{selected.stats.openTasksAlert}</p>}
@@ -2062,7 +2070,7 @@ function PortfolioPage() {
           {openTasksExpanded && selected.stats.openTasks > 0 && (
             <div style={{ marginTop: 12 }}>
               {selected.opportunities.filter(o => ["Active", "Tracking", "Submitted"].includes(o.stage)).slice(0, 3).map(opp => (
-                <div key={opp.id} style={{ marginBottom: 12, borderRadius: 10, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", overflow: "hidden" }}>
+                <div key={opp.id} style={{ marginBottom: 12, borderRadius: 10, border: "1px solid var(--hair)", backgroundColor: "var(--surface)", overflow: "hidden" }}>
                   <div style={{ padding: "8px 14px", backgroundColor: "var(--canvas)", borderBottom: "var(--border-subtle)" }}>
                     <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)" }}>{opp.name}</span>
                   </div>
@@ -2143,15 +2151,16 @@ function PortfolioPage() {
                     justifyContent: "space-between",
                     padding: "12px 18px",
                     borderRadius: 10,
-                    backgroundColor: "var(--surface-white)",
-                    boxShadow: "var(--shadow-card)",
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid var(--hair)",
+                    boxShadow: "none",
                     marginBottom: 8,
                     cursor: "pointer",
-                    transition: "background-color 150ms",
+                    transition: "background-color 150ms, border-color 150ms, box-shadow 150ms",
                     gap: 12,
                   }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--canvas)" }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--hair-2)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--lift-1)" }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--hair)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "none" }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
                     <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: dotColor, flexShrink: 0 }} />
@@ -2323,8 +2332,8 @@ function PortfolioPage() {
                 style={{
                   padding: "14px 16px",
                   borderRadius: 10,
-                  backgroundColor: "var(--surface-white)",
-                  boxShadow: "var(--shadow-card)",
+                  backgroundColor: "var(--surface-sunk)",
+                  border: "1px solid var(--hair)",
                 }}
               >
                 <NoteEditor
@@ -2356,8 +2365,8 @@ function PortfolioPage() {
                     style={{
                       padding: "14px 16px",
                       borderRadius: 10,
-                      backgroundColor: "var(--surface-white)",
-                      boxShadow: "var(--shadow-card)",
+                      backgroundColor: "var(--surface-sunk)",
+                      border: "1px solid var(--hair)",
                     }}
                   >
                     <NoteEditor
@@ -2379,8 +2388,8 @@ function PortfolioPage() {
                       gap: 12,
                       padding: "14px 16px",
                       borderRadius: 10,
-                      backgroundColor: "var(--canvas)",
-                      boxShadow: "var(--shadow-card)",
+                      backgroundColor: "var(--surface-sunk)",
+                      border: "1px solid var(--hair)",
                       cursor: "text",
                     }}
                   >
@@ -2482,9 +2491,9 @@ function PortfolioPage() {
                 <div
                   style={{
                     borderRadius: 10,
-                    border: "var(--border-subtle)",
+                    border: "1px solid var(--hair)",
                     overflow: "hidden",
-                    backgroundColor: "var(--surface-white)",
+                    backgroundColor: "var(--surface)",
                   }}
                 >
                   {selected.attachments.map((att, i) => (
@@ -2626,8 +2635,8 @@ function MiniStat({ label, value, sub }: { label: string; value: string; sub?: s
       style={{
         borderRadius: 10,
         padding: "12px 14px",
-        backgroundColor: "var(--surface-white)",
-        boxShadow: "var(--shadow-card)",
+        backgroundColor: "var(--surface-sunk)",
+        border: "1px solid var(--hair)",
       }}
     >
       <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
@@ -2662,8 +2671,8 @@ const modalInputStyle: React.CSSProperties = {
   width: "100%",
   padding: "9px 12px",
   borderRadius: 9,
-  border: "1px solid var(--border-default)",
-  backgroundColor: "var(--surface-white)",
+  border: "1px solid var(--hair-2)",
+  backgroundColor: "var(--surface)",
   fontSize: 13,
   color: "var(--ink)",
   outline: "none",

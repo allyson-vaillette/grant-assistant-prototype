@@ -351,7 +351,7 @@ function DetailPanel({ report }: { report: Report }) {
               cursor: "pointer",
               transition: "background-color 150ms",
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F3F0EA" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
           >
             Edit
@@ -742,7 +742,7 @@ export default function ReportsPage() {
           style={{
             width: 268,
             flexShrink: 0,
-            backgroundColor: "#F3F0EA",
+            backgroundColor: "var(--canvas)",
             borderRight: "var(--border-subtle)",
             overflowY: "auto",
             display: "flex",

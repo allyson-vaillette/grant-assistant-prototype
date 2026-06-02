@@ -146,7 +146,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
               fontSize: 15,
               fontFamily: "var(--font-inter), system-ui, sans-serif",
               color: "var(--ink)",
-              backgroundColor: "var(--surface-white)",
+              backgroundColor: "var(--surface)",
               border: `1.5px solid ${error ? "var(--error)" : "var(--border-default)"}`,
               borderRadius: "var(--radius-input)",
               outline: "none",

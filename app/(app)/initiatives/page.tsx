@@ -293,8 +293,8 @@ function GhostButton({
         gap: 6,
         padding: small ? "5px 10px" : "7px 14px",
         borderRadius: "var(--radius-button)",
-        border: "var(--border-subtle)",
-        backgroundColor: "var(--surface-white)",
+        border: "1px solid var(--hair-2)",
+        backgroundColor: "var(--surface)",
         color: "var(--ink-secondary)",
         fontSize: small ? 12 : 13,
         fontWeight: 400,
@@ -304,7 +304,7 @@ function GhostButton({
         whiteSpace: "nowrap",
       }}
       onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface-white)" }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface)" }}
     >
       {children}
     </button>
@@ -417,7 +417,7 @@ function GeographyInput({ value, onChange }: { value: Geography; onChange: (v: G
     top: "calc(100% + 4px)",
     left: 0,
     right: 0,
-    backgroundColor: "var(--surface-white)",
+    backgroundColor: "var(--surface)",
     borderRadius: 8,
     boxShadow: "0 4px 16px rgba(42,42,42,0.12)",
     zIndex: 300,
@@ -434,8 +434,8 @@ function GeographyInput({ value, onChange }: { value: Geography; onChange: (v: G
     justifyContent: "space-between",
     padding: "8px 12px",
     borderRadius: 8,
-    border: "var(--border-subtle)",
-    backgroundColor: "var(--surface-white)",
+    border: "1px solid var(--hair-2)",
+    backgroundColor: "var(--surface)",
     fontSize: 13,
     cursor: "pointer",
     textAlign: "left",
@@ -472,7 +472,7 @@ function GeographyInput({ value, onChange }: { value: Geography; onChange: (v: G
                   padding: "7px 14px",
                   border: "none",
                   borderRight: idx < 2 ? "1px solid var(--border-default)" : "none",
-                  backgroundColor: active ? "var(--slate-primary)" : "var(--surface-white)",
+                  backgroundColor: active ? "var(--slate-primary)" : "var(--surface)",
                   color: active ? "#FFFFFF" : "var(--ink-secondary)",
                   fontSize: 12,
                   fontWeight: active ? 600 : 400,
@@ -594,7 +594,7 @@ function MultiSelectDropdown({ label, options, value, onChange, placeholder }: {
         {label}
       </label>
       <button type="button" onClick={() => setOpen((o) => !o)}
-        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", fontSize: 13, color: value.length ? "var(--ink)" : "var(--ink-tertiary)", cursor: "pointer", textAlign: "left" }}
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)", fontSize: 13, color: value.length ? "var(--ink)" : "var(--ink-tertiary)", cursor: "pointer", textAlign: "left" }}
       >
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
           {value.length === 0 ? placeholder : value.length === 1 ? value[0] : `${value.length} selected`}
@@ -602,7 +602,7 @@ function MultiSelectDropdown({ label, options, value, onChange, placeholder }: {
         <ChevronDown size={14} color="var(--ink-tertiary)" />
       </button>
       {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, backgroundColor: "var(--surface-white)", borderRadius: 8, boxShadow: "0 4px 16px rgba(42,42,42,0.12)", zIndex: 300, maxHeight: 220, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, backgroundColor: "var(--surface)", borderRadius: 8, boxShadow: "0 4px 16px rgba(42,42,42,0.12)", zIndex: 300, maxHeight: 220, overflow: "hidden", display: "flex", flexDirection: "column" }}>
           <div style={{ padding: "8px 8px 0" }}>
             <input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)}
               style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border-default)", fontSize: 12, outline: "none", boxSizing: "border-box" as const, backgroundColor: "var(--canvas)" }}
@@ -685,7 +685,7 @@ function CreateInitiativeModal({
       style={{ position: "fixed", inset: 0, backgroundColor: "rgba(42,42,42,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 400 }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div style={{ width: 600, maxWidth: "90vw", maxHeight: "90vh", backgroundColor: "var(--surface-white)", borderRadius: 12, boxShadow: "0 16px 48px rgba(42,42,42,0.18)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ width: 600, maxWidth: "90vw", maxHeight: "90vh", backgroundColor: "var(--surface)", borderRadius: 12, boxShadow: "0 16px 48px rgba(42,42,42,0.18)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
         {/* Header */}
         <div style={{ padding: "20px 24px 16px", borderBottom: "var(--border-subtle)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexShrink: 0 }}>
@@ -714,7 +714,7 @@ function CreateInitiativeModal({
                 Name <span style={{ color: "var(--error)" }}>*</span>
               </label>
               <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Rescue & Intake Program"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", backgroundColor: "var(--surface-white)", outline: "none", boxSizing: "border-box" as const }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid var(--hair-2)", fontSize: 13, color: "var(--ink)", backgroundColor: "var(--surface)", outline: "none", boxSizing: "border-box" as const }}
               />
             </div>
 
@@ -724,7 +724,7 @@ function CreateInitiativeModal({
                 Description <span style={{ color: "var(--error)" }}>*</span>
               </label>
               <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="One sentence describing this program area"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", backgroundColor: "var(--surface-white)", outline: "none", boxSizing: "border-box" as const }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid var(--hair-2)", fontSize: 13, color: "var(--ink)", backgroundColor: "var(--surface)", outline: "none", boxSizing: "border-box" as const }}
               />
             </div>
 
@@ -753,7 +753,7 @@ function CreateInitiativeModal({
                 <select
                   value={parentId ?? ""}
                   onChange={(e) => setParentId(e.target.value || null)}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid var(--border-default)", fontSize: 13, color: parentId ? "var(--ink)" : "var(--ink-tertiary)", backgroundColor: "var(--surface-white)", outline: "none", boxSizing: "border-box" as const, cursor: "pointer" }}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid var(--hair-2)", fontSize: 13, color: parentId ? "var(--ink)" : "var(--ink-tertiary)", backgroundColor: "var(--surface)", outline: "none", boxSizing: "border-box" as const, cursor: "pointer" }}
                 >
                   <option value="">None — standalone initiative</option>
                   {parentOptions.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
@@ -802,7 +802,7 @@ function InlineEditModal({
       style={{ position: "fixed", inset: 0, backgroundColor: "rgba(42,42,42,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 500 }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div style={{ width: 580, backgroundColor: "var(--surface-white)", borderRadius: 12, boxShadow: "0 16px 48px rgba(42,42,42,0.18)", overflow: "hidden" }}>
+      <div style={{ width: 580, backgroundColor: "var(--surface)", borderRadius: 12, boxShadow: "0 16px 48px rgba(42,42,42,0.18)", overflow: "hidden" }}>
         <div style={{ padding: "18px 20px 14px", borderBottom: "var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 500, fontFamily: "var(--font-lora)", color: "var(--ink)" }}>{label}</h3>
           <button type="button" onClick={onClose} style={{ width: 28, height: 28, borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -811,7 +811,7 @@ function InlineEditModal({
         </div>
         <div style={{ padding: 20 }}>
           <textarea ref={ref} value={text} onChange={(e) => setText(e.target.value)} rows={6}
-            style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", backgroundColor: "var(--canvas)", outline: "none", resize: "vertical" as const, lineHeight: "20px", boxSizing: "border-box" as const, fontFamily: "inherit" }}
+            style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--hair-2)", fontSize: 13, color: "var(--ink)", backgroundColor: "var(--surface-sunk)", outline: "none", resize: "vertical" as const, lineHeight: "20px", boxSizing: "border-box" as const, fontFamily: "inherit" }}
           />
         </div>
         <div style={{ padding: "0 20px 20px", display: "flex", gap: 10, justifyContent: "flex-end" }}>
@@ -1002,14 +1002,14 @@ function EvidenceTab({ initiative }: { initiative: Initiative }) {
           No evidence items yet. Add proof points, statistics, and outcomes tied to this initiative.
         </div>
       ) : (
-        <div style={{ borderRadius: 10, boxShadow: "var(--shadow-card)", overflow: "hidden" }}>
+        <div style={{ borderRadius: 10, border: "1px solid var(--hair)", overflow: "hidden" }}>
           {items.map((item, i) => {
             const isLast = i === items.length - 1
             const isOpen = expanded === item.id
             return (
               <div key={item.id} style={{ borderBottom: isLast ? "none" : "var(--border-subtle)" }}>
                 <button type="button" onClick={() => setExpanded(isOpen ? null : item.id)}
-                  style={{ width: "100%", display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "14px 16px", border: "none", backgroundColor: isOpen ? "var(--canvas)" : "var(--surface-white)", cursor: "pointer", textAlign: "left", gap: 12, transition: "background-color 150ms" }}
+                  style={{ width: "100%", display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "14px 16px", border: "none", backgroundColor: isOpen ? "var(--canvas)" : "#FFFFFF", cursor: "pointer", textAlign: "left", gap: 12, transition: "background-color 150ms" }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{item.title}</p>
@@ -1048,15 +1048,15 @@ function MatchedTab({ initiative }: { initiative: Initiative }) {
           No matched opportunities yet. New opportunities will appear here as they&rsquo;re discovered.
         </div>
       ) : (
-        <div style={{ borderRadius: 10, boxShadow: "var(--shadow-card)", overflow: "hidden" }}>
+        <div style={{ borderRadius: 10, border: "1px solid var(--hair)", overflow: "hidden" }}>
           {opps.map((opp, i) => {
             const isLast = i === opps.length - 1
             const badge = stageColors(opp.stage)
             return (
               <Link key={opp.id} href={`/opportunity/${opp.id}`}
-                style={{ display: "flex", alignItems: "center", padding: "14px 16px", borderBottom: isLast ? "none" : "var(--border-subtle)", backgroundColor: "var(--surface-white)", textDecoration: "none", gap: 12, transition: "background-color 150ms" }}
+                style={{ display: "flex", alignItems: "center", padding: "14px 16px", borderBottom: isLast ? "none" : "var(--border-subtle)", backgroundColor: "#FFFFFF", textDecoration: "none", gap: 12, transition: "background-color 150ms" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "var(--canvas)" }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "var(--surface-white)" }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "#FFFFFF" }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{opp.name}</p>
@@ -1099,14 +1099,14 @@ function SubInitiativesTab({ parentId, initiatives, onSelect, onNewSub }: {
           No sub-initiatives yet. Add one to group related program areas under this initiative.
         </div>
       ) : (
-        <div style={{ borderRadius: 10, boxShadow: "var(--shadow-card)", overflow: "hidden" }}>
+        <div style={{ borderRadius: 10, border: "1px solid var(--hair)", overflow: "hidden" }}>
           {children.map((child, i) => {
             const isLast = i === children.length - 1
             return (
               <button key={child.id} type="button" onClick={() => onSelect(child.id)}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", border: "none", borderBottom: isLast ? "none" : "var(--border-subtle)", backgroundColor: "var(--surface-white)", cursor: "pointer", textAlign: "left", transition: "background-color 150ms" }}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", border: "none", borderBottom: isLast ? "none" : "var(--border-subtle)", backgroundColor: "#FFFFFF", cursor: "pointer", textAlign: "left", transition: "background-color 150ms" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface-white)" }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#FFFFFF" }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{child.name}</p>
@@ -1189,7 +1189,7 @@ function InitiativeDetail({
       )}
 
       {/* Header */}
-      <div style={{ flexShrink: 0, borderBottom: "var(--border-subtle)", backgroundColor: "var(--surface-white)", padding: "16px 32px 0" }}>
+      <div style={{ flexShrink: 0, borderBottom: "var(--border-subtle)", backgroundColor: "var(--surface)", padding: "16px 32px 0" }}>
 
         {/* Breadcrumb */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
@@ -1307,7 +1307,7 @@ function InitiativeRow({ initiative, onClick, onArchive, onRestore, indented }: 
         paddingLeft: indented ? 48 : 20,
         borderBottom: "var(--border-subtle)",
         cursor: "pointer",
-        backgroundColor: hovered ? "var(--slate-tint)" : (initiative.isArchived ? "#F8F4EE" : "var(--surface-white)"),
+        backgroundColor: hovered ? "var(--slate-tint)" : "#FFFFFF",
         transition: "background-color 150ms",
         opacity: initiative.isArchived ? 0.8 : 1,
         gap: 16,
@@ -1357,13 +1357,13 @@ function InitiativeRow({ initiative, onClick, onArchive, onRestore, indented }: 
         >
           {initiative.isArchived ? (
             <button type="button" title="Restore" onClick={onRestore}
-              style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", cursor: "pointer" }}
+              style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--hair)", backgroundColor: "var(--surface)", cursor: "pointer" }}
             >
               <ArchiveRestore size={13} color="var(--evergreen)" />
             </button>
           ) : (
             <button type="button" title="Archive" onClick={onArchive}
-              style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", cursor: "pointer" }}
+              style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--hair)", backgroundColor: "var(--surface)", cursor: "pointer" }}
             >
               <Archive size={13} color="var(--ink-secondary)" />
             </button>
@@ -1422,7 +1422,7 @@ function InitiativesList({ initiatives, onSelect, onArchive, onRestore, onNew }:
     <div className="flex flex-1 flex-col" style={{ overflow: "hidden", minHeight: 0 }}>
 
       {/* Page header */}
-      <div style={{ flexShrink: 0, padding: "20px 32px 14px", borderBottom: "var(--border-subtle)", backgroundColor: "var(--surface-white)" }}>
+      <div style={{ flexShrink: 0, padding: "20px 32px 14px", borderBottom: "var(--border-subtle)", backgroundColor: "var(--surface)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <h1 style={{ margin: 0, fontSize: 24, fontWeight: 500, fontFamily: "var(--font-lora)", color: "var(--ink)", letterSpacing: "-0.02em", lineHeight: "30px" }}>
@@ -1444,7 +1444,7 @@ function InitiativesList({ initiatives, onSelect, onArchive, onRestore, onNew }:
             <Search size={14} color="var(--ink-tertiary)" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
             <input
               type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search initiatives..."
-              style={{ width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, borderRadius: 8, border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", backgroundColor: "var(--surface-white)", outline: "none", boxSizing: "border-box" as const }}
+              style={{ width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, borderRadius: 8, border: "1px solid var(--hair-2)", fontSize: 13, color: "var(--ink)", backgroundColor: "var(--surface)", outline: "none", boxShadow: "var(--lift-1)", boxSizing: "border-box" as const }}
             />
           </div>
 
@@ -1453,8 +1453,8 @@ function InitiativesList({ initiatives, onSelect, onArchive, onRestore, onNew }:
             <button type="button" onClick={() => setFocusOpen((o) => !o)}
               style={{
                 display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 8,
-                border: `1px solid ${focusFilter.length ? "var(--slate-primary)" : "var(--border-default)"}`,
-                backgroundColor: focusFilter.length ? "var(--slate-tint)" : "var(--surface-white)",
+                border: `1px solid ${focusFilter.length ? "var(--slate-primary)" : "var(--hair-2)"}`,
+                backgroundColor: focusFilter.length ? "var(--slate-tint)" : "var(--surface)",
                 color: focusFilter.length ? "var(--slate-primary)" : "var(--ink-secondary)",
                 fontSize: 13, cursor: "pointer", transition: "all 150ms",
               }}
@@ -1469,7 +1469,7 @@ function InitiativesList({ initiatives, onSelect, onArchive, onRestore, onNew }:
               <ChevronDown size={13} />
             </button>
             {focusOpen && (
-              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, minWidth: 210, backgroundColor: "var(--surface-white)", borderRadius: 8, boxShadow: "0 4px 16px rgba(42,42,42,0.12)", zIndex: 200, padding: "4px 0" }}>
+              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, minWidth: 210, backgroundColor: "var(--surface)", borderRadius: 8, boxShadow: "0 4px 16px rgba(42,42,42,0.12)", zIndex: 200, padding: "4px 0" }}>
                 {FOCUS_AREAS.map((fa) => {
                   const sel = focusFilter.includes(fa)
                   return (
@@ -1502,8 +1502,8 @@ function InitiativesList({ initiatives, onSelect, onArchive, onRestore, onNew }:
               return (
                 <button key={v} type="button" onClick={() => setView(v)}
                   style={{
-                    padding: "7px 16px", border: "none", borderRight: idx === 0 ? "1px solid var(--border-default)" : "none",
-                    backgroundColor: active ? "var(--slate-primary)" : "var(--surface-white)",
+                    padding: "7px 16px", border: "none", borderRight: idx === 0 ? "1px solid var(--hair)" : "none",
+                    backgroundColor: active ? "var(--slate-primary)" : "var(--surface)",
                     color: active ? "#FFFFFF" : "var(--ink-secondary)",
                     fontSize: 12, fontWeight: active ? 600 : 400, cursor: "pointer",
                     transition: "background-color 150ms, color 150ms", textTransform: "capitalize" as const,
@@ -1541,7 +1541,7 @@ function InitiativesList({ initiatives, onSelect, onArchive, onRestore, onNew }:
             </div>
 
             {/* Rows */}
-            <div style={{ backgroundColor: "var(--surface-white)" }}>
+            <div style={{ backgroundColor: "#FFFFFF" }}>
               {ordered.map(({ initiative, indented }) => (
                 <InitiativeRow
                   key={initiative.id}

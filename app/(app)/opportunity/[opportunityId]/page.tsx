@@ -233,16 +233,16 @@ function StageControl({ stage, onChange }: { stage: Stage; onChange: (s: Stage) 
   return (
     <div style={{ position: "relative", flexShrink: 0 }}>
       <button type="button" onClick={() => setOpen((v) => !v)}
-        style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 8, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", cursor: "pointer", transition: "background-color 150ms" }}
+        style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 8, border: "var(--border-subtle)", backgroundColor: "var(--surface)", cursor: "pointer", transition: "background-color 150ms" }}
         onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface-white)" }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface)" }}
       >
         <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: dot, flexShrink: 0 }} />
         <span style={{ fontSize: 12, fontWeight: 500, borderRadius: 20, padding: "2px 8px", backgroundColor: badge.bg, color: badge.color }}>{stage}</span>
         <ChevronDown size={12} color="var(--ink-tertiary)" style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 150ms" }} />
       </button>
       {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)", borderRadius: 10, boxShadow: "var(--elevation-raised)", zIndex: 50, minWidth: 160, overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, backgroundColor: "var(--surface)", border: "var(--border-subtle)", borderRadius: 10, boxShadow: "var(--elevation-raised)", zIndex: 50, minWidth: 160, overflow: "hidden" }}>
           {nextStages.map((s) => {
             const b = STAGE_BADGE[s]
             return (
@@ -388,7 +388,7 @@ function StageChangeModal({ open, pendingStage, onConfirm, onAddTasks, onSkip, o
             <div style={{ padding: "12px 24px", display: "flex", flexDirection: "column", gap: 8 }}>
               {suggestions.map((s, i) => (
                 <label key={i}
-                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8, border: "var(--border-subtle)", cursor: "pointer", backgroundColor: checked[i] !== false ? "var(--slate-tint)" : "var(--surface-white)", transition: "background-color 150ms" }}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8, border: "var(--border-subtle)", cursor: "pointer", backgroundColor: checked[i] !== false ? "var(--slate-tint)" : "var(--surface)", transition: "background-color 150ms" }}
                 >
                   <input
                     type="checkbox"
@@ -502,7 +502,7 @@ function CoachingSection({ lessons, onLessonsChange }: { lessons: LessonsLearned
 
   const textareaStyle: React.CSSProperties = {
     width: "100%", padding: "9px 12px", borderRadius: 8, border: "var(--border-subtle)",
-    backgroundColor: "var(--surface-white)", fontSize: 13, color: "var(--ink)", outline: "none",
+    backgroundColor: "var(--surface)", fontSize: 13, color: "var(--ink)", outline: "none",
     resize: "vertical" as const, lineHeight: "19px", boxSizing: "border-box" as const, fontFamily: "inherit", minHeight: 72,
   }
 
@@ -536,7 +536,7 @@ function CoachingSection({ lessons, onLessonsChange }: { lessons: LessonsLearned
         ))}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button type="button" onClick={handleGenerate} disabled={generating}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", fontSize: 13, fontWeight: 500, color: "var(--slate-primary)", cursor: generating ? "not-allowed" : "pointer", opacity: generating ? 0.7 : 1 }}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "var(--border-subtle)", backgroundColor: "var(--surface)", fontSize: 13, fontWeight: 500, color: "var(--slate-primary)", cursor: generating ? "not-allowed" : "pointer", opacity: generating ? 0.7 : 1 }}
           >
             {generating ? <Loader2 size={13} style={{ animation: "ga-spin 1s linear infinite" }} /> : <Sparkles size={13} />}
             {generating ? "Generating..." : "Generate insights with AI"}
@@ -630,7 +630,7 @@ function TasksTab({ tasks, onAddTask, onUpdateTask, proposals, stage, onNavigate
 
   const inputStyle: React.CSSProperties = {
     padding: "6px 10px", borderRadius: 7, border: "var(--border-subtle)",
-    fontSize: 13, color: "var(--ink)", backgroundColor: "var(--surface-white)", outline: "none",
+    fontSize: 13, color: "var(--ink)", backgroundColor: "var(--surface)", outline: "none",
     fontFamily: "inherit", boxSizing: "border-box" as const,
   }
 
@@ -810,7 +810,7 @@ function TasksTab({ tasks, onAddTask, onUpdateTask, proposals, stage, onNavigate
     <div>
       {/* Add task inline form */}
       {isAdding ? (
-        <div style={{ marginBottom: 12, padding: "12px 16px", borderRadius: 10, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)" }}>
+        <div style={{ marginBottom: 12, padding: "12px 16px", borderRadius: 10, backgroundColor: "var(--surface)", border: "var(--border-subtle)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: addExpanded ? 10 : 0 }}>
             <input ref={addInputRef} type="text" value={addName} onChange={(e) => setAddName(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitAdd() } if (e.key === "Escape") cancelAdding() }}
@@ -885,7 +885,7 @@ function TasksTab({ tasks, onAddTask, onUpdateTask, proposals, stage, onNavigate
       {!hasActiveTasks && doneTasks.length === 0 ? (
         <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>No tasks yet. Add one above.</p>
       ) : (
-        <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", overflow: "hidden", boxShadow: "var(--elevation-card)" }}>
+        <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface)", overflow: "hidden", boxShadow: "var(--elevation-card)" }}>
           {/* Overdue */}
           {overdueTasks.length > 0 && renderSection("Overdue", overdueTasks, "#8B2020")}
           {/* To Do */}
@@ -938,7 +938,7 @@ function BudgetTab({ awardedAmount, expenses, onAddExpense, onUpdateExpense, onD
     setEditingId(null); setDraft(null)
   }
 
-  const editInputStyle: React.CSSProperties = { padding: "6px 10px", borderRadius: 6, border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", backgroundColor: "var(--surface-white)", outline: "none", width: "100%", boxSizing: "border-box" as const }
+  const editInputStyle: React.CSSProperties = { padding: "6px 10px", borderRadius: 6, border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", backgroundColor: "var(--surface)", outline: "none", width: "100%", boxSizing: "border-box" as const }
 
   function renderEditRow(borderBottom: string) {
     if (!draft) return null
@@ -1015,7 +1015,7 @@ function BudgetTab({ awardedAmount, expenses, onAddExpense, onUpdateExpense, onD
             <button type="button" onClick={startNew} style={{ marginTop: 4, padding: "7px 16px", borderRadius: 7, border: "none", backgroundColor: "var(--slate-primary)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>+ Add expense</button>
           </div>
         ) : (
-          <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", overflow: "hidden", boxShadow: "var(--elevation-card)" }}>
+          <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface)", overflow: "hidden", boxShadow: "var(--elevation-card)" }}>
             {expenses.map((expense, i) => {
               const isEditing = editingId === expense.id
               const isDeleting = deletingId === expense.id
@@ -1024,7 +1024,7 @@ function BudgetTab({ awardedAmount, expenses, onAddExpense, onUpdateExpense, onD
               if (isEditing && draft) return <div key={expense.id}>{renderEditRow(borderBottom)}</div>
               return (
                 <div key={expense.id}
-                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 18px", borderBottom, backgroundColor: isDeleting ? "var(--canvas)" : "var(--surface-white)", transition: "background-color 150ms" }}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 18px", borderBottom, backgroundColor: isDeleting ? "var(--canvas)" : "var(--surface)", transition: "background-color 150ms" }}
                   onMouseEnter={() => { if (!isDeleting) setHoveredRow(expense.id) }}
                   onMouseLeave={() => setHoveredRow(null)}
                 >
@@ -1076,7 +1076,7 @@ function NoteEditor({ initialText = "", placeholder = "Add a note...", saveLabel
       <textarea ref={ref} value={text} onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (text.trim()) onSave(text.trim()) } }}
         placeholder={placeholder} rows={3}
-        style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", fontSize: 13, color: "var(--ink)", outline: "none", resize: "none" as const, lineHeight: "19px", boxSizing: "border-box" as const, fontFamily: "inherit" }}
+        style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "var(--border-subtle)", backgroundColor: "var(--surface)", fontSize: 13, color: "var(--ink)", outline: "none", resize: "none" as const, lineHeight: "19px", boxSizing: "border-box" as const, fontFamily: "inherit" }}
       />
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
         <button type="button" onClick={() => { if (text.trim()) onSave(text.trim()) }}
@@ -1110,7 +1110,7 @@ function NotesTab({ notes, composerOpen, onComposerChange, onAddNote, onEditNote
         >+ Add note</button>
       </div>
       {composerOpen && (
-        <div style={{ marginBottom: 12, padding: "14px 16px", borderRadius: 10, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)" }}>
+        <div style={{ marginBottom: 12, padding: "14px 16px", borderRadius: 10, backgroundColor: "var(--surface)", border: "var(--border-subtle)" }}>
           <NoteEditor placeholder="Add a note..." saveLabel="Save note" onSave={handleSave} onCancel={handleCancelComposer} />
         </div>
       )}
@@ -1121,7 +1121,7 @@ function NotesTab({ notes, composerOpen, onComposerChange, onAddNote, onEditNote
           {notes.map((note) => (
             <div key={note.id} style={{ position: "relative" }} onMouseEnter={() => setHoveredNoteId(note.id)} onMouseLeave={() => setHoveredNoteId(null)}>
               {editingNoteId === note.id ? (
-                <div style={{ padding: "14px 16px", borderRadius: 10, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)" }}>
+                <div style={{ padding: "14px 16px", borderRadius: 10, backgroundColor: "var(--surface)", border: "var(--border-subtle)" }}>
                   <NoteEditor initialText={note.text} saveLabel="Save" onSave={(text) => { onEditNote(note.id, text); setEditingNoteId(null) }} onCancel={() => setEditingNoteId(null)} />
                 </div>
               ) : (
@@ -1304,7 +1304,7 @@ function ReportSetupModal({
               Report type <span style={{ color: "var(--error)" }}>*</span>
             </label>
             <div
-              style={{ display: "flex", border: `1px solid ${submitted && errors.type ? "var(--error)" : "var(--border-default)"}`, borderRadius: 9, overflow: "hidden", backgroundColor: "var(--surface-white)" }}
+              style={{ display: "flex", border: `1px solid ${submitted && errors.type ? "var(--error)" : "var(--border-default)"}`, borderRadius: 9, overflow: "hidden", backgroundColor: "var(--surface)" }}
             >
               {reportTypes.map((t) => (
                 <button
@@ -1341,14 +1341,14 @@ function ReportSetupModal({
                 type="date"
                 value={periodStart}
                 onChange={(e) => { setPeriodStart(e.target.value); setErrors((er) => ({ ...er, period: undefined })) }}
-                style={{ flex: 1, padding: "9px 12px", borderRadius: 9, border: `1px solid ${submitted && errors.period ? "var(--error)" : "var(--border-default)"}`, fontSize: 13, color: "var(--ink)", outline: "none", backgroundColor: "var(--surface-white)" }}
+                style={{ flex: 1, padding: "9px 12px", borderRadius: 9, border: `1px solid ${submitted && errors.period ? "var(--error)" : "var(--border-default)"}`, fontSize: 13, color: "var(--ink)", outline: "none", backgroundColor: "var(--surface)" }}
               />
               <span style={{ fontSize: 13, color: "var(--ink-tertiary)", flexShrink: 0 }}>to</span>
               <input
                 type="date"
                 value={periodEnd}
                 onChange={(e) => { setPeriodEnd(e.target.value); setErrors((er) => ({ ...er, period: undefined })) }}
-                style={{ flex: 1, padding: "9px 12px", borderRadius: 9, border: `1px solid ${submitted && errors.period ? "var(--error)" : "var(--border-default)"}`, fontSize: 13, color: "var(--ink)", outline: "none", backgroundColor: "var(--surface-white)" }}
+                style={{ flex: 1, padding: "9px 12px", borderRadius: 9, border: `1px solid ${submitted && errors.period ? "var(--error)" : "var(--border-default)"}`, fontSize: 13, color: "var(--ink)", outline: "none", backgroundColor: "var(--surface)" }}
               />
             </div>
             {submitted && errors.period && <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--error)" }}>{errors.period}</p>}
@@ -1363,7 +1363,7 @@ function ReportSetupModal({
               type="date"
               value={dueDate}
               onChange={(e) => { setDueDate(e.target.value); setErrors((er) => ({ ...er, dueDate: undefined })) }}
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: `1px solid ${submitted && errors.dueDate ? "var(--error)" : "var(--border-default)"}`, fontSize: 13, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const, backgroundColor: "var(--surface-white)" }}
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: `1px solid ${submitted && errors.dueDate ? "var(--error)" : "var(--border-default)"}`, fontSize: 13, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const, backgroundColor: "var(--surface)" }}
             />
             {submitted && errors.dueDate && <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--error)" }}>{errors.dueDate}</p>}
           </div>
@@ -1376,7 +1376,7 @@ function ReportSetupModal({
               value={reportName}
               onChange={(e) => { setReportName(e.target.value); setNameEdited(true) }}
               placeholder="Report name (auto-filled from type and period)"
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const, backgroundColor: "var(--surface-white)" }}
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const, backgroundColor: "var(--surface)" }}
             />
           </div>
 
@@ -1598,7 +1598,7 @@ function ReportsTab({
             return (
               <div
                 key={report.id}
-                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderRadius: 12, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)", boxShadow: "var(--elevation-card)" }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderRadius: 12, backgroundColor: "var(--surface)", border: "var(--border-subtle)", boxShadow: "var(--elevation-card)" }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 32, height: 32, borderRadius: 7, backgroundColor: "var(--slate-tint)", border: "var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -1670,7 +1670,7 @@ function OverviewTab({ proposals, onNewProposal }: { proposals: Proposal[]; onNe
           ) : proposals.map((p) => {
             const badge = PROPOSAL_STATUS_STYLE[p.status]
             return (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", boxShadow: "var(--elevation-card)" }}>
+              <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderRadius: "var(--radius-card)", backgroundColor: "var(--surface)", boxShadow: "var(--elevation-card)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 32, height: 32, borderRadius: 7, backgroundColor: "var(--slate-tint)", border: "var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <FileText size={14} color="var(--slate-secondary)" />
@@ -1815,7 +1815,7 @@ function OpportunityDetailContent() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto" style={{ backgroundColor: "var(--surface-white)" }}>
+    <div className="flex-1 overflow-y-auto" style={{ backgroundColor: "var(--surface)" }}>
       <Toast message={toast.msg} visible={toast.visible} />
       <NewProposalModal open={modalOpen} onClose={() => setModalOpen(false)} opportunityName={opportunityName} opportunityId={opportunityId} />
       <ShareModal open={shareModalOpen} onClose={() => setShareModalOpen(false)} onShare={handleShare} />
@@ -1837,7 +1837,7 @@ function OpportunityDetailContent() {
       />
 
       {/* Breadcrumb */}
-      <div style={{ padding: "12px 32px", borderBottom: "var(--border-subtle)", backgroundColor: "var(--surface-white)" }}>
+      <div style={{ padding: "12px 32px", borderBottom: "var(--border-subtle)", backgroundColor: "var(--surface)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
           <Link href="/home" style={{ fontSize: 13, color: "var(--ink-tertiary)", textDecoration: "none" }}>Home</Link>
           <span style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>›</span>
@@ -1849,7 +1849,7 @@ function OpportunityDetailContent() {
       </div>
 
       {/* Page header */}
-      <div style={{ padding: "24px 32px 0", backgroundColor: "var(--surface-white)", borderBottom: "var(--border-subtle)" }}>
+      <div style={{ padding: "24px 32px 0", backgroundColor: "var(--surface)", borderBottom: "var(--border-subtle)" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 500, letterSpacing: "-0.02em", lineHeight: "32px", color: "var(--ink)", fontFamily: "var(--font-lora)" }}>
             {opportunityName}

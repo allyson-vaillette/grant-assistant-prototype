@@ -109,7 +109,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Table */}
-            <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", boxShadow: "var(--shadow-card)", overflow: "hidden" }}>
+            <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface)", border: "1px solid var(--hair)", overflow: "hidden" }}>
               {/* Header row */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px", padding: "10px 20px", backgroundColor: "var(--canvas)", borderBottom: "var(--border-subtle)" }}>
                 <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Notification type</span>
