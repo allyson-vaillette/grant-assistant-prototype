@@ -17,45 +17,56 @@
 
     /* ── Primary accent — Slate Blue ── */
     --slate-primary:   #4A6080;  /* CTA buttons, active nav, primary actions */
-    --slate-secondary: #6B819E;  /* secondary elements, links */
-    --slate-soft:      #A6B3C5;  /* muted UI, stage dots */
+    --slate-secondary: #4D6585;  /* secondary elements, links — AA on cream */
+    --slate-soft:      #738498;  /* muted UI, stage dots — 3:1 on cream */
     --slate-tint:      #EBF0F5;  /* icon bg, badge bg, hover fills */
     --slate-light:     #E0E8F2;  /* light badge bg */
 
     /* ── Supporting accents ── */
     --evergreen:        #3C5E4C;  /* Awarded stage, success, positive stat */
     --evergreen-tint:   #E0EDE6;  /* Awarded badge bg, success bg */
-    --terracotta:       #D19A66;  /* Reporting stage, warm accent */
+    --terracotta:       #7A521C;  /* Reporting stage, warm accent — AA on tint */
     --terracotta-tint:  #F5EAD8;  /* Reporting badge bg */
-    --plum-soft:        #AD9DAE;  /* Submitted stage only */
+    --plum-soft:        #7B5E7C;  /* Submitted stage — AA on plum-tint */
     --plum-tint:        #F2EDF3;  /* Submitted badge bg */
 
     /* ── Status / semantic ── */
-    --amber:        #C47A10;
+    --amber:        #895412;   /* warning text — AA on amber-light */
     --amber-light:  #FEF3DC;
     --error:        #B91C1C;
     --error-light:  #FDE8E8;
 
     /* ── Borders ── */
-    --border-default: #E0DBE1;
+    --border-default: #8B8598;  /* 3:1 on cream and white — inputs and meaningful UI affordances */
+    --border-subtle:  1px solid rgba(42, 42, 42, 0.08);  /* card outlines, dividers, row separators */
 
     /* ── Ink — text hierarchy ── */
     --ink:           #2A2A2A;   /* primary text (charcoal) */
-    --ink-secondary: #6B819E;   /* secondary text — slate secondary */
-    --ink-tertiary:  #A6B3C5;   /* placeholder, disabled — slate soft */
+    --ink-secondary: #4D6585;   /* secondary text — AA 5.5:1 on cream */
+    --ink-tertiary:  #738498;   /* placeholder, disabled — 3:1 on cream */
 
     /* ── AI Gradients — slate-to-plum identity signal ── */
-    --gradient-ai-hero:    linear-gradient(135deg, #1E2D45 0%, #2D4A6B 50%, #4A2F4C 100%);
-    --gradient-ai-wash:    linear-gradient(135deg, rgba(74,96,128,0.06) 0%, rgba(74,47,76,0.06) 100%);
-    --gradient-ai-sidebar: linear-gradient(135deg, #1E2D45 0%, #3A2E4A 100%);
-    --gradient-avatar:     linear-gradient(135deg, #4A6080, #AD9DAE);
+    /* Widened hue travel: deep indigo-navy → deep violet-plum */
+    --gradient-ai-hero:    linear-gradient(135deg, #1B3060 0%, #4C1E5C 100%);
+    --gradient-ai-cta:     linear-gradient(135deg, #1B3060 0%, #4C1E5C 100%);
+    --gradient-ai-wash:    linear-gradient(135deg, rgba(27,48,96,0.09) 0%, rgba(76,30,92,0.09) 100%);
+    --gradient-ai-sidebar: linear-gradient(135deg, #1A2E5C 0%, #3D1A4C 100%);
+    --gradient-ai-rail:    linear-gradient(180deg, #1B3060 0%, #4C1E5C 100%);
+    --gradient-avatar:     linear-gradient(135deg, #4A6080, #7B5E7C);
+
+    /* ── Elevation — layered warm-tinted shadows ── */
+    --shadow-card:       0 1px 2px rgba(42,42,42,0.04), 0 2px 8px rgba(42,42,42,0.05);
+    --elevation-card:    0 1px 2px rgba(33,29,24,0.04), 0 10px 24px rgba(33,29,24,0.08);
+    --elevation-raised:  0 2px 4px rgba(33,29,24,0.05), 0 18px 40px rgba(33,29,24,0.12);
+    --elevation-overlay: 0 8px 16px rgba(33,29,24,0.10), 0 30px 60px rgba(33,29,24,0.18);
 
     /* ── Radius ── */
     --radius-pill:       20px;
-    --radius-card:       12px;
+    --radius-card:       16px;  /* increased for modern feel */
     --radius-button:     8px;
     --radius-input:      9px;
     --radius-icon-tile:  7px;
+    --radius-panel:      16px;
 
     /* ────────────────────────────────────────────
        shadcn/ui compatibility (HSL channel values)
@@ -71,7 +82,7 @@
     --secondary:               210 30% 93%;  /* slate-tint #EBF0F5 */
     --secondary-foreground:    216 27% 40%;
     --muted:                   210 20% 95%;
-    --muted-foreground:        213 20% 51%;  /* slate-secondary */
+    --muted-foreground:        214 15% 41%;  /* ink-secondary #4D6585 */
     --accent:                  210 30% 93%;  /* slate-tint */
     --accent-foreground:       216 27% 40%;
     --destructive:             0 72% 51%;

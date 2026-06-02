@@ -752,7 +752,7 @@ function FunderPanel({
           style={{
             flexShrink: 0,
             padding: "20px 20px 16px",
-            borderBottom: "1px solid var(--border-default)",
+            borderBottom: "var(--border-subtle)",
           }}
         >
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
@@ -781,7 +781,7 @@ function FunderPanel({
                 alignItems: "center",
                 justifyContent: "center",
                 borderRadius: 6,
-                border: "1px solid var(--border-default)",
+                border: "var(--border-subtle)",
                 backgroundColor: "transparent",
                 cursor: "pointer",
                 flexShrink: 0,
@@ -799,7 +799,7 @@ function FunderPanel({
                 fontSize: 11,
                 fontWeight: 500,
                 backgroundColor: "var(--canvas)",
-                border: "1px solid var(--border-default)",
+                border: "var(--border-subtle)",
                 color: "var(--ink-secondary)",
               }}
             >
@@ -843,7 +843,7 @@ function FunderPanel({
                         fontSize: 11,
                         fontWeight: 500,
                         backgroundColor: "var(--canvas)",
-                        border: "1px solid var(--border-default)",
+                        border: "var(--border-subtle)",
                         color: "var(--ink-secondary)",
                       }}
                     >
@@ -863,7 +863,7 @@ function FunderPanel({
                   {funder.description}
                 </p>
               </FunderDetailRow>
-              <div style={{ height: 1, backgroundColor: "var(--border-default)", margin: "4px 0 20px" }} />
+              <div style={{ height: 1, backgroundColor: "rgba(42,42,42,0.08)", margin: "4px 0 20px" }} />
             </>
           )}
 
@@ -891,7 +891,7 @@ function FunderPanel({
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-            <div style={{ borderRadius: 10, padding: "10px 12px", backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)" }}>
+            <div style={{ borderRadius: 10, padding: "10px 12px", backgroundColor: "var(--surface-white)", boxShadow: "var(--shadow-card)" }}>
               <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
                 Total awarded
               </p>
@@ -899,7 +899,7 @@ function FunderPanel({
                 {engagement.stats.awardedLifetime}
               </p>
             </div>
-            <div style={{ borderRadius: 10, padding: "10px 12px", backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)" }}>
+            <div style={{ borderRadius: 10, padding: "10px 12px", backgroundColor: "var(--surface-white)", boxShadow: "var(--shadow-card)" }}>
               <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
                 Active opps
               </p>
@@ -919,7 +919,7 @@ function FunderPanel({
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 {engagement.notes.slice(0, 2).map((note) => (
-                  <div key={note.id} style={{ padding: "9px 12px", borderRadius: 8, backgroundColor: "#FFFFFF", border: "1px solid var(--border-default)" }}>
+                  <div key={note.id} style={{ padding: "9px 12px", borderRadius: 8, backgroundColor: "var(--surface-white)", boxShadow: "var(--shadow-card)" }}>
                     <p style={{ margin: "0 0 3px", fontSize: 12, color: "var(--ink)", lineHeight: "17px" }}>
                       {note.text.length > 90 ? `${note.text.slice(0, 90)}…` : note.text}
                     </p>
@@ -945,7 +945,7 @@ function FunderPanel({
                     justifyContent: "space-between",
                     gap: 8,
                     padding: "8px 0",
-                    borderBottom: i < arr.length - 1 ? "1px solid var(--border-default)" : "none",
+                    borderBottom: i < arr.length - 1 ? "var(--border-subtle)" : "none",
                   }}
                 >
                   <span style={{ fontSize: 12, color: "var(--ink)", flex: 1, lineHeight: "16px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -1074,7 +1074,7 @@ function NewOpportunityModal({
           <button
             type="button"
             onClick={resetAndClose}
-            style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "transparent", cursor: "pointer" }}
+            style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "transparent", cursor: "pointer" }}
           >
             <X size={14} color="var(--ink-secondary)" />
           </button>
@@ -1147,7 +1147,7 @@ function NewOpportunityModal({
         </div>
 
         {/* Footer */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px 20px", borderTop: "1px solid var(--border-default)", flexShrink: 0 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px 20px", borderTop: "var(--border-subtle)", flexShrink: 0 }}>
           <GhostButton onClick={resetAndClose}>Cancel</GhostButton>
           <SlateButton onClick={handleCreate}>Create opportunity</SlateButton>
         </div>
@@ -1255,7 +1255,7 @@ function AwardedMiniStat({ value, history }: { value: string; history: { year: n
         borderRadius: 10,
         padding: "12px 14px",
         backgroundColor: "var(--surface-white)",
-        border: "1px solid var(--border-default)",
+        boxShadow: "var(--shadow-card)",
       }}
     >
       <p
@@ -1348,6 +1348,7 @@ function PortfolioPage() {
   const [showExplainerBanner, setShowExplainerBanner] = useState(false)
   const [showDetailHelpPopover, setShowDetailHelpPopover] = useState(false)
   const [historyExpanded, setHistoryExpanded] = useState(false)
+  const [openTasksExpanded, setOpenTasksExpanded] = useState(false)
   const [_showAddAttachment, setShowAddAttachment] = useState(false)
   const [attachmentDragOver, setAttachmentDragOver] = useState(false)
   const attachmentInputRef = useRef<HTMLInputElement>(null)
@@ -1543,7 +1544,7 @@ function PortfolioPage() {
           width: 340,
           flexShrink: 0,
           backgroundColor: "var(--canvas)",
-          borderRight: "1px solid var(--border-default)",
+          borderRight: "var(--border-subtle)",
           display: "flex",
           flexDirection: "column",
           height: "100%",
@@ -1605,7 +1606,7 @@ function PortfolioPage() {
                         width: 272,
                         backgroundColor: "#FFFFFF",
                         borderRadius: 10,
-                        border: "1px solid var(--border-default)",
+                        border: "var(--border-subtle)",
                         boxShadow: "0 8px 24px rgba(28,24,64,0.12)",
                         padding: "14px 16px",
                         zIndex: 301,
@@ -1653,7 +1654,7 @@ function PortfolioPage() {
               borderRadius: 9,
               padding: "8px 10px",
               backgroundColor: "var(--surface-white)",
-              border: "1px solid var(--border-default)",
+              border: "var(--border-subtle)",
               marginBottom: 8,
             }}
           >
@@ -1688,7 +1689,7 @@ function PortfolioPage() {
                   style={{
                     padding: "3px 10px",
                     borderRadius: 20,
-                    border: active ? "1px solid var(--slate-primary)" : "1px solid var(--border-default)",
+                    border: active ? "1px solid var(--slate-primary)" : "var(--border-subtle)",
                     backgroundColor: active ? "var(--slate-tint)" : "transparent",
                     fontSize: 11,
                     fontWeight: active ? 600 : 400,
@@ -1902,7 +1903,7 @@ function PortfolioPage() {
         <div
           style={{
             padding: "20px 28px 16px",
-            borderBottom: "1px solid var(--border-default)",
+            borderBottom: "var(--border-subtle)",
             backgroundColor: "var(--surface-white)",
           }}
         >
@@ -1962,7 +1963,7 @@ function PortfolioPage() {
                         width: 288,
                         backgroundColor: "#FFFFFF",
                         borderRadius: 10,
-                        border: "1px solid var(--border-default)",
+                        border: "var(--border-subtle)",
                         boxShadow: "0 8px 24px rgba(28,24,64,0.12)",
                         padding: "14px 16px",
                         zIndex: 301,
@@ -2027,7 +2028,7 @@ function PortfolioPage() {
                   fontSize: 12,
                   fontWeight: 400,
                   backgroundColor: "var(--canvas)",
-                  border: "1px solid var(--border-default)",
+                  border: "var(--border-subtle)",
                   color: "var(--ink-secondary)",
                 }}
               >
@@ -2038,18 +2039,63 @@ function PortfolioPage() {
         </div>
 
         {/* Funding summary */}
-        <div style={{ backgroundColor: "var(--canvas)", padding: "16px 28px", borderBottom: "1px solid var(--border-default)" }}>
+        <div style={{ backgroundColor: "var(--canvas)", padding: "16px 28px", borderBottom: "var(--border-subtle)" }}>
           <p style={sectionLabel}>Funding summary</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
             <MiniStat label="In pursuit" value={selected.stats.inPursuit} />
             <MiniStat label="Awaiting decision" value={selected.stats.awaiting} />
             <AwardedMiniStat value={selected.stats.awardedLifetime} history={selected.awardHistory} />
-            <MiniStat
-              label="Open tasks"
-              value={String(selected.stats.openTasks)}
-              sub={selected.stats.openTasksAlert}
-            />
+            <button
+              type="button"
+              onClick={() => setOpenTasksExpanded(v => !v)}
+              style={{ padding: 0, border: "none", background: "none", cursor: "pointer", textAlign: "left", borderRadius: 10 }}
+            >
+              <div style={{ borderRadius: 10, padding: "12px 14px", backgroundColor: openTasksExpanded ? "var(--slate-tint)" : "var(--surface-white)", border: openTasksExpanded ? "1px solid var(--slate-secondary)" : "none", boxShadow: openTasksExpanded ? "none" : "var(--shadow-card)", transition: "background-color 150ms, border-color 150ms, box-shadow 150ms" }}>
+                <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)" }}>Open tasks</p>
+                <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.02em" }}>{String(selected.stats.openTasks)}</p>
+                {selected.stats.openTasksAlert && <p style={{ margin: "3px 0 0", fontSize: 11, color: "var(--terracotta)" }}>{selected.stats.openTasksAlert}</p>}
+              </div>
+            </button>
           </div>
+
+          {/* Inline task rollup */}
+          {openTasksExpanded && selected.stats.openTasks > 0 && (
+            <div style={{ marginTop: 12 }}>
+              {selected.opportunities.filter(o => ["Active", "Tracking", "Submitted"].includes(o.stage)).slice(0, 3).map(opp => (
+                <div key={opp.id} style={{ marginBottom: 12, borderRadius: 10, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", overflow: "hidden" }}>
+                  <div style={{ padding: "8px 14px", backgroundColor: "var(--canvas)", borderBottom: "var(--border-subtle)" }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)" }}>{opp.name}</span>
+                  </div>
+                  {[
+                    { name: "Complete narrative section", assigneeInitials: "TS", dueLabel: "May 15", overdue: true },
+                    { name: "Collect letters of support", assigneeInitials: null, dueLabel: "Jun 1", overdue: false },
+                    { name: "Review budget allocation", assigneeInitials: "MR", dueLabel: "Jun 10", overdue: false },
+                  ].slice(0, 3).map((task, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", borderBottom: i < 2 ? "var(--border-subtle)" : "none" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: 13, color: "var(--ink)" }}>{task.name}</span>
+                      </div>
+                      {task.overdue && <span style={{ borderRadius: 4, padding: "1px 6px", fontSize: 10, fontWeight: 600, backgroundColor: "#FDE8E8", color: "#8B2020" }}>Overdue</span>}
+                      {task.assigneeInitials
+                        ? <div style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--gradient-avatar)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ fontSize: 8, fontWeight: 700, color: "#FFF" }}>{task.assigneeInitials}</span></div>
+                        : <div style={{ width: 20, height: 20, borderRadius: "50%", border: "1.5px dashed var(--ink-tertiary)", flexShrink: 0 }} />
+                      }
+                      <span style={{ fontSize: 11, color: task.overdue ? "var(--error)" : "var(--ink-tertiary)", flexShrink: 0 }}>{task.dueLabel}</span>
+                    </div>
+                  ))}
+                  <div style={{ padding: "8px 14px", borderTop: "var(--border-subtle)" }}>
+                    <button type="button" onClick={() => router.push(`/opportunity/${opp.id}`)}
+                      style={{ background: "none", border: "none", fontSize: 12, color: "var(--slate-secondary)", cursor: "pointer", padding: 0, fontWeight: 500 }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "underline" }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "none" }}
+                    >
+                      View all in {opp.name} →
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Opportunities — grouped */}
@@ -2064,7 +2110,7 @@ function PortfolioPage() {
                 fontSize: 13,
                 lineHeight: "19px",
                 borderRadius: "var(--radius-card)",
-                border: "1px solid var(--border-default)",
+                border: "var(--border-subtle)",
                 marginBottom: 28,
               }}
             >
@@ -2075,7 +2121,7 @@ function PortfolioPage() {
             const awardedOpps = selected.opportunities.filter((o) => AWARDED_STAGES.includes(o.stage))
             const historyOpps = selected.opportunities.filter((o) => HISTORY_STAGES.includes(o.stage))
 
-            function OppRow({ opp, isLast }: { opp: Opportunity; isLast: boolean }) {
+            function OppRow({ opp }: { opp: Opportunity }) {
               const dotColor = STAGE_DOT[opp.stage]
               const badge = STAGE_BADGE[opp.stage]
               const hasIndicators = (opp.noteCount ?? 0) > 0 || (opp.oppFileCount ?? 0) > 0
@@ -2096,7 +2142,10 @@ function PortfolioPage() {
                     alignItems: "center",
                     justifyContent: "space-between",
                     padding: "12px 18px",
-                    borderBottom: !isLast ? "1px solid var(--border-default)" : "none",
+                    borderRadius: 10,
+                    backgroundColor: "var(--surface-white)",
+                    boxShadow: "var(--shadow-card)",
+                    marginBottom: 8,
                     cursor: "pointer",
                     transition: "background-color 150ms",
                     gap: 12,
@@ -2173,9 +2222,7 @@ function PortfolioPage() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    padding: "7px 18px",
-                    backgroundColor: "var(--canvas)",
-                    borderBottom: "1px solid var(--border-default)",
+                    padding: "12px 4px 6px",
                     cursor: collapsible ? "pointer" : "default",
                     userSelect: "none",
                   }}
@@ -2195,26 +2242,22 @@ function PortfolioPage() {
             return (
               <div
                 style={{
-                  borderRadius: "var(--radius-card)",
-                  border: "1px solid var(--border-default)",
-                  overflow: "hidden",
-                  backgroundColor: "var(--surface-white)",
                   marginBottom: 28,
                 }}
               >
                 {inProgressOpps.length > 0 && (
                   <>
                     <GroupHeader label="In progress" count={inProgressOpps.length} />
-                    {inProgressOpps.map((opp, i) => (
-                      <OppRow key={opp.id} opp={opp} isLast={i === inProgressOpps.length - 1 && awardedOpps.length === 0 && historyOpps.length === 0} />
+                    {inProgressOpps.map((opp) => (
+                      <OppRow key={opp.id} opp={opp} />
                     ))}
                   </>
                 )}
                 {awardedOpps.length > 0 && (
                   <>
                     <GroupHeader label="Awarded" count={awardedOpps.length} />
-                    {awardedOpps.map((opp, i) => (
-                      <OppRow key={opp.id} opp={opp} isLast={i === awardedOpps.length - 1 && historyOpps.length === 0} />
+                    {awardedOpps.map((opp) => (
+                      <OppRow key={opp.id} opp={opp} />
                     ))}
                   </>
                 )}
@@ -2227,8 +2270,8 @@ function PortfolioPage() {
                       expanded={historyExpanded}
                       onToggle={() => setHistoryExpanded((v) => !v)}
                     />
-                    {historyExpanded && historyOpps.map((opp, i) => (
-                      <OppRow key={opp.id} opp={opp} isLast={i === historyOpps.length - 1} />
+                    {historyExpanded && historyOpps.map((opp) => (
+                      <OppRow key={opp.id} opp={opp} />
                     ))}
                   </>
                 )}
@@ -2281,7 +2324,7 @@ function PortfolioPage() {
                   padding: "14px 16px",
                   borderRadius: 10,
                   backgroundColor: "var(--surface-white)",
-                  border: "1px solid var(--border-default)",
+                  boxShadow: "var(--shadow-card)",
                 }}
               >
                 <NoteEditor
@@ -2314,7 +2357,7 @@ function PortfolioPage() {
                       padding: "14px 16px",
                       borderRadius: 10,
                       backgroundColor: "var(--surface-white)",
-                      border: "1px solid var(--border-default)",
+                      boxShadow: "var(--shadow-card)",
                     }}
                   >
                     <NoteEditor
@@ -2337,7 +2380,7 @@ function PortfolioPage() {
                       padding: "14px 16px",
                       borderRadius: 10,
                       backgroundColor: "var(--canvas)",
-                      border: "1px solid var(--border-default)",
+                      boxShadow: "var(--shadow-card)",
                       cursor: "text",
                     }}
                   >
@@ -2418,7 +2461,7 @@ function PortfolioPage() {
                 onClick={() => attachmentInputRef.current?.click()}
                 style={{
                   borderRadius: 10,
-                  border: `2px dashed ${attachmentDragOver ? "var(--slate-primary)" : "var(--border-default)"}`,
+                  border: `2px dashed ${attachmentDragOver ? "var(--slate-primary)" : "rgba(42,42,42,0.12)"}`,
                   backgroundColor: attachmentDragOver ? "var(--slate-tint)" : "transparent",
                   padding: "24px 20px",
                   textAlign: "center",
@@ -2439,7 +2482,7 @@ function PortfolioPage() {
                 <div
                   style={{
                     borderRadius: 10,
-                    border: "1px solid var(--border-default)",
+                    border: "var(--border-subtle)",
                     overflow: "hidden",
                     backgroundColor: "var(--surface-white)",
                   }}
@@ -2452,7 +2495,7 @@ function PortfolioPage() {
                         alignItems: "center",
                         gap: 12,
                         padding: "12px 16px",
-                        borderBottom: i < selected.attachments.length - 1 ? "1px solid var(--border-default)" : "none",
+                        borderBottom: i < selected.attachments.length - 1 ? "var(--border-subtle)" : "none",
                         transition: "background-color 150ms",
                       }}
                       onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--canvas)" }}
@@ -2503,7 +2546,7 @@ function PortfolioPage() {
                   style={{
                     marginTop: 8,
                     borderRadius: 10,
-                    border: `2px dashed ${attachmentDragOver ? "var(--slate-primary)" : "var(--border-default)"}`,
+                    border: `2px dashed ${attachmentDragOver ? "var(--slate-primary)" : "rgba(42,42,42,0.12)"}`,
                     backgroundColor: attachmentDragOver ? "var(--slate-tint)" : "transparent",
                     padding: "12px 20px",
                     textAlign: "center",
@@ -2534,7 +2577,7 @@ function GhostButton({ children, onClick }: { children: React.ReactNode; onClick
       style={{
         padding: "7px 14px",
         borderRadius: 8,
-        border: "1px solid var(--border-default)",
+        border: "var(--border-subtle)",
         backgroundColor: "transparent",
         fontSize: 13,
         fontWeight: 400,
@@ -2584,7 +2627,7 @@ function MiniStat({ label, value, sub }: { label: string; value: string; sub?: s
         borderRadius: 10,
         padding: "12px 14px",
         backgroundColor: "var(--surface-white)",
-        border: "1px solid var(--border-default)",
+        boxShadow: "var(--shadow-card)",
       }}
     >
       <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 500, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
