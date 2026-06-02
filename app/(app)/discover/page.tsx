@@ -336,12 +336,12 @@ function OpportunityCard({
         borderRadius: 12,
         backgroundColor: isSelected ? "var(--slate-tint)" : "#FFFFFF",
         border: isSelected
-          ? "1.5px solid var(--slate-secondary)"
+          ? "1.5px solid var(--slate-primary)"
           : isHovered
           ? "1px solid rgba(74,96,128,0.35)"
           : "1px solid var(--border-default)",
         borderLeft: isSelected
-          ? "3px solid var(--slate-secondary)"
+          ? "3px solid var(--slate-primary)"
           : "3px solid transparent",
         boxShadow: isSelected
           ? "0px 3px 10px rgba(28,24,64,0.1)"
@@ -1379,7 +1379,8 @@ function DetailPanel({
         display: "flex",
         flexDirection: "column",
         borderLeft: "var(--border-subtle)",
-        backgroundColor: "var(--canvas)",
+        boxShadow: "var(--shadow-panel)",
+        backgroundColor: "var(--surface-raised)",
         overflow: "hidden",
       }}
     >
@@ -1469,27 +1470,23 @@ function DetailPanel({
           <div
             style={{
               display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
+              flexDirection: "column",
+              gap: 10,
               backgroundColor: "#FFFFFF",
               boxShadow: "var(--shadow-card)",
               borderRadius: 10,
-              padding: "12px 14px",
+              padding: "14px 14px 12px",
               marginBottom: 12,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div>
-                <p style={{ margin: "0 0 2px", fontSize: 24, fontWeight: 700, color: fitColor, lineHeight: 1, letterSpacing: "-0.02em" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                <span style={{ fontSize: 30, fontWeight: 700, color: fitColor, lineHeight: 1, letterSpacing: "-0.03em" }}>
                   {opp.fitPct}%
-                </p>
-                <p style={{ margin: 0, fontSize: 11, color: "var(--ink-secondary)", fontWeight: 500 }}>{fitLabel}</p>
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-secondary)", lineHeight: 1 }}>{fitLabel}</span>
               </div>
-              <div style={{ width: 72, height: 5, borderRadius: 3, backgroundColor: "var(--slate-tint)", overflow: "hidden" }}>
-                <div style={{ height: "100%", borderRadius: 3, backgroundColor: fitColor, width: `${opp.fitPct}%`, transition: "width 300ms ease" }} />
-              </div>
-            </div>
-            <div style={{ position: "relative" }}>
+              <div style={{ position: "relative" }}>
               <button
                 type="button"
                 onClick={() => setMethodologyOpen((v) => !v)}
@@ -1548,6 +1545,19 @@ function DetailPanel({
               )}
             </div>
           </div>
+          {/* AI gradient progress bar — full width */}
+          <div style={{ height: 6, borderRadius: 3, backgroundColor: "var(--slate-tint)", overflow: "hidden" }}>
+            <div
+              style={{
+                height: "100%",
+                borderRadius: 3,
+                background: "var(--gradient-ai-cta)",
+                width: `${opp.fitPct}%`,
+                transition: "width 400ms ease",
+              }}
+            />
+          </div>
+        </div>
 
           <p style={sectionLabelStyle}>Why this matches you</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1646,7 +1656,7 @@ function DetailPanel({
           position: "relative",
           borderTop: "var(--border-subtle)",
           padding: "14px 20px",
-          backgroundColor: "var(--canvas)",
+          backgroundColor: "var(--surface-raised)",
         }}
       >
         {showPopover && <TrackPopover onCancel={onCancelPopover} onSelect={onSelectEngagement} />}
@@ -1956,10 +1966,10 @@ function FunderDetailPanel({
   }
 
   return (
-    <div style={{ width: 320, flexShrink: 0, display: "flex", flexDirection: "column", borderLeft: "var(--border-subtle)", backgroundColor: "var(--canvas)", overflow: "hidden" }}>
+    <div style={{ width: 320, flexShrink: 0, display: "flex", flexDirection: "column", borderLeft: "var(--border-subtle)", boxShadow: "var(--shadow-panel)", backgroundColor: "var(--surface-raised)", overflow: "hidden" }}>
       {/* Back nav */}
       {onBack && (
-        <div style={{ flexShrink: 0, padding: "8px 12px", borderBottom: "var(--border-subtle)", backgroundColor: "var(--canvas)" }}>
+        <div style={{ flexShrink: 0, padding: "8px 12px", borderBottom: "var(--border-subtle)", backgroundColor: "var(--surface-raised)" }}>
           <button
             type="button"
             onClick={onBack}
@@ -2256,7 +2266,7 @@ function FunderDetailPanel({
       </div>
 
       {/* ── Sticky footer ── */}
-      <div style={{ flexShrink: 0, borderTop: "var(--border-subtle)", padding: "14px 20px", backgroundColor: "var(--canvas)" }}>
+      <div style={{ flexShrink: 0, borderTop: "var(--border-subtle)", padding: "14px 20px", backgroundColor: "var(--surface-raised)" }}>
         <button type="button"
           onClick={() => isTracked ? router.push("/portfolio") : onCreateEngagement(funder.name)}
           style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", height: 40, borderRadius: 10, backgroundColor: "var(--slate-primary)", border: "none", cursor: "pointer", marginBottom: isTracked ? 8 : 0, transition: "background-color 150ms" }}
@@ -3115,7 +3125,7 @@ export default function DiscoverPage() {
         flex: 1,
         overflow: "hidden",
         minHeight: 0,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "var(--surface-canvas)",
       }}
     >
       {/* ── View Toggle Header ── */}
@@ -3124,7 +3134,7 @@ export default function DiscoverPage() {
           flexShrink: 0,
           padding: "10px 20px",
           borderBottom: "var(--border-subtle)",
-          backgroundColor: "#FFFFFF",
+          backgroundColor: "var(--surface-canvas)",
           display: "flex",
           alignItems: "center",
         }}
@@ -3161,7 +3171,7 @@ export default function DiscoverPage() {
             flexDirection: "column",
             overflow: "hidden",
             borderRight: "var(--border-subtle)",
-            backgroundColor: "#FFFFFF",
+            backgroundColor: "var(--surface-canvas)",
           }}
         >
           {/* Results header */}
@@ -3172,7 +3182,7 @@ export default function DiscoverPage() {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              backgroundColor: "#FFFFFF",
+              backgroundColor: "var(--surface-canvas)",
               borderBottom: "var(--border-subtle)",
             }}
           >
@@ -3267,7 +3277,7 @@ export default function DiscoverPage() {
               flexShrink: 0,
               padding: "10px 20px",
               borderBottom: "var(--border-subtle)",
-              backgroundColor: "#FFFFFF",
+              backgroundColor: "var(--surface-canvas)",
             }}
           >
             <div style={{ position: "relative" }}>
@@ -3315,7 +3325,7 @@ export default function DiscoverPage() {
                 flexShrink: 0,
                 padding: "8px 20px",
                 borderBottom: "var(--border-subtle)",
-                backgroundColor: "#FFFFFF",
+                backgroundColor: "var(--surface-canvas)",
                 display: "flex",
                 flexWrap: "wrap",
                 gap: 6,
