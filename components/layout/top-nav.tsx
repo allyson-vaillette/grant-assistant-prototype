@@ -20,7 +20,7 @@ export function TopNav() {
       className="h-11 shrink-0 flex items-center px-6 gap-4"
       style={{
         backgroundColor: "var(--surface)",
-        borderBottom: "1px solid var(--border-color)",
+        borderBottom: "var(--border-subtle)",
         position: "sticky",
         top: 0,
         zIndex: 50,

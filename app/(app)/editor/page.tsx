@@ -116,13 +116,13 @@ function ShareModal({ onClose, onShare }: { onClose: () => void; onShare: (teamm
       style={{ position: "fixed", inset: 0, backgroundColor: "rgba(28,24,64,0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div style={{ width: 400, backgroundColor: "#FFFFFF", borderRadius: 14, boxShadow: "0 16px 48px rgba(28,24,64,0.18)", display: "flex", flexDirection: "column" }}>
+      <div style={{ width: 400, backgroundColor: "#FFFFFF", borderRadius: 14, boxShadow: "var(--elevation-overlay)", display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 0" }}>
           <div>
             <h2 style={{ margin: "0 0 2px", fontSize: 17, fontWeight: 600, color: "var(--ink)", fontFamily: "var(--font-lora)" }}>Share proposal</h2>
             <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)" }}>Equitable Futures — Draft 1</p>
           </div>
-          <button type="button" onClick={onClose} style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "transparent", cursor: "pointer" }}>
+          <button type="button" onClick={onClose} style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "transparent", cursor: "pointer" }}>
             <X size={14} color="var(--ink-secondary)" />
           </button>
         </div>
@@ -136,10 +136,10 @@ function ShareModal({ onClose, onShare }: { onClose: () => void; onShare: (teamm
               onFocus={() => setListOpen(true)}
               onBlur={() => setTimeout(() => setListOpen(false), 150)}
               placeholder="Search by name..."
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", outline: "none", boxSizing: "border-box" }}
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", outline: "none", boxSizing: "border-box" }}
             />
             {listOpen && filtered.length > 0 && (
-              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, backgroundColor: "#FFFFFF", border: "1px solid var(--border-default)", borderRadius: 10, boxShadow: "0 8px 24px rgba(28,24,64,0.12)", zIndex: 300, overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, backgroundColor: "#FFFFFF", border: "var(--border-subtle)", borderRadius: 10, boxShadow: "var(--elevation-raised)", zIndex: 300, overflow: "hidden" }}>
                 {filtered.map((t) => (
                   <button key={t.id} type="button" onMouseDown={() => handleSelect(t)}
                     style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
@@ -164,12 +164,12 @@ function ShareModal({ onClose, onShare }: { onClose: () => void; onShare: (teamm
               onChange={(e) => setNote(e.target.value)}
               placeholder="Add a message..."
               rows={3}
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", outline: "none", resize: "none", lineHeight: "19px", boxSizing: "border-box", fontFamily: "inherit" }}
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", outline: "none", resize: "none", lineHeight: "19px", boxSizing: "border-box", fontFamily: "inherit" }}
             />
           </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px 20px", borderTop: "1px solid var(--border-default)" }}>
-          <button type="button" onClick={onClose} style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid var(--border-default)", backgroundColor: "transparent", fontSize: 13, color: "var(--ink)", cursor: "pointer" }}>Cancel</button>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px 20px", borderTop: "var(--border-subtle)" }}>
+          <button type="button" onClick={onClose} style={{ padding: "8px 18px", borderRadius: 8, border: "var(--border-subtle)", backgroundColor: "transparent", fontSize: 13, color: "var(--ink)", cursor: "pointer" }}>Cancel</button>
           <button
             type="button"
             disabled={!selected}
@@ -211,13 +211,13 @@ function SubmitForReviewModal({ onClose, onConfirm }: { onClose: () => void; onC
       style={{ position: "fixed", inset: 0, backgroundColor: "rgba(28,24,64,0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div style={{ width: 440, backgroundColor: "#FFFFFF", borderRadius: 14, boxShadow: "0 16px 48px rgba(28,24,64,0.18)", display: "flex", flexDirection: "column" }}>
+      <div style={{ width: 440, backgroundColor: "#FFFFFF", borderRadius: 14, boxShadow: "var(--elevation-overlay)", display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 0" }}>
           <div>
             <h2 style={{ margin: "0 0 2px", fontSize: 17, fontWeight: 600, color: "var(--ink)", fontFamily: "var(--font-lora)" }}>Submit for review</h2>
             <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)" }}>Equitable Futures — Draft 1</p>
           </div>
-          <button type="button" onClick={onClose} style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "transparent", cursor: "pointer" }}>
+          <button type="button" onClick={onClose} style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "transparent", cursor: "pointer" }}>
             <X size={14} color="var(--ink-secondary)" />
           </button>
         </div>
@@ -229,7 +229,7 @@ function SubmitForReviewModal({ onClose, onConfirm }: { onClose: () => void; onC
             {selected.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
                 {selected.map((t) => (
-                  <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 8px 3px 6px", borderRadius: 20, backgroundColor: "var(--slate-tint)", border: "1px solid var(--border-default)" }}>
+                  <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 8px 3px 6px", borderRadius: 20, backgroundColor: "var(--slate-tint)", border: "var(--border-subtle)" }}>
                     <div style={{ width: 16, height: 16, borderRadius: "50%", background: "var(--gradient-avatar)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <span style={{ fontSize: 7, fontWeight: 700, color: "#FFFFFF" }}>{t.initials}</span>
                     </div>
@@ -248,10 +248,10 @@ function SubmitForReviewModal({ onClose, onConfirm }: { onClose: () => void; onC
               onFocus={() => setListOpen(true)}
               onBlur={() => setTimeout(() => setListOpen(false), 150)}
               placeholder="Search teammates..."
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", outline: "none", boxSizing: "border-box" }}
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", outline: "none", boxSizing: "border-box" }}
             />
             {listOpen && filtered.length > 0 && (
-              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, backgroundColor: "#FFFFFF", border: "1px solid var(--border-default)", borderRadius: 10, boxShadow: "0 8px 24px rgba(28,24,64,0.12)", zIndex: 300, overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, backgroundColor: "#FFFFFF", border: "var(--border-subtle)", borderRadius: 10, boxShadow: "var(--elevation-raised)", zIndex: 300, overflow: "hidden" }}>
                 {filtered.map((t) => (
                   <button key={t.id} type="button" onMouseDown={() => handleSelect(t)}
                     style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
@@ -276,13 +276,13 @@ function SubmitForReviewModal({ onClose, onConfirm }: { onClose: () => void; onC
               onChange={(e) => setNote(e.target.value)}
               placeholder="Describe what you'd like reviewed..."
               rows={3}
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", outline: "none", resize: "none", lineHeight: "19px", boxSizing: "border-box", fontFamily: "inherit" }}
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", outline: "none", resize: "none", lineHeight: "19px", boxSizing: "border-box", fontFamily: "inherit" }}
             />
           </div>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px 20px", borderTop: "1px solid var(--border-default)" }}>
-          <button type="button" onClick={onClose} style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid var(--border-default)", backgroundColor: "transparent", fontSize: 13, color: "var(--ink)", cursor: "pointer" }}>Cancel</button>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px 20px", borderTop: "var(--border-subtle)" }}>
+          <button type="button" onClick={onClose} style={{ padding: "8px 18px", borderRadius: 8, border: "var(--border-subtle)", backgroundColor: "transparent", fontSize: 13, color: "var(--ink)", cursor: "pointer" }}>Cancel</button>
           <button
             type="button"
             disabled={selected.length === 0}
@@ -301,7 +301,7 @@ function SubmitForReviewModal({ onClose, onConfirm }: { onClose: () => void; onC
 
 function Toast({ msg, visible }: { msg: string; visible: boolean }) {
   return (
-    <div style={{ position: "fixed", bottom: 24, left: "50%", transform: `translateX(-50%) translateY(${visible ? 0 : 8}px)`, opacity: visible ? 1 : 0, transition: "transform 0.2s ease, opacity 0.2s ease", backgroundColor: "#FFFFFF", border: "1px solid var(--border-default)", borderRadius: 12, padding: "10px 20px", boxShadow: "0 4px 16px rgba(42,42,42,0.12)", fontSize: 13, color: "var(--ink)", zIndex: 150, pointerEvents: "none", whiteSpace: "nowrap" }}>
+    <div style={{ position: "fixed", bottom: 24, left: "50%", transform: `translateX(-50%) translateY(${visible ? 0 : 8}px)`, opacity: visible ? 1 : 0, transition: "transform 0.2s ease, opacity 0.2s ease", backgroundColor: "#FFFFFF", border: "var(--border-subtle)", borderRadius: 12, padding: "10px 20px", boxShadow: "var(--elevation-card)", fontSize: 13, color: "var(--ink)", zIndex: 150, pointerEvents: "none", whiteSpace: "nowrap" }}>
       {msg}
     </div>
   )
@@ -344,7 +344,7 @@ function AttributionChips({ sources, onChipClick }: { sources: string[]; onChipC
             onClick={onChipClick}
             onMouseEnter={() => setHoveredIdx(i)}
             onMouseLeave={() => setHoveredIdx(null)}
-            style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)", fontSize: 11, color: "var(--ink-secondary)", cursor: "pointer", transition: "background-color 150ms, border-color 150ms", maxWidth: 160 }}
+            style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "var(--border-subtle)", fontSize: 11, color: "var(--ink-secondary)", cursor: "pointer", transition: "background-color 150ms, border-color 150ms", maxWidth: 160 }}
             onFocus={() => setHoveredIdx(i)}
             onBlur={() => setHoveredIdx(null)}
           >
@@ -453,9 +453,9 @@ export default function EditorPage() {
       )}
 
       {/* Top bar */}
-      <div style={{ flexShrink: 0, height: 44, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", backgroundColor: "var(--surface-white)", borderBottom: "1px solid var(--border-default)" }}>
+      <div style={{ flexShrink: 0, height: 44, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", backgroundColor: "var(--surface-white)", borderBottom: "var(--border-subtle)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <NextLink href="/opportunity/equitable-futures" style={{ width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "var(--surface-white)", textDecoration: "none", flexShrink: 0 }}>
+          <NextLink href="/opportunity/equitable-futures" style={{ width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", textDecoration: "none", flexShrink: 0 }}>
             <ChevronLeft size={13} color="var(--ink-secondary)" />
           </NextLink>
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--ink-tertiary)" }}>
@@ -497,15 +497,15 @@ export default function EditorPage() {
       </div>
 
       {/* Toolbar */}
-      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 2, padding: "0 20px", height: 40, backgroundColor: "var(--surface-white)", borderBottom: "1px solid var(--border-default)" }}>
+      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 2, padding: "0 20px", height: 40, backgroundColor: "var(--surface-white)", borderBottom: "var(--border-subtle)" }}>
         {[Bold, Italic, Underline].map((Icon, i) => (
           <button key={i} type="button" style={toolbarBtn} onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }} onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}><Icon size={13} color="var(--ink-secondary)" /></button>
         ))}
-        <div style={{ width: 1, height: 16, backgroundColor: "var(--border-default)", margin: "0 4px" }} />
+        <div style={{ width: 1, height: 16, backgroundColor: "rgba(42, 42, 42, 0.08)", margin: "0 4px" }} />
         {["H1", "H2"].map((t) => (
           <button key={t} type="button" style={{ ...toolbarBtn, fontSize: 12, fontWeight: 600, color: "var(--ink-secondary)" }} onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }} onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}>{t}</button>
         ))}
-        <div style={{ width: 1, height: 16, backgroundColor: "var(--border-default)", margin: "0 4px" }} />
+        <div style={{ width: 1, height: 16, backgroundColor: "rgba(42, 42, 42, 0.08)", margin: "0 4px" }} />
         {[List, ListOrdered, Link, BarChart2, Code].map((Icon, i) => (
           <button key={i} type="button" style={toolbarBtn} onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }} onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}><Icon size={13} color="var(--ink-secondary)" /></button>
         ))}
@@ -578,16 +578,21 @@ export default function EditorPage() {
               <h1 style={{ margin: "0 0 6px", fontSize: 28, fontWeight: 500, color: "var(--ink)", fontFamily: "var(--font-lora)", letterSpacing: "-0.02em" }}>Equitable Futures Grant 2026</h1>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "var(--slate-secondary)" }}>Ford Foundation</p>
             </div>
-            <div style={{ height: 1, backgroundColor: "var(--border-default)", marginBottom: 36 }} />
+            <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)", marginBottom: 36 }} />
 
             {SECTIONS.map((section) => {
               const isActive = section.id === activeId
               const sources = SECTION_SOURCES[section.id]
               return (
                 <div key={section.id} id={`section-${section.id}`} onClick={() => setActiveId(section.id)} style={{ marginBottom: 40, cursor: "text" }}>
-                  <h2 style={{ margin: "0 0 12px", fontSize: 18, fontWeight: 500, color: "var(--ink)", fontFamily: "var(--font-lora)", borderBottom: isActive ? "2px solid var(--slate-primary)" : "2px solid transparent", paddingBottom: 4, display: "inline-block", transition: "border-color 150ms", letterSpacing: "-0.01em" }}>
-                    {section.label}
-                  </h2>
+                  <div style={{ marginBottom: 12 }}>
+                    <h2 style={{ margin: 0, fontSize: 18, fontWeight: 500, color: "var(--ink)", fontFamily: "var(--font-lora)", paddingBottom: 6, display: "inline-block", letterSpacing: "-0.01em" }}>
+                      {section.label}
+                    </h2>
+                    {isActive && (
+                      <div style={{ height: 2, background: "var(--gradient-ai-rail)", borderRadius: 1, transition: "opacity 150ms", width: "100%" }} />
+                    )}
+                  </div>
                   {/* Funder callout */}
                   <div style={{ padding: "10px 14px", marginBottom: 14, borderRadius: 8, backgroundColor: "#F5F0F6", borderLeft: "3px solid #AD9DAE" }}>
                     <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "19px", fontStyle: "italic" }}>{section.funderPrompt}</p>
@@ -611,9 +616,14 @@ export default function EditorPage() {
         </div>
 
         {/* Right: AI panel */}
-        <div style={{ width: 340, flexShrink: 0, borderLeft: "1px solid var(--border-default)", backgroundColor: "var(--canvas)", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+        <div style={{ width: 340, flexShrink: 0, borderLeft: "var(--border-subtle)", backgroundColor: "var(--canvas)", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+          {/* AI panel header band */}
+          <div style={{ flexShrink: 0, background: "var(--gradient-ai-hero)", padding: "10px 16px 10px", display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 16, color: "rgba(255,255,255,0.85)", fontVariationSettings: "'FILL' 1" }}>auto_fix_high</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#FFFFFF", letterSpacing: "0.01em" }}>Grant Assistant</span>
+          </div>
           {/* Tabs */}
-          <div style={{ flexShrink: 0, display: "flex", borderBottom: "1px solid var(--border-default)", padding: "0 16px", backgroundColor: "var(--canvas)" }}>
+          <div style={{ flexShrink: 0, display: "flex", borderBottom: "var(--border-subtle)", padding: "0 16px", backgroundColor: "var(--canvas)" }}>
             {(["assistant", "suggestions", "context"] as AITab[]).map((tab) => {
               const label = tab === "assistant" ? "AI Assistant" : tab === "suggestions" ? "Suggestions" : "Context"
               const isA = aiTab === tab
@@ -628,8 +638,8 @@ export default function EditorPage() {
 
           {/* Scope toggle — AI Assistant tab only */}
           {aiTab === "assistant" && (
-            <div style={{ flexShrink: 0, padding: "10px 16px 8px", borderBottom: "1px solid var(--border-default)", backgroundColor: "var(--canvas)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 0, borderRadius: 8, border: "1px solid var(--border-default)", overflow: "hidden", backgroundColor: "var(--surface-white)", marginBottom: 8 }}>
+            <div style={{ flexShrink: 0, padding: "10px 16px 8px", borderBottom: "var(--border-subtle)", backgroundColor: "var(--canvas)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 0, borderRadius: 8, border: "var(--border-subtle)", overflow: "hidden", backgroundColor: "var(--surface-white)", marginBottom: 8 }}>
                 {(["section", "document"] as Scope[]).map((s) => (
                   <button key={s} type="button" onClick={() => setScope(s)} style={{ flex: 1, padding: "6px 0", fontSize: 12, fontWeight: scope === s ? 600 : 400, color: scope === s ? "var(--slate-primary)" : "var(--ink-secondary)", backgroundColor: scope === s ? "var(--slate-tint)" : "transparent", border: "none", cursor: "pointer", transition: "background-color 150ms, color 150ms" }}>
                     {s === "section" ? "This section" : "Whole document"}
@@ -655,7 +665,7 @@ export default function EditorPage() {
                     <p style={{ margin: "0 0 8px", fontSize: 12, color: "#7A4A10" }}>This looks like a document-wide change. Should I apply it to the whole proposal?</p>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button type="button" onClick={() => { setShowScopeWarning(false); setScope("document") }} style={{ padding: "5px 12px", borderRadius: 6, backgroundColor: "var(--slate-primary)", border: "none", fontSize: 12, fontWeight: 500, color: "#FFFFFF", cursor: "pointer" }}>Yes, whole proposal</button>
-                      <button type="button" onClick={() => { setShowScopeWarning(false) }} style={{ padding: "5px 12px", borderRadius: 6, backgroundColor: "transparent", border: "1px solid var(--border-default)", fontSize: 12, color: "var(--ink)", cursor: "pointer" }}>No, just this section</button>
+                      <button type="button" onClick={() => { setShowScopeWarning(false) }} style={{ padding: "5px 12px", borderRadius: 6, backgroundColor: "transparent", border: "var(--border-subtle)", fontSize: 12, color: "var(--ink)", cursor: "pointer" }}>No, just this section</button>
                     </div>
                   </div>
                 )}
@@ -666,7 +676,7 @@ export default function EditorPage() {
                         <span style={{ fontSize: 8, fontWeight: 700, color: "#FFF" }}>GA</span>
                       </div>
                     )}
-                    <div style={{ flex: 1, padding: "10px 12px", borderRadius: 10, backgroundColor: msg.role === "ai" ? "var(--surface-white)" : "var(--slate-tint)", border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", lineHeight: "19px" }}>
+                    <div style={{ flex: 1, padding: "10px 12px", borderRadius: 10, backgroundColor: msg.role === "ai" ? "var(--surface-white)" : "var(--slate-tint)", border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", lineHeight: "19px" }}>
                       {msg.text}
                     </div>
                   </div>
@@ -676,7 +686,7 @@ export default function EditorPage() {
                     <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--gradient-avatar)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <span style={{ fontSize: 8, fontWeight: 700, color: "#FFF" }}>GA</span>
                     </div>
-                    <div style={{ padding: "10px 14px", borderRadius: 10, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)" }}>
+                    <div style={{ padding: "10px 14px", borderRadius: 10, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)" }}>
                       <span style={{ fontSize: 18, color: "var(--ink-tertiary)", letterSpacing: 2 }}>···</span>
                     </div>
                   </div>
@@ -688,18 +698,19 @@ export default function EditorPage() {
             {aiTab === "suggestions" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {AI_SUGGESTION[activeId] ? (
-                  <div style={{ borderRadius: 10, border: "1px solid var(--border-default)", backgroundColor: "var(--surface-white)", overflow: "hidden" }}>
-                    <div style={{ padding: "10px 14px 0", borderBottom: "1px solid var(--border-default)", paddingBottom: 10, backgroundColor: "var(--slate-tint)" }}>
-                      <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--slate-primary)" }}>Suggested content</span>
+                  <div style={{ borderRadius: 10, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", overflow: "hidden" }}>
+                    <div style={{ padding: "10px 14px", borderBottom: "1px solid rgba(255,255,255,0.12)", background: "var(--gradient-ai-cta)", display: "flex", alignItems: "center", gap: 6 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", fontVariationSettings: "'FILL' 1" }}>auto_fix_high</span>
+                      <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "#FFFFFF" }}>Suggested content</span>
                     </div>
                     <div style={{ padding: 14 }}>
                       <p style={{ margin: "0 0 10px", fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px" }}>{AI_SUGGESTION[activeId]!.intro}</p>
-                      <div style={{ padding: "10px 12px", borderRadius: 8, backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)", marginBottom: 10 }}>
+                      <div style={{ padding: "10px 12px", borderRadius: 8, backgroundColor: "var(--canvas)", border: "var(--border-subtle)", marginBottom: 10 }}>
                         <p style={{ margin: 0, fontSize: 12, color: "var(--ink)", lineHeight: "18px", fontStyle: "italic" }}>{AI_SUGGESTION[activeId]!.text}</p>
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
                         <button type="button" onClick={() => showToast("Text inserted")} style={{ padding: "6px 14px", borderRadius: 7, backgroundColor: "var(--slate-primary)", border: "none", fontSize: 12, fontWeight: 600, color: "#FFFFFF", cursor: "pointer" }}>Insert</button>
-                        <button type="button" style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 7, backgroundColor: "transparent", border: "1px solid var(--border-default)", fontSize: 12, color: "var(--ink-secondary)", cursor: "pointer" }}><RotateCcw size={11} />Regenerate</button>
+                        <button type="button" style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 7, backgroundColor: "transparent", border: "var(--border-subtle)", fontSize: 12, color: "var(--ink-secondary)", cursor: "pointer" }}><RotateCcw size={11} />Regenerate</button>
                       </div>
                     </div>
                   </div>
@@ -734,7 +745,7 @@ export default function EditorPage() {
                   <p style={{ margin: "0 0 8px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Uploaded documents</p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {UPLOADED_DOCS.map((doc) => (
-                      <div key={doc.name} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)" }}>
+                      <div key={doc.name} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)" }}>
                         <MIcon name="description" size={16} color="var(--slate-secondary)" style={{ flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ margin: 0, fontSize: 12, fontWeight: 500, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</p>
@@ -749,12 +760,12 @@ export default function EditorPage() {
                   </div>
                 </div>
 
-                <div style={{ height: 1, backgroundColor: "var(--border-default)" }} />
+                <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
 
                 {/* Base context items */}
                 <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Working from</p>
                 {CONTEXT_ITEMS_BASE.map(({ label, value }) => (
-                  <div key={label} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "10px 12px", borderRadius: 8, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)" }}>
+                  <div key={label} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "10px 12px", borderRadius: 8, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)" }}>
                     <div>
                       <p style={{ margin: "0 0 2px", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>{label}</p>
                       <p style={{ margin: 0, fontSize: 13, color: "var(--ink)", lineHeight: "17px" }}>{value}</p>
@@ -768,8 +779,8 @@ export default function EditorPage() {
 
           {/* Chat input (only on assistant tab) */}
           {aiTab === "assistant" && (
-            <div style={{ flexShrink: 0, borderTop: "1px solid var(--border-default)", padding: "10px 16px", backgroundColor: "var(--canvas)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 9, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)" }}>
+            <div style={{ flexShrink: 0, borderTop: "var(--border-subtle)", padding: "10px 16px", backgroundColor: "var(--canvas)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 9, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)" }}>
                 <input
                   type="text"
                   value={chatInput}
@@ -791,7 +802,7 @@ export default function EditorPage() {
 }
 
 const outlineBtn: React.CSSProperties = {
-  padding: "6px 14px", borderRadius: 8, backgroundColor: "transparent", border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", cursor: "pointer", transition: "background-color 150ms",
+  padding: "6px 14px", borderRadius: 8, backgroundColor: "transparent", border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", cursor: "pointer", transition: "background-color 150ms",
 }
 
 const toolbarBtn: React.CSSProperties = {

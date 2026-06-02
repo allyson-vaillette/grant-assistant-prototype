@@ -51,7 +51,7 @@ function CloseBtn({ onClick }: { onClick: () => void }) {
         alignItems: "center",
         justifyContent: "center",
         borderRadius: 6,
-        border: "1px solid var(--border-default)",
+        border: "var(--border-subtle)",
         backgroundColor: "transparent",
         cursor: "pointer",
         flexShrink: 0,
@@ -134,7 +134,7 @@ function UploadRow({
         padding: "10px 12px",
         borderRadius: 8,
         backgroundColor: "var(--surface-white)",
-        border: "1px solid var(--border-default)",
+        border: "var(--border-subtle)",
       }}
     >
       <FileText size={14} color="var(--slate-secondary)" style={{ flexShrink: 0 }} />
@@ -165,7 +165,7 @@ function UploadRow({
           </span>
         </div>
         <div
-          style={{ height: 3, borderRadius: 2, backgroundColor: "var(--border-default)" }}
+          style={{ height: 3, borderRadius: 2, backgroundColor: "rgba(42, 42, 42, 0.08)" }}
         >
           <div
             style={{
@@ -192,7 +192,7 @@ function UploadRow({
           alignItems: "center",
           justifyContent: "center",
           borderRadius: 4,
-          border: "1px solid var(--border-default)",
+          border: "var(--border-subtle)",
           backgroundColor: "transparent",
           cursor: "pointer",
           flexShrink: 0,
@@ -276,7 +276,7 @@ export function NewProposalModal({ open, onClose, opportunityName, opportunityId
           maxHeight: "88vh",
           backgroundColor: "#FFFFFF",
           borderRadius: 14,
-          boxShadow: "0 16px 48px rgba(42,42,42,0.18)",
+          boxShadow: "var(--elevation-overlay)",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -309,7 +309,7 @@ export function NewProposalModal({ open, onClose, opportunityName, opportunityId
                   style={{
                     display: "flex",
                     borderRadius: 9,
-                    border: "1px solid var(--border-default)",
+                    border: "var(--border-subtle)",
                     overflow: "hidden",
                   }}
                 >
@@ -369,7 +369,7 @@ export function NewProposalModal({ open, onClose, opportunityName, opportunityId
                     alignItems: "center",
                     justifyContent: "center",
                     borderRadius: 6,
-                    border: "1px solid var(--border-default)",
+                    border: "var(--border-subtle)",
                     backgroundColor: "transparent",
                     cursor: "pointer",
                   }}
@@ -420,7 +420,7 @@ export function NewProposalModal({ open, onClose, opportunityName, opportunityId
               <div
                 style={{
                   height: 1,
-                  backgroundColor: "var(--border-default)",
+                  backgroundColor: "rgba(42, 42, 42, 0.08)",
                   marginBottom: 18,
                 }}
               />
@@ -497,7 +497,7 @@ export function NewProposalModal({ open, onClose, opportunityName, opportunityId
                     width: "100%",
                     padding: "9px 12px",
                     borderRadius: 9,
-                    border: "1px solid var(--border-default)",
+                    border: "var(--border-subtle)",
                     backgroundColor: "var(--surface-white)",
                     fontSize: 13,
                     color: "var(--ink)",
@@ -550,7 +550,7 @@ function GhostBtn({
       style={{
         padding: "8px 18px",
         borderRadius: 8,
-        border: "1px solid var(--border-default)",
+        border: "var(--border-subtle)",
         backgroundColor: "transparent",
         fontSize: 13,
         color: "var(--ink)",
@@ -618,7 +618,7 @@ const footerStyle: React.CSSProperties = {
   justifyContent: "space-between",
   alignItems: "center",
   padding: "16px 24px 20px",
-  borderTop: "1px solid var(--border-default)",
+  borderTop: "var(--border-subtle)",
   flexShrink: 0,
 }
 

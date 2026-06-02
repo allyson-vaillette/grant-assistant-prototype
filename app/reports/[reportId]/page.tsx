@@ -610,11 +610,11 @@ function ReportEditorContent() {
       style={{ height: "100vh", overflow: "hidden", backgroundColor: "var(--surface-white)" }}
     >
       {/* Top bar */}
-      <div style={{ flexShrink: 0, height: 44, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", backgroundColor: "var(--surface-white)", borderBottom: "1px solid var(--border-default)" }}>
+      <div style={{ flexShrink: 0, height: 44, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", backgroundColor: "var(--surface-white)", borderBottom: "var(--border-subtle)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Link
             href={`/opportunity/${opportunityId}`}
-            style={{ width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "var(--surface-white)", textDecoration: "none", flexShrink: 0 }}
+            style={{ width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", textDecoration: "none", flexShrink: 0 }}
           >
             <ChevronLeft size={13} color="var(--ink-secondary)" />
           </Link>
@@ -623,7 +623,7 @@ function ReportEditorContent() {
             <span>›</span>
             <span style={{ color: "var(--ink)", fontWeight: 500 }}>{reportName}</span>
           </div>
-          <span style={{ borderRadius: 20, padding: "2px 8px", backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)", fontSize: 11, fontWeight: 500, color: "var(--ink-secondary)" }}>
+          <span style={{ borderRadius: 20, padding: "2px 8px", backgroundColor: "var(--canvas)", border: "var(--border-subtle)", fontSize: 11, fontWeight: 500, color: "var(--ink-secondary)" }}>
             {reportType}
           </span>
         </div>
@@ -652,19 +652,19 @@ function ReportEditorContent() {
       </div>
 
       {/* Toolbar */}
-      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 2, padding: "0 20px", height: 40, backgroundColor: "var(--surface-white)", borderBottom: "1px solid var(--border-default)" }}>
+      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 2, padding: "0 20px", height: 40, backgroundColor: "var(--surface-white)", borderBottom: "var(--border-subtle)" }}>
         {[Bold, Italic, Underline].map((Icon, i) => (
           <button key={i} type="button" style={toolbarBtn} onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }} onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}>
             <Icon size={13} color="var(--ink-secondary)" />
           </button>
         ))}
-        <div style={{ width: 1, height: 16, backgroundColor: "var(--border-default)", margin: "0 4px" }} />
+        <div style={{ width: 1, height: 16, backgroundColor: "rgba(42, 42, 42, 0.08)", margin: "0 4px" }} />
         {["H1", "H2"].map((t) => (
           <button key={t} type="button" style={{ ...toolbarBtn, fontSize: 12, fontWeight: 600, color: "var(--ink-secondary)" }} onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }} onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}>
             {t}
           </button>
         ))}
-        <div style={{ width: 1, height: 16, backgroundColor: "var(--border-default)", margin: "0 4px" }} />
+        <div style={{ width: 1, height: 16, backgroundColor: "rgba(42, 42, 42, 0.08)", margin: "0 4px" }} />
         {[List, ListOrdered].map((Icon, i) => (
           <button key={i} type="button" style={toolbarBtn} onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }} onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}>
             <Icon size={13} color="var(--ink-secondary)" />
@@ -716,8 +716,8 @@ function ReportEditorContent() {
                 <div style={{ height: 28, borderRadius: 6, backgroundColor: "var(--canvas)", width: "60%", marginBottom: 10 }} />
                 <div style={{ height: 14, borderRadius: 4, backgroundColor: "var(--canvas)", width: "30%" }} />
               </div>
-              <div style={{ height: 1, backgroundColor: "var(--border-default)", marginBottom: 36 }} />
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderRadius: 10, backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)" }}>
+              <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)", marginBottom: 36 }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderRadius: 10, backgroundColor: "var(--canvas)", boxShadow: "var(--shadow-card)" }}>
                 <div style={{ width: 16, height: 16, borderRadius: "50%", border: "2px solid var(--slate-soft)", borderTopColor: "var(--slate-primary)", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
                 <span style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>Analyzing template and preparing sections...</span>
               </div>
@@ -735,7 +735,7 @@ function ReportEditorContent() {
                   {formattedDue && <><span style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>·</span><span style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>Due {formattedDue}</span></>}
                 </div>
               </div>
-              <div style={{ height: 1, backgroundColor: "var(--border-default)", marginBottom: 36 }} />
+              <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)", marginBottom: 36 }} />
 
               {/* Sections */}
               {TEMPLATE_SECTIONS.map((section) => {
@@ -771,11 +771,11 @@ function ReportEditorContent() {
         </div>
 
         {/* Right: AI panel */}
-        <div style={{ width: 360, flexShrink: 0, borderLeft: "1px solid var(--border-default)", backgroundColor: "var(--canvas)", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+        <div style={{ width: 360, flexShrink: 0, borderLeft: "var(--border-subtle)", backgroundColor: "var(--canvas)", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
 
           {/* Section scope header */}
           {!isLoading && (
-            <div style={{ flexShrink: 0, padding: "7px 14px 6px", backgroundColor: "var(--slate-tint)", borderBottom: "1px solid var(--border-default)", display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ flexShrink: 0, padding: "7px 14px 6px", backgroundColor: "var(--slate-tint)", borderBottom: "var(--border-subtle)", display: "flex", alignItems: "center", gap: 6 }}>
               <MIcon name="auto_fix_high" size={13} color="var(--slate-secondary)" />
               <span style={{ fontSize: 11, color: "var(--ink-secondary)" }}>
                 Helping with: <strong style={{ fontWeight: 600, color: "var(--ink)" }}>{activeSection.heading}</strong>
@@ -784,7 +784,7 @@ function ReportEditorContent() {
           )}
 
           {/* Tabs */}
-          <div style={{ flexShrink: 0, display: "flex", borderBottom: "1px solid var(--border-default)", padding: "0 14px", backgroundColor: "var(--canvas)" }}>
+          <div style={{ flexShrink: 0, display: "flex", borderBottom: "var(--border-subtle)", padding: "0 14px", backgroundColor: "var(--canvas)" }}>
             {(["assistant", "suggestions", "context", "evidence"] as AITab[]).map((tab) => {
               const labels: Record<AITab, string> = { assistant: "AI Assistant", suggestions: "Suggestions", context: "Context", evidence: "Evidence" }
               const isA = aiTab === tab
@@ -814,12 +814,12 @@ function ReportEditorContent() {
                       <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--gradient-avatar)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
                         <span style={{ fontSize: 8, fontWeight: 700, color: "#FFF" }}>GA</span>
                       </div>
-                      <div style={{ flex: 1, padding: "10px 12px", borderRadius: 10, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", lineHeight: "19px" }}>
+                      <div style={{ flex: 1, padding: "10px 12px", borderRadius: 10, backgroundColor: "var(--surface-white)", boxShadow: "var(--shadow-card)", fontSize: 13, color: "var(--ink)", lineHeight: "19px" }}>
                         Setting up your report...
                       </div>
                     </div>
                     {fileProcessing && templateName && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 8, backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)", fontSize: 12, color: "var(--ink-secondary)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 8, backgroundColor: "var(--canvas)", border: "var(--border-subtle)", fontSize: 12, color: "var(--ink-secondary)" }}>
                         <div style={{ width: 12, height: 12, borderRadius: "50%", border: "1.5px solid var(--slate-soft)", borderTopColor: "var(--slate-primary)", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
                         Still processing {templateName}...
                       </div>
@@ -846,7 +846,7 @@ function ReportEditorContent() {
                                 padding: "10px 12px",
                                 borderRadius: 10,
                                 backgroundColor: msg.role === "ai" ? "var(--surface-white)" : "var(--slate-tint)",
-                                border: "1px solid var(--border-default)",
+                                boxShadow: "var(--shadow-card)",
                                 fontSize: 13,
                                 color: "var(--ink)",
                                 lineHeight: "19px",
@@ -871,7 +871,7 @@ function ReportEditorContent() {
                                 <button
                                   type="button"
                                   onClick={() => handleRegenerate(msg.id)}
-                                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", borderRadius: 6, backgroundColor: "transparent", border: "1px solid var(--border-default)", fontSize: 12, color: "var(--ink-secondary)", cursor: "pointer" }}
+                                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", borderRadius: 6, backgroundColor: "transparent", border: "var(--border-subtle)", fontSize: 12, color: "var(--ink-secondary)", cursor: "pointer" }}
                                 >
                                   <MIcon name="refresh" size={13} />
                                   Regenerate
@@ -900,7 +900,7 @@ function ReportEditorContent() {
                         <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--gradient-avatar)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                           <span style={{ fontSize: 8, fontWeight: 700, color: "#FFF" }}>GA</span>
                         </div>
-                        <div style={{ padding: "10px 14px", borderRadius: 10, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)" }}>
+                        <div style={{ padding: "10px 14px", borderRadius: 10, backgroundColor: "var(--surface-white)", boxShadow: "var(--shadow-card)" }}>
                           <span style={{ fontSize: 18, color: "var(--ink-tertiary)", letterSpacing: 2 }}>···</span>
                         </div>
                       </div>
@@ -956,7 +956,7 @@ function ReportEditorContent() {
                         </p>
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                           {sectionSuggestions.proposalPhrasing.map((item, i) => (
-                            <div key={i} style={{ padding: "10px 12px", borderRadius: 8, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)" }}>
+                            <div key={i} style={{ padding: "10px 12px", borderRadius: 8, backgroundColor: "var(--surface-white)", boxShadow: "var(--shadow-card)" }}>
                               <p style={{ margin: "0 0 6px", fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px", fontStyle: "italic" }}>
                                 {item.promise}
                               </p>
@@ -970,7 +970,7 @@ function ReportEditorContent() {
                     )}
 
                     {!sectionSuggestions && (
-                      <div style={{ padding: "14px", borderRadius: 10, backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)" }}>
+                      <div style={{ padding: "14px", borderRadius: 10, backgroundColor: "var(--canvas)", border: "var(--border-subtle)" }}>
                         <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)", lineHeight: "19px" }}>
                           Suggestions for <strong style={{ color: "var(--ink)" }}>{activeSection.heading}</strong> will appear here once you start writing.
                         </p>
@@ -996,7 +996,7 @@ function ReportEditorContent() {
                         {visibleItems.map((item) => (
                           <div
                             key={item.id}
-                            style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)" }}
+                            style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, backgroundColor: "var(--surface-white)", boxShadow: "var(--shadow-card)" }}
                           >
                             <MIcon name={item.icon} size={15} color="var(--slate-secondary)" style={{ flexShrink: 0 }} />
                             <div style={{ flex: 1, minWidth: 0 }}>
@@ -1142,7 +1142,7 @@ function ReportEditorContent() {
                           <button
                             type="button"
                             onClick={() => setShowAddEvidence(false)}
-                            style={{ flex: 1, padding: "7px", borderRadius: 6, backgroundColor: "transparent", border: "1px solid var(--border-default)", fontSize: 12, color: "var(--ink-secondary)", cursor: "pointer" }}
+                            style={{ flex: 1, padding: "7px", borderRadius: 6, backgroundColor: "transparent", border: "var(--border-subtle)", fontSize: 12, color: "var(--ink-secondary)", cursor: "pointer" }}
                           >
                             Cancel
                           </button>
@@ -1183,11 +1183,11 @@ function ReportEditorContent() {
 
                 {/* Divider */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ flex: 1, height: 1, backgroundColor: "var(--border-default)" }} />
+                  <div style={{ flex: 1, height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
                   <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>
                     Initiative — reusable
                   </span>
-                  <div style={{ flex: 1, height: 1, backgroundColor: "var(--border-default)" }} />
+                  <div style={{ flex: 1, height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
                 </div>
 
                 {/* Secondary: evergreen */}
@@ -1223,8 +1223,8 @@ function ReportEditorContent() {
 
           {/* Chat input — assistant tab only */}
           {aiTab === "assistant" && !isLoading && (
-            <div style={{ flexShrink: 0, borderTop: "1px solid var(--border-default)", padding: "10px 14px", backgroundColor: "var(--canvas)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 9, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)" }}>
+            <div style={{ flexShrink: 0, borderTop: "var(--border-subtle)", padding: "10px 14px", backgroundColor: "var(--canvas)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 9, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)" }}>
                 <input
                   type="text"
                   value={chatInput}
@@ -1265,7 +1265,7 @@ function ReportEditorContent() {
 
 function SuggestionEvidenceCard({ item, onInsert }: { item: EvidenceItem; onInsert: () => void }) {
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "9px 10px", borderRadius: 8, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)" }}>
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "9px 10px", borderRadius: 8, backgroundColor: "var(--surface-white)", boxShadow: "var(--shadow-card)" }}>
       <MIcon name={EVIDENCE_TYPE_ICONS[item.type]} size={15} color="var(--slate-secondary)" style={{ flexShrink: 0, marginTop: 1 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ margin: "0 0 2px", fontSize: 12, fontWeight: 500, color: "var(--ink)", lineHeight: "16px" }}>{item.label}</p>
@@ -1302,7 +1302,7 @@ function EvidenceCard({
       }}
     >
       <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-        <div style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: isAttached ? "var(--slate-tint)" : "var(--canvas)", border: "1px solid var(--border-default)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <div style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: isAttached ? "var(--slate-tint)" : "var(--canvas)", border: "var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <MIcon name={EVIDENCE_TYPE_ICONS[item.type]} size={14} color={isAttached ? "var(--slate-primary)" : "var(--ink-secondary)"} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -1337,7 +1337,7 @@ function EvidenceCard({
         <button
           type="button"
           onClick={isAttached ? onDetach : onAttach}
-          style={{ padding: "3px 8px", borderRadius: 5, backgroundColor: isAttached ? "transparent" : "var(--slate-tint)", border: isAttached ? "1px solid var(--border-default)" : "1px solid var(--slate-light)", fontSize: 11, fontWeight: 500, color: isAttached ? "var(--ink-secondary)" : "var(--slate-primary)", cursor: "pointer" }}
+          style={{ padding: "3px 8px", borderRadius: 5, backgroundColor: isAttached ? "transparent" : "var(--slate-tint)", border: isAttached ? "var(--border-subtle)" : "1px solid var(--slate-light)", fontSize: 11, fontWeight: 500, color: isAttached ? "var(--ink-secondary)" : "var(--slate-primary)", cursor: "pointer" }}
         >
           {isAttached ? "Remove" : "Attach"}
         </button>
@@ -1365,7 +1365,7 @@ const outlineBtn: React.CSSProperties = {
   padding: "6px 14px",
   borderRadius: 8,
   backgroundColor: "transparent",
-  border: "1px solid var(--border-default)",
+  border: "var(--border-subtle)",
   fontSize: 13,
   color: "var(--ink)",
   cursor: "pointer",

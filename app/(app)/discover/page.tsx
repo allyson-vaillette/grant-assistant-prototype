@@ -732,7 +732,6 @@ function TrackPopover({ onCancel, onSelect }: { onCancel: () => void; onSelect: 
         left: 0,
         right: 0,
         backgroundColor: "#FFFFFF",
-        border: "1px solid var(--border-default)",
         borderRadius: 12,
         boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
         padding: "16px",
@@ -950,7 +949,7 @@ function NotRelevantModal({
               width: "100%",
               padding: "9px 12px",
               borderRadius: 8,
-              border: "1px solid var(--border-color)",
+              border: "1px solid var(--border-default)",
               fontSize: 13,
               color: "var(--ink)",
               backgroundColor: "var(--canvas)",
@@ -961,7 +960,7 @@ function NotRelevantModal({
         )}
 
         {/* Divider */}
-        <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+        <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
 
         {/* Remove from list checkbox */}
         <div>
@@ -994,7 +993,7 @@ function NotRelevantModal({
             style={{
               padding: "8px 16px",
               borderRadius: "var(--radius-button)",
-              border: "1px solid var(--border-color)",
+              border: "var(--border-subtle)",
               backgroundColor: "transparent",
               fontSize: 13,
               color: "var(--ink)",
@@ -1098,7 +1097,7 @@ function ShareDiscoverModal({
               alignItems: "center",
               justifyContent: "center",
               borderRadius: 6,
-              border: "1px solid var(--border-default)",
+              border: "var(--border-subtle)",
               backgroundColor: "transparent",
               cursor: "pointer",
               flexShrink: 0,
@@ -1140,7 +1139,6 @@ function ShareDiscoverModal({
                   left: 0,
                   right: 0,
                   backgroundColor: "#FFFFFF",
-                  border: "1px solid var(--border-default)",
                   borderRadius: 10,
                   boxShadow: "0 8px 24px rgba(28,24,64,0.12)",
                   zIndex: 300,
@@ -1224,7 +1222,7 @@ function ShareDiscoverModal({
             justifyContent: "space-between",
             alignItems: "center",
             padding: "16px 24px 20px",
-            borderTop: "1px solid var(--border-default)",
+            borderTop: "var(--border-subtle)",
           }}
         >
           <button
@@ -1233,7 +1231,7 @@ function ShareDiscoverModal({
             style={{
               padding: "8px 18px",
               borderRadius: 8,
-              border: "1px solid var(--border-default)",
+              border: "var(--border-subtle)",
               backgroundColor: "transparent",
               fontSize: 13,
               color: "var(--ink)",
@@ -1380,7 +1378,7 @@ function DetailPanel({
         flexShrink: 0,
         display: "flex",
         flexDirection: "column",
-        borderLeft: "1px solid var(--border-color)",
+        borderLeft: "var(--border-subtle)",
         backgroundColor: "var(--canvas)",
         overflow: "hidden",
       }}
@@ -1463,7 +1461,7 @@ function DetailPanel({
           </div>
         </div>
 
-        <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+        <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
 
         {/* Fit score + Why this matches */}
         <div>
@@ -1474,7 +1472,7 @@ function DetailPanel({
               alignItems: "center",
               justifyContent: "space-between",
               backgroundColor: "#FFFFFF",
-              border: "1px solid var(--border-default)",
+              boxShadow: "var(--shadow-card)",
               borderRadius: 10,
               padding: "12px 14px",
               marginBottom: 12,
@@ -1530,7 +1528,6 @@ function DetailPanel({
                     right: 0,
                     width: 240,
                     backgroundColor: "#FFFFFF",
-                    border: "1px solid var(--border-default)",
                     borderRadius: 10,
                     boxShadow: "0 8px 24px rgba(28,24,64,0.14)",
                     padding: "12px 14px",
@@ -1581,7 +1578,7 @@ function DetailPanel({
                 padding: "9px 12px",
                 borderRadius: 8,
                 backgroundColor: "#FFFFFF",
-                border: "1px solid var(--border-default)",
+                boxShadow: "var(--shadow-card)",
                 fontSize: 12,
                 color: "var(--ink-secondary)",
                 lineHeight: "18px",
@@ -1592,7 +1589,7 @@ function DetailPanel({
           )}
         </div>
 
-        <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+        <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
 
         {/* About this grant */}
         <div>
@@ -1602,7 +1599,7 @@ function DetailPanel({
           </p>
         </div>
 
-        <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+        <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
 
         {/* Your initiatives */}
         <div style={{ paddingBottom: 20 }}>
@@ -1618,7 +1615,7 @@ function DetailPanel({
                   padding: "9px 0",
                   borderBottom:
                     i < opp.initiatives.length - 1
-                      ? "1px solid var(--border-color)"
+                      ? "var(--border-subtle)"
                       : "none",
                 }}
               >
@@ -1647,7 +1644,7 @@ function DetailPanel({
         style={{
           flexShrink: 0,
           position: "relative",
-          borderTop: "1px solid var(--border-color)",
+          borderTop: "var(--border-subtle)",
           padding: "14px 20px",
           backgroundColor: "var(--canvas)",
         }}
@@ -1952,17 +1949,17 @@ function FunderDetailPanel({
     borderRadius: "var(--radius-pill)",
     padding: "3px 9px",
     backgroundColor: "#FFFFFF",
-    border: "1px solid var(--border-default)",
+    border: "var(--border-subtle)",
     fontSize: 11,
     fontWeight: 500,
     color: "var(--ink-secondary)",
   }
 
   return (
-    <div style={{ width: 320, flexShrink: 0, display: "flex", flexDirection: "column", borderLeft: "1px solid var(--border-color)", backgroundColor: "var(--canvas)", overflow: "hidden" }}>
+    <div style={{ width: 320, flexShrink: 0, display: "flex", flexDirection: "column", borderLeft: "var(--border-subtle)", backgroundColor: "var(--canvas)", overflow: "hidden" }}>
       {/* Back nav */}
       {onBack && (
-        <div style={{ flexShrink: 0, padding: "8px 12px", borderBottom: "1px solid var(--border-color)", backgroundColor: "var(--canvas)" }}>
+        <div style={{ flexShrink: 0, padding: "8px 12px", borderBottom: "var(--border-subtle)", backgroundColor: "var(--canvas)" }}>
           <button
             type="button"
             onClick={onBack}
@@ -2016,7 +2013,7 @@ function FunderDetailPanel({
           </div>
         </div>
 
-        <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+        <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
 
         {/* ── About ── */}
         <div>
@@ -2027,7 +2024,7 @@ function FunderDetailPanel({
         {/* ── Alignment ── */}
         {funder.whyMatches.length > 0 && (
           <>
-            <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+            <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
             <div>
               <p style={sectionLabelStyle}>Alignment with your organization</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -2045,7 +2042,7 @@ function FunderDetailPanel({
         {/* ── What They Fund ── */}
         {wtf && (
           <>
-            <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+            <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
             <div>
               <p style={sectionLabelStyle}>What they fund</p>
               <p style={{ margin: "0 0 12px", fontSize: 12, color: "var(--ink-secondary)", fontWeight: 500 }}>{wtf.typicalGrantRange}</p>
@@ -2104,7 +2101,7 @@ function FunderDetailPanel({
         {/* ── Giving History ── */}
         {gh && (
           <>
-            <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+            <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
             <div>
               <p style={sectionLabelStyle}>Giving history</p>
               <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{gh.statLine}</p>
@@ -2114,7 +2111,7 @@ function FunderDetailPanel({
                   <p style={{ fontSize: 9, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)", margin: "0 0 8px" }}>Past grantee snapshot</p>
                   <div style={{ display: "flex", flexDirection: "column" }}>
                     {gh.pastGrantees.map((g, i) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: i < gh.pastGrantees!.length - 1 ? "1px solid var(--border-color)" : "none" }}>
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: i < gh.pastGrantees!.length - 1 ? "var(--border-subtle)" : "none" }}>
                         <span style={{ fontSize: 12, color: "var(--ink)" }}>{g.name}</span>
                         <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)", flexShrink: 0, marginLeft: 8 }}>{g.amount}</span>
                       </div>
@@ -2129,7 +2126,7 @@ function FunderDetailPanel({
         {/* ── Leadership ── */}
         {leadership && leadership.length > 0 && (
           <>
-            <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+            <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
             <div>
               <button type="button" onClick={() => toggleSect("leadership")}
                 style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", marginBottom: openSections.leadership ? 10 : 0 }}
@@ -2152,7 +2149,7 @@ function FunderDetailPanel({
         )}
 
         {/* ── Our Relationship ── */}
-        <div style={{ height: 1, backgroundColor: "var(--border-color)" }} />
+        <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
         <div style={{ paddingBottom: 20 }}>
           <p style={sectionLabelStyle}>Our relationship</p>
 
@@ -2169,7 +2166,7 @@ function FunderDetailPanel({
                     <ChevronDown size={10} color={RELATIONSHIP_BADGE[relStatus].color} style={{ transform: relStatusOpen ? "rotate(180deg)" : "none", transition: "transform 150ms" }} />
                   </button>
                   {relStatusOpen && (
-                    <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, backgroundColor: "#FFFFFF", border: "1px solid var(--border-default)", borderRadius: 8, boxShadow: "0 8px 24px rgba(28,24,64,0.12)", zIndex: 30, overflow: "hidden", minWidth: 130 }}>
+                    <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, backgroundColor: "#FFFFFF", borderRadius: 8, boxShadow: "0 8px 24px rgba(28,24,64,0.12)", zIndex: 30, overflow: "hidden", minWidth: 130 }}>
                       {(["New", "Cultivating", "Established", "Lapsed"] as RelationshipStatus[]).filter((s) => s !== relStatus).map((s) => (
                         <button key={s} type="button" onClick={() => { setRelStatus(s); setRelStatusOpen(false) }}
                           style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
@@ -2218,7 +2215,7 @@ function FunderDetailPanel({
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                     {rel.notes.slice(0, 2).map((note, i) => (
-                      <div key={i} style={{ padding: "9px 12px", borderRadius: 8, backgroundColor: "#FFFFFF", border: "1px solid var(--border-default)" }}>
+                      <div key={i} style={{ padding: "9px 12px", borderRadius: 8, backgroundColor: "#FFFFFF", boxShadow: "var(--shadow-card)" }}>
                         <p style={{ margin: "0 0 3px", fontSize: 12, color: "var(--ink)", lineHeight: "17px" }}>{note.preview}</p>
                         <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>{note.date}</span>
                       </div>
@@ -2233,7 +2230,7 @@ function FunderDetailPanel({
                   <span style={{ display: "block", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)", marginBottom: 7 }}>Engagement history</span>
                   <div style={{ display: "flex", flexDirection: "column" }}>
                     {rel.engagements.map((eng, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 0", borderBottom: i < rel.engagements.length - 1 ? "1px solid var(--border-color)" : "none" }}>
+                      <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 0", borderBottom: i < rel.engagements.length - 1 ? "var(--border-subtle)" : "none" }}>
                         <span style={{ fontSize: 12, color: "var(--ink)", flex: 1, lineHeight: "16px" }}>{eng.name}</span>
                         <span style={{ borderRadius: 20, padding: "2px 8px", backgroundColor: "#EBF0F5", fontSize: 11, fontWeight: 500, color: "#4A6080", flexShrink: 0 }}>{eng.stage}</span>
                       </div>
@@ -2259,7 +2256,7 @@ function FunderDetailPanel({
       </div>
 
       {/* ── Sticky footer ── */}
-      <div style={{ flexShrink: 0, borderTop: "1px solid var(--border-color)", padding: "14px 20px", backgroundColor: "var(--canvas)" }}>
+      <div style={{ flexShrink: 0, borderTop: "var(--border-subtle)", padding: "14px 20px", backgroundColor: "var(--canvas)" }}>
         <button type="button"
           onClick={() => isTracked ? router.push("/portfolio") : onCreateEngagement(funder.name)}
           style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", height: 40, borderRadius: 10, backgroundColor: "var(--slate-primary)", border: "none", cursor: "pointer", marginBottom: isTracked ? 8 : 0, transition: "background-color 150ms" }}
@@ -2485,7 +2482,7 @@ function FilterSidebar({
               )}
             </div>
 
-            <div style={{ height: 1, backgroundColor: "var(--border-default)" }} />
+            <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
 
             {/* Focus Areas — shared */}
             <div>
@@ -2512,7 +2509,7 @@ function FilterSidebar({
               )}
             </div>
 
-            <div style={{ height: 1, backgroundColor: "var(--border-default)" }} />
+            <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
 
             {/* Geography — shared */}
             <div>
@@ -2539,7 +2536,7 @@ function FilterSidebar({
               )}
             </div>
 
-            <div style={{ height: 1, backgroundColor: "var(--border-default)" }} />
+            <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
 
             {activeTab === "opportunities" ? (
               <>
@@ -2582,7 +2579,7 @@ function FilterSidebar({
                   )}
                 </div>
 
-                <div style={{ height: 1, backgroundColor: "var(--border-default)" }} />
+                <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
 
                 {/* Deadline — opportunities only */}
                 <div>
@@ -2645,7 +2642,7 @@ function FilterSidebar({
                   )}
                 </div>
 
-                <div style={{ height: 1, backgroundColor: "var(--border-default)" }} />
+                <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
 
                 {/* Funding Range — funders */}
                 <div>
@@ -2686,7 +2683,7 @@ function FilterSidebar({
                   )}
                 </div>
 
-                <div style={{ height: 1, backgroundColor: "var(--border-default)" }} />
+                <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
 
                 {/* Accepts unsolicited — funders only */}
                 <div>
@@ -2709,7 +2706,7 @@ function FilterSidebar({
         <div
           style={{
             flexShrink: 0,
-            borderTop: "1px solid var(--border-default)",
+            borderTop: "var(--border-subtle)",
             padding: "12px 16px 16px 0",
             display: "flex",
             flexDirection: "column",
@@ -3126,7 +3123,7 @@ export default function DiscoverPage() {
         style={{
           flexShrink: 0,
           padding: "10px 20px",
-          borderBottom: "1px solid var(--border-color)",
+          borderBottom: "var(--border-subtle)",
           backgroundColor: "#FFFFFF",
           display: "flex",
           alignItems: "center",
@@ -3163,7 +3160,7 @@ export default function DiscoverPage() {
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
-            borderRight: "1px solid var(--border-color)",
+            borderRight: "var(--border-subtle)",
             backgroundColor: "#FFFFFF",
           }}
         >
@@ -3176,7 +3173,7 @@ export default function DiscoverPage() {
               alignItems: "center",
               justifyContent: "space-between",
               backgroundColor: "#FFFFFF",
-              borderBottom: "1px solid var(--border-default)",
+              borderBottom: "var(--border-subtle)",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -3222,7 +3219,7 @@ export default function DiscoverPage() {
                     color: "var(--ink-tertiary)",
                     padding: "3px 7px",
                     borderRadius: 6,
-                    border: "1px solid var(--border-default)",
+                    border: "var(--border-subtle)",
                     backgroundColor: "var(--canvas)",
                     transition: "color 150ms, background-color 150ms",
                   }}
@@ -3250,7 +3247,7 @@ export default function DiscoverPage() {
                 borderRadius: "var(--radius-button)",
                 padding: "6px 12px",
                 backgroundColor: "#FFFFFF",
-                border: "1px solid var(--border-default)",
+                border: "var(--border-subtle)",
                 fontSize: 13,
                 color: "var(--ink)",
                 cursor: "pointer",
@@ -3269,7 +3266,7 @@ export default function DiscoverPage() {
             style={{
               flexShrink: 0,
               padding: "10px 20px",
-              borderBottom: "1px solid var(--border-default)",
+              borderBottom: "var(--border-subtle)",
               backgroundColor: "#FFFFFF",
             }}
           >
@@ -3317,7 +3314,7 @@ export default function DiscoverPage() {
               style={{
                 flexShrink: 0,
                 padding: "8px 20px",
-                borderBottom: "1px solid var(--border-default)",
+                borderBottom: "var(--border-subtle)",
                 backgroundColor: "#FFFFFF",
                 display: "flex",
                 flexWrap: "wrap",
@@ -3423,7 +3420,7 @@ export default function DiscoverPage() {
                             alignItems: "center",
                             gap: 4,
                             background: "none",
-                            border: "1px solid var(--border-default)",
+                            border: "var(--border-subtle)",
                             borderRadius: 6,
                             cursor: "pointer",
                             padding: "4px 9px",

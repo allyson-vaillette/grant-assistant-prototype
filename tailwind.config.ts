@@ -99,9 +99,17 @@ const config: Config = {
         button:     "var(--radius-button)",
         input:      "var(--radius-input)",
         "icon-tile":"var(--radius-icon-tile)",
+        panel:      "var(--radius-panel)",
         lg:         "var(--radius)",
         md:         "calc(var(--radius) - 2px)",
         sm:         "calc(var(--radius) - 4px)",
+      },
+
+      /* ── Elevation shadows ── */
+      boxShadow: {
+        card:    "var(--elevation-card)",
+        raised:  "var(--elevation-raised)",
+        overlay: "var(--elevation-overlay)",
       },
 
       /* ── Font family ── */

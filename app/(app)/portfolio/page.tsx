@@ -1236,7 +1236,7 @@ function AwardHistoryBar({ history }: { history: { year: number; amount: number 
               flex: 1,
               height: barH,
               borderRadius: 2,
-              backgroundColor: h.amount > 0 ? "var(--slate-secondary)" : "var(--border-default)",
+              backgroundColor: h.amount > 0 ? "var(--slate-secondary)" : "rgba(42, 42, 42, 0.12)",
               transition: "background-color 150ms",
               cursor: "default",
             }}

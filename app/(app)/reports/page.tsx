@@ -194,7 +194,7 @@ function ReportRow({
         padding: "14px 14px",
         borderRadius: 10,
         backgroundColor: isSelected ? "#FFFFFF" : "transparent",
-        border: isSelected ? "1px solid var(--border-color)" : "1px solid transparent",
+        border: isSelected ? "var(--border-subtle)" : "1px solid transparent",
         borderLeft: isSelected ? "3px solid var(--slate-primary)" : "3px solid transparent",
         boxShadow: isSelected ? "0px 1px 4px rgba(28,24,64,0.06)" : "none",
         cursor: "pointer",
@@ -289,7 +289,7 @@ function DetailPanel({ report }: { report: Report }) {
         overflowY: "auto",
         padding: "28px 40px",
         backgroundColor: "#FFFFFF",
-        borderLeft: "1px solid var(--border-color)",
+        borderLeft: "var(--border-subtle)",
         display: "flex",
         flexDirection: "column",
         gap: 0,
@@ -344,7 +344,7 @@ function DetailPanel({ report }: { report: Report }) {
             style={{
               padding: "6px 14px",
               borderRadius: "var(--radius-button)",
-              border: "1px solid var(--border-color)",
+              border: "var(--border-subtle)",
               backgroundColor: "transparent",
               fontSize: 13,
               color: "var(--ink)",
@@ -366,7 +366,7 @@ function DetailPanel({ report }: { report: Report }) {
             borderRadius: "var(--radius-pill)",
             padding: "4px 12px",
             backgroundColor: "var(--subtle)",
-            border: "1px solid var(--border-color)",
+            border: "var(--border-subtle)",
             fontSize: 13,
             color: "var(--ink-secondary)",
           }}
@@ -378,7 +378,7 @@ function DetailPanel({ report }: { report: Report }) {
             borderRadius: "var(--radius-pill)",
             padding: "4px 12px",
             backgroundColor: "var(--subtle)",
-            border: "1px solid var(--border-color)",
+            border: "var(--border-subtle)",
             fontSize: 13,
             color: "var(--ink-secondary)",
           }}
@@ -395,7 +395,7 @@ function DetailPanel({ report }: { report: Report }) {
         <div
           style={{
             borderRadius: "var(--radius-card)",
-            border: "1px solid var(--border-color)",
+            boxShadow: "var(--shadow-card)",
             overflow: "hidden",
           }}
         >
@@ -410,7 +410,7 @@ function DetailPanel({ report }: { report: Report }) {
                   padding: "10px 16px",
                   borderBottom:
                     i < report.coveredOpps.length - 1
-                      ? "1px solid var(--border-color)"
+                      ? "var(--border-subtle)"
                       : "none",
                   gap: 12,
                 }}
@@ -516,7 +516,7 @@ function DetailPanel({ report }: { report: Report }) {
           <div
             style={{
               borderRadius: "var(--radius-card)",
-              border: "1px solid var(--border-color)",
+              boxShadow: "var(--shadow-card)",
               overflow: "hidden",
               marginBottom: 10,
             }}
@@ -530,7 +530,7 @@ function DetailPanel({ report }: { report: Report }) {
                   gap: 12,
                   padding: "12px 16px",
                   borderBottom:
-                    i < report.files.length - 1 ? "1px solid var(--border-color)" : "none",
+                    i < report.files.length - 1 ? "var(--border-subtle)" : "none",
                 }}
               >
                 <FileText size={14} color="var(--ink-tertiary)" style={{ flexShrink: 0 }} />
@@ -656,7 +656,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 
 function Divider() {
   return (
-    <div style={{ height: 1, backgroundColor: "var(--border-color)", margin: "4px 0 20px 0" }} />
+    <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)", margin: "4px 0 20px 0" }} />
   )
 }
 
@@ -688,7 +688,7 @@ export default function ReportsPage() {
           flexShrink: 0,
           padding: "20px 32px",
           backgroundColor: "#FFFFFF",
-          borderBottom: "1px solid var(--border-color)",
+          borderBottom: "var(--border-subtle)",
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
@@ -743,7 +743,7 @@ export default function ReportsPage() {
             width: 268,
             flexShrink: 0,
             backgroundColor: "#F3F0EA",
-            borderRight: "1px solid var(--border-color)",
+            borderRight: "var(--border-subtle)",
             overflowY: "auto",
             display: "flex",
             flexDirection: "column",
@@ -770,7 +770,7 @@ export default function ReportsPage() {
                   style={{
                     borderRadius: "var(--radius-pill)",
                     padding: "4px 12px",
-                    border: isActive ? "none" : "1px solid var(--border-color)",
+                    border: isActive ? "none" : "var(--border-subtle)",
                     backgroundColor: isActive
                       ? isOverdueTab
                         ? "#C0302A"

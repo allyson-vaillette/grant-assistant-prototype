@@ -214,8 +214,8 @@ function Toast({ message, visible }: { message: string; visible: boolean }) {
       position: "fixed", bottom: 24, left: "50%",
       transform: visible ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(12px)",
       opacity: visible ? 1 : 0, transition: "transform 0.2s ease, opacity 0.2s ease",
-      backgroundColor: "#FFFFFF", border: "1px solid var(--border-default)", borderRadius: 12,
-      padding: "10px 20px", boxShadow: "0 4px 16px rgba(42,42,42,0.12)",
+      backgroundColor: "#FFFFFF", border: "var(--border-subtle)", borderRadius: 12,
+      padding: "10px 20px", boxShadow: "var(--elevation-card)",
       fontSize: 13, color: "var(--ink)", zIndex: 100, pointerEvents: "none", whiteSpace: "nowrap",
     }}>
       {message}
@@ -233,7 +233,7 @@ function StageControl({ stage, onChange }: { stage: Stage; onChange: (s: Stage) 
   return (
     <div style={{ position: "relative", flexShrink: 0 }}>
       <button type="button" onClick={() => setOpen((v) => !v)}
-        style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 8, border: "1px solid var(--border-default)", backgroundColor: "var(--surface-white)", cursor: "pointer", transition: "background-color 150ms" }}
+        style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 8, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", cursor: "pointer", transition: "background-color 150ms" }}
         onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
         onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface-white)" }}
       >
@@ -242,7 +242,7 @@ function StageControl({ stage, onChange }: { stage: Stage; onChange: (s: Stage) 
         <ChevronDown size={12} color="var(--ink-tertiary)" style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 150ms" }} />
       </button>
       {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)", borderRadius: 10, boxShadow: "0 8px 24px rgba(42,42,42,0.12)", zIndex: 50, minWidth: 160, overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)", borderRadius: 10, boxShadow: "var(--elevation-raised)", zIndex: 50, minWidth: 160, overflow: "hidden" }}>
           {nextStages.map((s) => {
             const b = STAGE_BADGE[s]
             return (
@@ -341,17 +341,17 @@ function StageChangeModal({ open, pendingStage, onConfirm, onAddTasks, onSkip, o
       style={{ position: "fixed", inset: 0, backgroundColor: "rgba(42,42,42,0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}
       onClick={(e) => { if (e.target === e.currentTarget) onCancel() }}
     >
-      <div style={{ width: 440, backgroundColor: "#FFFFFF", borderRadius: 14, boxShadow: "0 16px 48px rgba(42,42,42,0.18)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ width: 440, backgroundColor: "#FFFFFF", borderRadius: 14, boxShadow: "var(--elevation-overlay)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {step === "confirm" ? (
           <>
-            <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--border-default)" }}>
+            <div style={{ padding: "20px 24px", borderBottom: "var(--border-subtle)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: "var(--ink)", fontFamily: "var(--font-lora)" }}>
                   Move to{" "}
                   <span style={{ borderRadius: 20, padding: "2px 10px", fontSize: 15, backgroundColor: badge.bg, color: badge.color }}>{pendingStage}</span>
                   ?
                 </h2>
-                <button type="button" onClick={onCancel} style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "transparent", cursor: "pointer", flexShrink: 0 }}>
+                <button type="button" onClick={onCancel} style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "transparent", cursor: "pointer", flexShrink: 0 }}>
                   <X size={14} color="var(--ink-secondary)" />
                 </button>
               </div>
@@ -363,7 +363,7 @@ function StageChangeModal({ open, pendingStage, onConfirm, onAddTasks, onSkip, o
             </div>
             <div style={{ padding: "16px 24px 20px", display: "flex", justifyContent: "flex-end", gap: 10 }}>
               <button type="button" onClick={onCancel}
-                style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid var(--border-default)", backgroundColor: "transparent", fontSize: 13, color: "var(--ink)", cursor: "pointer", transition: "background-color 150ms" }}
+                style={{ padding: "8px 18px", borderRadius: 8, border: "var(--border-subtle)", backgroundColor: "transparent", fontSize: 13, color: "var(--ink)", cursor: "pointer", transition: "background-color 150ms" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
               >
@@ -377,7 +377,7 @@ function StageChangeModal({ open, pendingStage, onConfirm, onAddTasks, onSkip, o
           </>
         ) : (
           <>
-            <div style={{ padding: "20px 24px 12px", borderBottom: "1px solid var(--border-default)" }}>
+            <div style={{ padding: "20px 24px 12px", borderBottom: "var(--border-subtle)" }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: "var(--ink)", fontFamily: "var(--font-lora)" }}>
                 Suggested tasks for {pendingStage}
               </h2>
@@ -388,7 +388,7 @@ function StageChangeModal({ open, pendingStage, onConfirm, onAddTasks, onSkip, o
             <div style={{ padding: "12px 24px", display: "flex", flexDirection: "column", gap: 8 }}>
               {suggestions.map((s, i) => (
                 <label key={i}
-                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border-default)", cursor: "pointer", backgroundColor: checked[i] !== false ? "var(--slate-tint)" : "var(--surface-white)", transition: "background-color 150ms" }}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8, border: "var(--border-subtle)", cursor: "pointer", backgroundColor: checked[i] !== false ? "var(--slate-tint)" : "var(--surface-white)", transition: "background-color 150ms" }}
                 >
                   <input
                     type="checkbox"
@@ -405,7 +405,7 @@ function StageChangeModal({ open, pendingStage, onConfirm, onAddTasks, onSkip, o
                 </label>
               ))}
             </div>
-            <div style={{ padding: "12px 24px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border-default)" }}>
+            <div style={{ padding: "12px 24px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "var(--border-subtle)" }}>
               <button type="button" onClick={onSkip}
                 style={{ background: "none", border: "none", fontSize: 13, color: "var(--ink-secondary)", cursor: "pointer", padding: 0 }}>
                 Skip
@@ -443,10 +443,10 @@ function ShareModal({ open, onClose, onShare }: {
     <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(42,42,42,0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div style={{ width: 400, backgroundColor: "#FFFFFF", borderRadius: 14, boxShadow: "0 16px 48px rgba(42,42,42,0.18)", display: "flex", flexDirection: "column" }}>
+      <div style={{ width: 400, backgroundColor: "#FFFFFF", borderRadius: 14, boxShadow: "var(--elevation-overlay)", display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 0" }}>
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: "var(--ink)", fontFamily: "var(--font-lora)" }}>Share this opportunity</h2>
-          <button type="button" onClick={onClose} style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "transparent", cursor: "pointer" }}>
+          <button type="button" onClick={onClose} style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "transparent", cursor: "pointer" }}>
             <X size={14} color="var(--ink-secondary)" />
           </button>
         </div>
@@ -454,10 +454,10 @@ function ShareModal({ open, onClose, onShare }: {
           <div style={{ marginBottom: 16, position: "relative" }}>
             <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--ink)", marginBottom: 6 }}>Teammate</label>
             <input type="text" value={query} onChange={(e) => { setQuery(e.target.value); setSelected(null); setListOpen(true) }} onFocus={() => setListOpen(true)} onBlur={() => setTimeout(() => setListOpen(false), 150)} placeholder="Search by name..."
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const }}
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const }}
             />
             {listOpen && filtered.length > 0 && (
-              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, backgroundColor: "#FFFFFF", border: "1px solid var(--border-default)", borderRadius: 10, boxShadow: "0 8px 24px rgba(42,42,42,0.12)", zIndex: 300, overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, backgroundColor: "#FFFFFF", border: "var(--border-subtle)", borderRadius: 10, boxShadow: "var(--elevation-raised)", zIndex: 300, overflow: "hidden" }}>
                 {filtered.map((t) => (
                   <button key={t.id} type="button" onMouseDown={() => handleSelect(t)}
                     style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
@@ -476,12 +476,12 @@ function ShareModal({ open, onClose, onShare }: {
               Note <span style={{ fontWeight: 400, color: "var(--ink-tertiary)" }}>(optional)</span>
             </label>
             <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add a message..." rows={3}
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", outline: "none", resize: "none" as const, lineHeight: "19px", boxSizing: "border-box" as const, fontFamily: "inherit" }}
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", outline: "none", resize: "none" as const, lineHeight: "19px", boxSizing: "border-box" as const, fontFamily: "inherit" }}
             />
           </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px 20px", borderTop: "1px solid var(--border-default)" }}>
-          <button type="button" onClick={onClose} style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid var(--border-default)", backgroundColor: "transparent", fontSize: 13, color: "var(--ink)", cursor: "pointer" }}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px 20px", borderTop: "var(--border-subtle)" }}>
+          <button type="button" onClick={onClose} style={{ padding: "8px 18px", borderRadius: 8, border: "var(--border-subtle)", backgroundColor: "transparent", fontSize: 13, color: "var(--ink)", cursor: "pointer" }}
             onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
           >Cancel</button>
@@ -501,7 +501,7 @@ function CoachingSection({ lessons, onLessonsChange }: { lessons: LessonsLearned
   const [saved, setSaved] = useState(false)
 
   const textareaStyle: React.CSSProperties = {
-    width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid var(--border-default)",
+    width: "100%", padding: "9px 12px", borderRadius: 8, border: "var(--border-subtle)",
     backgroundColor: "var(--surface-white)", fontSize: 13, color: "var(--ink)", outline: "none",
     resize: "vertical" as const, lineHeight: "19px", boxSizing: "border-box" as const, fontFamily: "inherit", minHeight: 72,
   }
@@ -519,7 +519,7 @@ function CoachingSection({ lessons, onLessonsChange }: { lessons: LessonsLearned
   }
 
   return (
-    <div style={{ backgroundColor: "var(--canvas)", borderBottom: "1px solid var(--border-default)", padding: "24px 32px" }}>
+    <div style={{ backgroundColor: "var(--canvas)", borderBottom: "var(--border-subtle)", padding: "24px 32px" }}>
       <style>{`@keyframes ga-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <p style={{ ...sectionLabelStyle, marginBottom: 4 }}>Lessons learned</p>
       <p style={{ margin: "0 0 20px", fontSize: 13, color: "var(--ink-secondary)", lineHeight: "19px" }}>
@@ -536,7 +536,7 @@ function CoachingSection({ lessons, onLessonsChange }: { lessons: LessonsLearned
         ))}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button type="button" onClick={handleGenerate} disabled={generating}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid var(--border-default)", backgroundColor: "var(--surface-white)", fontSize: 13, fontWeight: 500, color: "var(--slate-primary)", cursor: generating ? "not-allowed" : "pointer", opacity: generating ? 0.7 : 1 }}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", fontSize: 13, fontWeight: 500, color: "var(--slate-primary)", cursor: generating ? "not-allowed" : "pointer", opacity: generating ? 0.7 : 1 }}
           >
             {generating ? <Loader2 size={13} style={{ animation: "ga-spin 1s linear infinite" }} /> : <Sparkles size={13} />}
             {generating ? "Generating..." : "Generate insights with AI"}
@@ -629,7 +629,7 @@ function TasksTab({ tasks, onAddTask, onUpdateTask, proposals, stage, onNavigate
   }
 
   const inputStyle: React.CSSProperties = {
-    padding: "6px 10px", borderRadius: 7, border: "1px solid var(--border-default)",
+    padding: "6px 10px", borderRadius: 7, border: "var(--border-subtle)",
     fontSize: 13, color: "var(--ink)", backgroundColor: "var(--surface-white)", outline: "none",
     fontFamily: "inherit", boxSizing: "border-box" as const,
   }
@@ -661,7 +661,7 @@ function TasksTab({ tasks, onAddTask, onUpdateTask, proposals, stage, onNavigate
 
     if (isEditing && editDraft) {
       return (
-        <div key={task.id} style={{ borderBottom: isLast ? "none" : "1px solid var(--border-default)" }}>
+        <div key={task.id} style={{ borderBottom: isLast ? "none" : "var(--border-subtle)" }}>
           <div style={{ padding: "14px 18px", backgroundColor: "var(--canvas)", display: "flex", flexDirection: "column", gap: 10 }}>
             <input type="text" value={editDraft.name} onChange={(e) => setEditDraft(p => p ? { ...p, name: e.target.value } : p)}
               style={{ ...inputStyle, fontSize: 14, fontWeight: 500, width: "100%" }} autoFocus
@@ -731,7 +731,7 @@ function TasksTab({ tasks, onAddTask, onUpdateTask, proposals, stage, onNavigate
       <div key={task.id}>
         <div
           onClick={() => startEdit(task)}
-          style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 18px", borderBottom: (isLast && !showDuePrompt) ? "none" : "1px solid var(--border-default)", opacity: task.done ? 0.5 : 1, cursor: "pointer", transition: "background-color 150ms" }}
+          style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 18px", borderBottom: (isLast && !showDuePrompt) ? "none" : "var(--border-subtle)", opacity: task.done ? 0.5 : 1, cursor: "pointer", transition: "background-color 150ms" }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--canvas)" }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
         >
@@ -773,7 +773,7 @@ function TasksTab({ tasks, onAddTask, onUpdateTask, proposals, stage, onNavigate
 
         {/* Due date soft prompt */}
         {showDuePrompt && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 18px 8px", borderBottom: isLast ? "none" : "1px solid var(--border-default)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 18px 8px", borderBottom: isLast ? "none" : "var(--border-subtle)" }}>
             <button type="button" onClick={(e) => { e.stopPropagation(); startEdit(task) }}
               style={{ background: "none", border: "none", fontSize: 12, color: "var(--ink-tertiary)", cursor: "pointer", padding: 0, textDecoration: "underline", textDecorationStyle: "dotted" }}
             >
@@ -794,7 +794,7 @@ function TasksTab({ tasks, onAddTask, onUpdateTask, proposals, stage, onNavigate
     if (sectionTasks.length === 0) return null
     return (
       <div>
-        <div style={{ padding: "8px 18px 4px", backgroundColor: "var(--canvas)", borderBottom: "1px solid var(--border-default)" }}>
+        <div style={{ padding: "8px 18px 4px", backgroundColor: "var(--canvas)", borderBottom: "var(--border-subtle)" }}>
           <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: accent ?? "var(--ink-tertiary)" }}>
             {label} · {sectionTasks.length}
           </span>
@@ -810,7 +810,7 @@ function TasksTab({ tasks, onAddTask, onUpdateTask, proposals, stage, onNavigate
     <div>
       {/* Add task inline form */}
       {isAdding ? (
-        <div style={{ marginBottom: 12, padding: "12px 16px", borderRadius: 10, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)" }}>
+        <div style={{ marginBottom: 12, padding: "12px 16px", borderRadius: 10, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: addExpanded ? 10 : 0 }}>
             <input ref={addInputRef} type="text" value={addName} onChange={(e) => setAddName(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commitAdd() } if (e.key === "Escape") cancelAdding() }}
@@ -885,7 +885,7 @@ function TasksTab({ tasks, onAddTask, onUpdateTask, proposals, stage, onNavigate
       {!hasActiveTasks && doneTasks.length === 0 ? (
         <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>No tasks yet. Add one above.</p>
       ) : (
-        <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)", overflow: "hidden" }}>
+        <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", overflow: "hidden", boxShadow: "var(--elevation-card)" }}>
           {/* Overdue */}
           {overdueTasks.length > 0 && renderSection("Overdue", overdueTasks, "#8B2020")}
           {/* To Do */}
@@ -897,7 +897,7 @@ function TasksTab({ tasks, onAddTask, onUpdateTask, proposals, stage, onNavigate
           {doneTasks.length > 0 && (
             <div>
               <button type="button" onClick={() => setDoneCollapsed(v => !v)}
-                style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "8px 18px", background: "var(--canvas)", border: "none", borderTop: hasActiveTasks ? "1px solid var(--border-default)" : "none", cursor: "pointer", textAlign: "left" }}>
+                style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "8px 18px", background: "var(--canvas)", border: "none", borderTop: hasActiveTasks ? "var(--border-subtle)" : "none", cursor: "pointer", textAlign: "left" }}>
                 <ChevronRight size={12} color="var(--ink-tertiary)" style={{ transform: doneCollapsed ? "none" : "rotate(90deg)", transition: "transform 150ms" }} />
                 <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "var(--evergreen)" }}>
                   Done · {doneTasks.length}
@@ -938,7 +938,7 @@ function BudgetTab({ awardedAmount, expenses, onAddExpense, onUpdateExpense, onD
     setEditingId(null); setDraft(null)
   }
 
-  const editInputStyle: React.CSSProperties = { padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", backgroundColor: "var(--surface-white)", outline: "none", width: "100%", boxSizing: "border-box" as const }
+  const editInputStyle: React.CSSProperties = { padding: "6px 10px", borderRadius: 6, border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", backgroundColor: "var(--surface-white)", outline: "none", width: "100%", boxSizing: "border-box" as const }
 
   function renderEditRow(borderBottom: string) {
     if (!draft) return null
@@ -967,7 +967,7 @@ function BudgetTab({ awardedAmount, expenses, onAddExpense, onUpdateExpense, onD
           </div>
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--slate-secondary)", cursor: "pointer", borderRadius: 6, padding: "5px 10px", border: "1px solid var(--border-default)", backgroundColor: "transparent" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--slate-secondary)", cursor: "pointer", borderRadius: 6, padding: "5px 10px", border: "var(--border-subtle)", backgroundColor: "transparent" }}>
             <input type="file" style={{ display: "none" }} onChange={(e) => { const file = e.target.files?.[0]; if (file) setDraft(p => p ? { ...p, receiptName: file.name } : null) }} />
             <Paperclip size={13} /> Attach receipt
           </label>
@@ -988,7 +988,7 @@ function BudgetTab({ awardedAmount, expenses, onAddExpense, onUpdateExpense, onD
     )
   }
 
-  const statCardStyle: React.CSSProperties = { borderRadius: 10, padding: "14px 16px", backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)" }
+  const statCardStyle: React.CSSProperties = { borderRadius: 10, padding: "14px 16px", backgroundColor: "var(--canvas)", border: "var(--border-subtle)" }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
@@ -1015,12 +1015,12 @@ function BudgetTab({ awardedAmount, expenses, onAddExpense, onUpdateExpense, onD
             <button type="button" onClick={startNew} style={{ marginTop: 4, padding: "7px 16px", borderRadius: 7, border: "none", backgroundColor: "var(--slate-primary)", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>+ Add expense</button>
           </div>
         ) : (
-          <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)", overflow: "hidden" }}>
+          <div style={{ borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", overflow: "hidden", boxShadow: "var(--elevation-card)" }}>
             {expenses.map((expense, i) => {
               const isEditing = editingId === expense.id
               const isDeleting = deletingId === expense.id
               const isLast = i === expenses.length - 1
-              const borderBottom = (isLast && editingId !== "new") ? "none" : "1px solid var(--border-default)"
+              const borderBottom = (isLast && editingId !== "new") ? "none" : "var(--border-subtle)"
               if (isEditing && draft) return <div key={expense.id}>{renderEditRow(borderBottom)}</div>
               return (
                 <div key={expense.id}
@@ -1032,7 +1032,7 @@ function BudgetTab({ awardedAmount, expenses, onAddExpense, onUpdateExpense, onD
                     <>
                       <span style={{ flex: 1, fontSize: 13, color: "var(--ink-secondary)" }}>Delete &ldquo;{expense.description}&rdquo;?</span>
                       <button type="button" onClick={() => { onDeleteExpense(expense.id); setDeletingId(null) }} style={{ padding: "5px 12px", borderRadius: 6, border: "none", backgroundColor: "#DC2626", color: "#fff", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>Delete</button>
-                      <button type="button" onClick={() => setDeletingId(null)} style={{ padding: "5px 12px", borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "transparent", fontSize: 12, fontWeight: 500, cursor: "pointer", color: "var(--ink)" }}>Cancel</button>
+                      <button type="button" onClick={() => setDeletingId(null)} style={{ padding: "5px 12px", borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "transparent", fontSize: 12, fontWeight: 500, cursor: "pointer", color: "var(--ink)" }}>Cancel</button>
                     </>
                   ) : (
                     <>
@@ -1040,10 +1040,10 @@ function BudgetTab({ awardedAmount, expenses, onAddExpense, onUpdateExpense, onD
                       <span style={{ flex: 1, fontSize: 14, color: "var(--ink)" }}>{expense.description}</span>
                       <span style={{ flexShrink: 0, borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 500, backgroundColor: "#F0F2F5", color: "var(--ink-secondary)" }}>{expense.category}</span>
                       <span style={{ flex: "0 0 80px", textAlign: "right", fontSize: 14, fontWeight: 500, color: "var(--ink)" }}>{formatCurrency(expense.amount)}</span>
-                      <Paperclip size={14} color={expense.receiptName ? "var(--ink-secondary)" : "var(--border-default)"} style={{ flexShrink: 0 }} />
+                      <Paperclip size={14} color={expense.receiptName ? "var(--ink-secondary)" : "var(--ink-tertiary)"} style={{ flexShrink: 0 }} />
                       <div style={{ display: "flex", gap: 4, opacity: hoveredRow === expense.id ? 1 : 0, transition: "opacity 150ms", flexShrink: 0 }}>
-                        <button type="button" onClick={() => { setEditingId(expense.id); setDraft({ ...expense }); setDeletingId(null) }} style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Pencil size={13} color="var(--ink-secondary)" /></button>
-                        <button type="button" onClick={() => { setDeletingId(expense.id); setHoveredRow(null) }} style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Trash2 size={13} color="var(--ink-secondary)" /></button>
+                        <button type="button" onClick={() => { setEditingId(expense.id); setDraft({ ...expense }); setDeletingId(null) }} style={{ width: 28, height: 28, borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Pencil size={13} color="var(--ink-secondary)" /></button>
+                        <button type="button" onClick={() => { setDeletingId(expense.id); setHoveredRow(null) }} style={{ width: 28, height: 28, borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Trash2 size={13} color="var(--ink-secondary)" /></button>
                       </div>
                     </>
                   )}
@@ -1076,7 +1076,7 @@ function NoteEditor({ initialText = "", placeholder = "Add a note...", saveLabel
       <textarea ref={ref} value={text} onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (text.trim()) onSave(text.trim()) } }}
         placeholder={placeholder} rows={3}
-        style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid var(--border-default)", backgroundColor: "var(--surface-white)", fontSize: 13, color: "var(--ink)", outline: "none", resize: "none" as const, lineHeight: "19px", boxSizing: "border-box" as const, fontFamily: "inherit" }}
+        style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", fontSize: 13, color: "var(--ink)", outline: "none", resize: "none" as const, lineHeight: "19px", boxSizing: "border-box" as const, fontFamily: "inherit" }}
       />
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
         <button type="button" onClick={() => { if (text.trim()) onSave(text.trim()) }}
@@ -1110,7 +1110,7 @@ function NotesTab({ notes, composerOpen, onComposerChange, onAddNote, onEditNote
         >+ Add note</button>
       </div>
       {composerOpen && (
-        <div style={{ marginBottom: 12, padding: "14px 16px", borderRadius: 10, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)" }}>
+        <div style={{ marginBottom: 12, padding: "14px 16px", borderRadius: 10, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)" }}>
           <NoteEditor placeholder="Add a note..." saveLabel="Save note" onSave={handleSave} onCancel={handleCancelComposer} />
         </div>
       )}
@@ -1121,12 +1121,12 @@ function NotesTab({ notes, composerOpen, onComposerChange, onAddNote, onEditNote
           {notes.map((note) => (
             <div key={note.id} style={{ position: "relative" }} onMouseEnter={() => setHoveredNoteId(note.id)} onMouseLeave={() => setHoveredNoteId(null)}>
               {editingNoteId === note.id ? (
-                <div style={{ padding: "14px 16px", borderRadius: 10, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)" }}>
+                <div style={{ padding: "14px 16px", borderRadius: 10, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)" }}>
                   <NoteEditor initialText={note.text} saveLabel="Save" onSave={(text) => { onEditNote(note.id, text); setEditingNoteId(null) }} onCancel={() => setEditingNoteId(null)} />
                 </div>
               ) : (
                 <div onClick={() => { onComposerChange(false); setEditingNoteId(note.id) }}
-                  style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "14px 16px", borderRadius: 10, backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)", cursor: "text" }}
+                  style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "14px 16px", borderRadius: 10, backgroundColor: "var(--canvas)", border: "var(--border-subtle)", cursor: "text" }}
                 >
                   <div style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 7, backgroundColor: "var(--slate-tint)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <FileText size={14} color="var(--slate-secondary)" />
@@ -1257,7 +1257,7 @@ function ReportSetupModal({
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
-        style={{ width: 520, backgroundColor: "#FFFFFF", borderRadius: 16, boxShadow: "0 20px 60px rgba(28,24,64,0.20)", display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 64px)", overflow: "hidden" }}
+        style={{ width: 520, backgroundColor: "#FFFFFF", borderRadius: 16, boxShadow: "var(--elevation-overlay)", display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 64px)", overflow: "hidden" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -1266,7 +1266,7 @@ function ReportSetupModal({
             <h2 style={{ margin: "0 0 2px", fontSize: 18, fontWeight: 600, color: "var(--ink)", fontFamily: "var(--font-lora)" }}>New report</h2>
             <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)" }}>Set up a post-award report for this Opportunity.</p>
           </div>
-          <button type="button" onClick={onClose} style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "transparent", cursor: "pointer" }}>
+          <button type="button" onClick={onClose} style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "transparent", cursor: "pointer" }}>
             <X size={14} color="var(--ink-secondary)" />
           </button>
         </div>
@@ -1275,7 +1275,7 @@ function ReportSetupModal({
         <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
 
           {/* Owning Opportunity (read-only) */}
-          <div style={{ marginBottom: 18, padding: "10px 14px", borderRadius: 9, backgroundColor: "var(--canvas)", border: "1px solid var(--border-default)" }}>
+          <div style={{ marginBottom: 18, padding: "10px 14px", borderRadius: 9, backgroundColor: "var(--canvas)", border: "var(--border-subtle)" }}>
             <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Reporting on</span>
             <p style={{ margin: "2px 0 0", fontSize: 14, fontWeight: 500, color: "var(--ink)" }}>{opportunityName}</p>
           </div>
@@ -1283,7 +1283,7 @@ function ReportSetupModal({
           {/* Start from submitted proposal (quiet affordance) */}
           {submittedProposal && (
             <label
-              style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 18, cursor: "pointer", padding: "10px 14px", borderRadius: 9, backgroundColor: startFromProposal ? "var(--slate-tint)" : "transparent", border: "1px solid var(--border-default)", transition: "background-color 150ms" }}
+              style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 18, cursor: "pointer", padding: "10px 14px", borderRadius: 9, backgroundColor: startFromProposal ? "var(--slate-tint)" : "transparent", border: "var(--border-subtle)", transition: "background-color 150ms" }}
             >
               <input
                 type="checkbox"
@@ -1319,7 +1319,7 @@ function ReportSetupModal({
                     color: reportType === t ? "var(--slate-primary)" : "var(--ink-secondary)",
                     backgroundColor: reportType === t ? "var(--slate-tint)" : "transparent",
                     border: "none",
-                    borderRight: t !== "Progress" ? "1px solid var(--border-default)" : "none",
+                    borderRight: t !== "Progress" ? "var(--border-subtle)" : "none",
                     cursor: "pointer",
                     transition: "background-color 150ms, color 150ms",
                   }}
@@ -1376,7 +1376,7 @@ function ReportSetupModal({
               value={reportName}
               onChange={(e) => { setReportName(e.target.value); setNameEdited(true) }}
               placeholder="Report name (auto-filled from type and period)"
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const, backgroundColor: "var(--surface-white)" }}
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const, backgroundColor: "var(--surface-white)" }}
             />
           </div>
 
@@ -1387,7 +1387,7 @@ function ReportSetupModal({
               <span style={{ fontWeight: 400, color: "var(--ink-tertiary)" }}>(optional)</span>
             </label>
             {/* Template mode tabs */}
-            <div style={{ display: "flex", gap: 0, border: "1px solid var(--border-default)", borderRadius: "9px 9px 0 0", overflow: "hidden", borderBottom: "none" }}>
+            <div style={{ display: "flex", gap: 0, border: "var(--border-subtle)", borderRadius: "9px 9px 0 0", overflow: "hidden", borderBottom: "none" }}>
               {(["file", "text", "url"] as const).map((mode) => {
                 const labels: Record<typeof mode, string> = { file: "Upload file", text: "Paste text", url: "URL" }
                 return (
@@ -1395,14 +1395,14 @@ function ReportSetupModal({
                     key={mode}
                     type="button"
                     onClick={() => setTemplateTab(mode)}
-                    style={{ flex: 1, padding: "7px 0", fontSize: 12, fontWeight: templateTab === mode ? 600 : 400, color: templateTab === mode ? "var(--slate-primary)" : "var(--ink-secondary)", backgroundColor: templateTab === mode ? "var(--slate-tint)" : "var(--canvas)", border: "none", borderRight: mode !== "url" ? "1px solid var(--border-default)" : "none", cursor: "pointer", transition: "background-color 150ms" }}
+                    style={{ flex: 1, padding: "7px 0", fontSize: 12, fontWeight: templateTab === mode ? 600 : 400, color: templateTab === mode ? "var(--slate-primary)" : "var(--ink-secondary)", backgroundColor: templateTab === mode ? "var(--slate-tint)" : "var(--canvas)", border: "none", borderRight: mode !== "url" ? "var(--border-subtle)" : "none", cursor: "pointer", transition: "background-color 150ms" }}
                   >
                     {labels[mode]}
                   </button>
                 )
               })}
             </div>
-            <div style={{ border: "1px solid var(--border-default)", borderRadius: "0 0 9px 9px", overflow: "hidden" }}>
+            <div style={{ border: "var(--border-subtle)", borderRadius: "0 0 9px 9px", overflow: "hidden" }}>
               {templateTab === "file" && (
                 <div>
                   <input
@@ -1417,7 +1417,7 @@ function ReportSetupModal({
                     onDragOver={(e) => { e.preventDefault(); setTemplateDragOver(true) }}
                     onDragLeave={() => setTemplateDragOver(false)}
                     onDrop={(e) => { e.preventDefault(); setTemplateDragOver(false); if (e.dataTransfer.files[0]) handleFileSelect(e.dataTransfer.files[0]) }}
-                    style={{ padding: "20px 16px", textAlign: "center", cursor: "pointer", backgroundColor: templateDragOver ? "var(--slate-tint)" : "var(--canvas)", transition: "background-color 150ms", borderTop: "1px solid var(--border-default)" }}
+                    style={{ padding: "20px 16px", textAlign: "center", cursor: "pointer", backgroundColor: templateDragOver ? "var(--slate-tint)" : "var(--canvas)", transition: "background-color 150ms", borderTop: "var(--border-subtle)" }}
                   >
                     {templateFile ? (
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
@@ -1450,7 +1450,7 @@ function ReportSetupModal({
                   onChange={(e) => setTemplateText(e.target.value)}
                   placeholder="Paste the funder's report template text here..."
                   rows={6}
-                  style={{ width: "100%", padding: "12px 14px", border: "none", borderTop: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", outline: "none", resize: "vertical", lineHeight: "19px", boxSizing: "border-box" as const, fontFamily: "inherit", backgroundColor: "var(--canvas)" }}
+                  style={{ width: "100%", padding: "12px 14px", border: "none", borderTop: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", outline: "none", resize: "vertical", lineHeight: "19px", boxSizing: "border-box" as const, fontFamily: "inherit", backgroundColor: "var(--canvas)" }}
                 />
               )}
               {templateTab === "url" && (
@@ -1459,7 +1459,7 @@ function ReportSetupModal({
                   value={templateUrl}
                   onChange={(e) => setTemplateUrl(e.target.value)}
                   placeholder="https://..."
-                  style={{ width: "100%", padding: "12px 14px", border: "none", borderTop: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const, backgroundColor: "var(--canvas)" }}
+                  style={{ width: "100%", padding: "12px 14px", border: "none", borderTop: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const, backgroundColor: "var(--canvas)" }}
                 />
               )}
             </div>
@@ -1480,7 +1480,7 @@ function ReportSetupModal({
               This report also covers…
             </button>
             {rollupOpen && (
-              <div style={{ marginTop: 8, padding: "12px 14px", borderRadius: 9, border: "1px solid var(--border-default)", backgroundColor: "var(--canvas)" }}>
+              <div style={{ marginTop: 8, padding: "12px 14px", borderRadius: 9, border: "var(--border-subtle)", backgroundColor: "var(--canvas)" }}>
                 <p style={{ margin: "0 0 10px", fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "17px" }}>
                   Select additional Opportunities in the same Engagement covered by this report.
                 </p>
@@ -1508,8 +1508,8 @@ function ReportSetupModal({
         </div>
 
         {/* Footer */}
-        <div style={{ flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px 20px", borderTop: "1px solid var(--border-default)" }}>
-          <button type="button" onClick={onClose} style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid var(--border-default)", backgroundColor: "transparent", fontSize: 13, color: "var(--ink)", cursor: "pointer" }}>
+        <div style={{ flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px 20px", borderTop: "var(--border-subtle)" }}>
+          <button type="button" onClick={onClose} style={{ padding: "8px 18px", borderRadius: 8, border: "var(--border-subtle)", backgroundColor: "transparent", fontSize: 13, color: "var(--ink)", cursor: "pointer" }}>
             Cancel
           </button>
           <button
@@ -1598,10 +1598,10 @@ function ReportsTab({
             return (
               <div
                 key={report.id}
-                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderRadius: 12, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)", boxShadow: "0 1px 3px rgba(42,42,42,0.04)" }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderRadius: 12, backgroundColor: "var(--surface-white)", border: "var(--border-subtle)", boxShadow: "var(--elevation-card)" }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 7, backgroundColor: "var(--slate-tint)", border: "1px solid var(--border-default)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 7, backgroundColor: "var(--slate-tint)", border: "var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <FileText size={14} color="var(--slate-secondary)" />
                   </div>
                   <div>
@@ -1631,7 +1631,7 @@ function ReportsTab({
                       })
                       router.push(`/reports/${report.id}?${params.toString()}`)
                     }}
-                    style={{ padding: "7px 14px", borderRadius: 7, backgroundColor: "transparent", border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", cursor: "pointer", transition: "background-color 150ms" }}
+                    style={{ padding: "7px 14px", borderRadius: 7, backgroundColor: "transparent", border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", cursor: "pointer", transition: "background-color 150ms" }}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
                   >
@@ -1670,9 +1670,9 @@ function OverviewTab({ proposals, onNewProposal }: { proposals: Proposal[]; onNe
           ) : proposals.map((p) => {
             const badge = PROPOSAL_STATUS_STYLE[p.status]
             return (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)", boxShadow: "0 1px 3px rgba(42,42,42,0.04)" }}>
+              <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderRadius: "var(--radius-card)", backgroundColor: "var(--surface-white)", boxShadow: "var(--elevation-card)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 7, backgroundColor: "var(--slate-tint)", border: "1px solid var(--border-default)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 7, backgroundColor: "var(--slate-tint)", border: "var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <FileText size={14} color="var(--slate-secondary)" />
                   </div>
                   <div>
@@ -1685,11 +1685,11 @@ function OverviewTab({ proposals, onNewProposal }: { proposals: Proposal[]; onNe
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button type="button" onClick={() => router.push(`/proposals/${p.id === "draft-1" ? "equitable-futures-2026-draft" : p.id}`)}
-                    style={{ padding: "7px 14px", borderRadius: 7, backgroundColor: "transparent", border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", cursor: "pointer", transition: "background-color 150ms" }}
+                    style={{ padding: "7px 14px", borderRadius: 7, backgroundColor: "transparent", border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", cursor: "pointer", transition: "background-color 150ms" }}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
                   >Open in editor</button>
-                  <button type="button" style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 7, backgroundColor: "transparent", border: "1px solid var(--border-default)", cursor: "pointer" }}
+                  <button type="button" style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 7, backgroundColor: "transparent", border: "var(--border-subtle)", cursor: "pointer" }}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
                   ><Copy size={13} color="var(--ink-tertiary)" /></button>
@@ -1837,7 +1837,7 @@ function OpportunityDetailContent() {
       />
 
       {/* Breadcrumb */}
-      <div style={{ padding: "12px 32px", borderBottom: "1px solid var(--border-default)", backgroundColor: "var(--surface-white)" }}>
+      <div style={{ padding: "12px 32px", borderBottom: "var(--border-subtle)", backgroundColor: "var(--surface-white)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
           <Link href="/home" style={{ fontSize: 13, color: "var(--ink-tertiary)", textDecoration: "none" }}>Home</Link>
           <span style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>›</span>
@@ -1849,7 +1849,7 @@ function OpportunityDetailContent() {
       </div>
 
       {/* Page header */}
-      <div style={{ padding: "24px 32px 0", backgroundColor: "var(--surface-white)", borderBottom: "1px solid var(--border-default)" }}>
+      <div style={{ padding: "24px 32px 0", backgroundColor: "var(--surface-white)", borderBottom: "var(--border-subtle)" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 500, letterSpacing: "-0.02em", lineHeight: "32px", color: "var(--ink)", fontFamily: "var(--font-lora)" }}>
             {opportunityName}
@@ -1865,12 +1865,12 @@ function OpportunityDetailContent() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14, flexWrap: "wrap" as const }}>
-          <span style={{ borderRadius: 20, padding: "4px 12px", fontSize: 13, border: "1px solid var(--border-default)", backgroundColor: "var(--canvas)", color: "var(--ink-secondary)" }}>{engagementName}</span>
-          <span style={{ borderRadius: 20, padding: "4px 12px", fontSize: 13, border: "1px solid var(--border-default)", backgroundColor: "var(--evergreen-tint)", color: "var(--evergreen)" }}>{chipStage}</span>
+          <span style={{ borderRadius: 20, padding: "4px 12px", fontSize: 13, border: "var(--border-subtle)", backgroundColor: "var(--canvas)", color: "var(--ink-secondary)" }}>{engagementName}</span>
+          <span style={{ borderRadius: 20, padding: "4px 12px", fontSize: 13, border: "var(--border-subtle)", backgroundColor: "var(--evergreen-tint)", color: "var(--evergreen)" }}>{chipStage}</span>
           {chipDeadline && (
-            <span style={{ borderRadius: 20, padding: "4px 12px", fontSize: 13, border: "1px solid var(--border-default)", backgroundColor: "var(--evergreen-tint)", color: "var(--evergreen)" }}>{chipDeadline}</span>
+            <span style={{ borderRadius: 20, padding: "4px 12px", fontSize: 13, border: "var(--border-subtle)", backgroundColor: "var(--evergreen-tint)", color: "var(--evergreen)" }}>{chipDeadline}</span>
           )}
-          <span style={{ borderRadius: 20, padding: "4px 12px", fontSize: 13, border: "1px solid var(--border-default)", backgroundColor: "var(--canvas)", color: "var(--ink-secondary)" }}>{chipAmount}</span>
+          <span style={{ borderRadius: 20, padding: "4px 12px", fontSize: 13, border: "var(--border-subtle)", backgroundColor: "var(--canvas)", color: "var(--ink-secondary)" }}>{chipAmount}</span>
           {attentionFlag && (
             <span style={{ display: "flex", alignItems: "center", gap: 4, borderRadius: 20, padding: "4px 12px", fontSize: 13, border: "1px solid rgba(185,28,28,0.3)", backgroundColor: "#FDE8E8", color: "#8B2020" }}>
               <Flag size={11} /> Overdue
@@ -1880,12 +1880,12 @@ function OpportunityDetailContent() {
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
           <button type="button" onClick={() => { setActiveTab("notes"); setNoteComposerOpen(true) }}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, backgroundColor: "transparent", border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", cursor: "pointer", transition: "background-color 150ms" }}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, backgroundColor: "transparent", border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", cursor: "pointer", transition: "background-color 150ms" }}
             onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
           ><Plus size={13} /> Add note</button>
           <button type="button" onClick={() => setShareModalOpen(true)}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, backgroundColor: "transparent", border: "1px solid var(--border-default)", fontSize: 13, color: "var(--ink)", cursor: "pointer", transition: "background-color 150ms" }}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, backgroundColor: "transparent", border: "var(--border-subtle)", fontSize: 13, color: "var(--ink)", cursor: "pointer", transition: "background-color 150ms" }}
             onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
           ><Share2 size={13} /> Share</button>

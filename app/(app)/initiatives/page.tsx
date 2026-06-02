@@ -293,7 +293,7 @@ function GhostButton({
         gap: 6,
         padding: small ? "5px 10px" : "7px 14px",
         borderRadius: "var(--radius-button)",
-        border: "1px solid var(--border-default)",
+        border: "var(--border-subtle)",
         backgroundColor: "var(--surface-white)",
         color: "var(--ink-secondary)",
         fontSize: small ? 12 : 13,
@@ -418,7 +418,6 @@ function GeographyInput({ value, onChange }: { value: Geography; onChange: (v: G
     left: 0,
     right: 0,
     backgroundColor: "var(--surface-white)",
-    border: "1px solid var(--border-default)",
     borderRadius: 8,
     boxShadow: "0 4px 16px rgba(42,42,42,0.12)",
     zIndex: 300,
@@ -435,7 +434,7 @@ function GeographyInput({ value, onChange }: { value: Geography; onChange: (v: G
     justifyContent: "space-between",
     padding: "8px 12px",
     borderRadius: 8,
-    border: "1px solid var(--border-default)",
+    border: "var(--border-subtle)",
     backgroundColor: "var(--surface-white)",
     fontSize: 13,
     cursor: "pointer",
@@ -595,7 +594,7 @@ function MultiSelectDropdown({ label, options, value, onChange, placeholder }: {
         {label}
       </label>
       <button type="button" onClick={() => setOpen((o) => !o)}
-        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border-default)", backgroundColor: "var(--surface-white)", fontSize: 13, color: value.length ? "var(--ink)" : "var(--ink-tertiary)", cursor: "pointer", textAlign: "left" }}
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", fontSize: 13, color: value.length ? "var(--ink)" : "var(--ink-tertiary)", cursor: "pointer", textAlign: "left" }}
       >
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
           {value.length === 0 ? placeholder : value.length === 1 ? value[0] : `${value.length} selected`}
@@ -603,7 +602,7 @@ function MultiSelectDropdown({ label, options, value, onChange, placeholder }: {
         <ChevronDown size={14} color="var(--ink-tertiary)" />
       </button>
       {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)", borderRadius: 8, boxShadow: "0 4px 16px rgba(42,42,42,0.12)", zIndex: 300, maxHeight: 220, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, backgroundColor: "var(--surface-white)", borderRadius: 8, boxShadow: "0 4px 16px rgba(42,42,42,0.12)", zIndex: 300, maxHeight: 220, overflow: "hidden", display: "flex", flexDirection: "column" }}>
           <div style={{ padding: "8px 8px 0" }}>
             <input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)}
               style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border-default)", fontSize: 12, outline: "none", boxSizing: "border-box" as const, backgroundColor: "var(--canvas)" }}
@@ -689,7 +688,7 @@ function CreateInitiativeModal({
       <div style={{ width: 600, maxWidth: "90vw", maxHeight: "90vh", backgroundColor: "var(--surface-white)", borderRadius: 12, boxShadow: "0 16px 48px rgba(42,42,42,0.18)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
         {/* Header */}
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border-default)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexShrink: 0 }}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "var(--border-subtle)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexShrink: 0 }}>
           <div>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 500, fontFamily: "var(--font-lora)", color: "var(--ink)", letterSpacing: "-0.01em", lineHeight: "22px" }}>
               {defaultParentId ? "New sub-initiative" : "New initiative"}
@@ -699,7 +698,7 @@ function CreateInitiativeModal({
             </p>
           </div>
           <button type="button" onClick={onClose}
-            style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "transparent", cursor: "pointer", flexShrink: 0 }}
+            style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "transparent", cursor: "pointer", flexShrink: 0 }}
           >
             <X size={14} color="var(--ink-secondary)" />
           </button>
@@ -765,7 +764,7 @@ function CreateInitiativeModal({
         </div>
 
         {/* Footer */}
-        <div style={{ flexShrink: 0, padding: "16px 24px 20px", borderTop: "1px solid var(--border-default)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ flexShrink: 0, padding: "16px 24px 20px", borderTop: "var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <GhostButton onClick={onClose}>Cancel</GhostButton>
           <SlateButton
             onClick={() => canCreate && onCreate({ name: name.trim(), description, geography, focusAreas, subFocusAreas, parentId })}
@@ -804,9 +803,9 @@ function InlineEditModal({
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{ width: 580, backgroundColor: "var(--surface-white)", borderRadius: 12, boxShadow: "0 16px 48px rgba(42,42,42,0.18)", overflow: "hidden" }}>
-        <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid var(--border-default)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ padding: "18px 20px 14px", borderBottom: "var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 500, fontFamily: "var(--font-lora)", color: "var(--ink)" }}>{label}</h3>
-          <button type="button" onClick={onClose} style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <button type="button" onClick={onClose} style={{ width: 28, height: 28, borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={14} color="var(--ink-secondary)" />
           </button>
         </div>
@@ -852,7 +851,7 @@ function CompletenessBar({ pct }: { pct: number }) {
   const barColor = pct >= 80 ? "var(--evergreen)" : pct >= 50 ? "var(--terracotta)" : "var(--amber)"
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <div style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: "var(--border-default)", overflow: "hidden" }}>
+      <div style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: "rgba(42, 42, 42, 0.08)", overflow: "hidden" }}>
         <div style={{ height: "100%", width: `${pct}%`, borderRadius: 2, backgroundColor: barColor, transition: "width 400ms ease" }} />
       </div>
       <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)", whiteSpace: "nowrap" }}>
@@ -1003,12 +1002,12 @@ function EvidenceTab({ initiative }: { initiative: Initiative }) {
           No evidence items yet. Add proof points, statistics, and outcomes tied to this initiative.
         </div>
       ) : (
-        <div style={{ borderRadius: 10, border: "1px solid var(--border-default)", overflow: "hidden" }}>
+        <div style={{ borderRadius: 10, boxShadow: "var(--shadow-card)", overflow: "hidden" }}>
           {items.map((item, i) => {
             const isLast = i === items.length - 1
             const isOpen = expanded === item.id
             return (
-              <div key={item.id} style={{ borderBottom: isLast ? "none" : "1px solid var(--border-default)" }}>
+              <div key={item.id} style={{ borderBottom: isLast ? "none" : "var(--border-subtle)" }}>
                 <button type="button" onClick={() => setExpanded(isOpen ? null : item.id)}
                   style={{ width: "100%", display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "14px 16px", border: "none", backgroundColor: isOpen ? "var(--canvas)" : "var(--surface-white)", cursor: "pointer", textAlign: "left", gap: 12, transition: "background-color 150ms" }}
                 >
@@ -1019,7 +1018,7 @@ function EvidenceTab({ initiative }: { initiative: Initiative }) {
                   {isOpen ? <ChevronUp size={16} color="var(--ink-tertiary)" /> : <ChevronDown size={16} color="var(--ink-tertiary)" />}
                 </button>
                 {isOpen && (
-                  <div style={{ padding: "0 16px 16px", backgroundColor: "var(--canvas)", borderTop: "1px solid var(--border-default)" }}>
+                  <div style={{ padding: "0 16px 16px", backgroundColor: "var(--canvas)", borderTop: "var(--border-subtle)" }}>
                     <p style={{ margin: "12px 0 6px", fontSize: 13, color: "var(--ink)", lineHeight: "19px" }}>{item.content}</p>
                     <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)" }}>{item.source} · {item.date}</p>
                   </div>
@@ -1049,13 +1048,13 @@ function MatchedTab({ initiative }: { initiative: Initiative }) {
           No matched opportunities yet. New opportunities will appear here as they&rsquo;re discovered.
         </div>
       ) : (
-        <div style={{ borderRadius: 10, border: "1px solid var(--border-default)", overflow: "hidden" }}>
+        <div style={{ borderRadius: 10, boxShadow: "var(--shadow-card)", overflow: "hidden" }}>
           {opps.map((opp, i) => {
             const isLast = i === opps.length - 1
             const badge = stageColors(opp.stage)
             return (
               <Link key={opp.id} href={`/opportunity/${opp.id}`}
-                style={{ display: "flex", alignItems: "center", padding: "14px 16px", borderBottom: isLast ? "none" : "1px solid var(--border-default)", backgroundColor: "var(--surface-white)", textDecoration: "none", gap: 12, transition: "background-color 150ms" }}
+                style={{ display: "flex", alignItems: "center", padding: "14px 16px", borderBottom: isLast ? "none" : "var(--border-subtle)", backgroundColor: "var(--surface-white)", textDecoration: "none", gap: 12, transition: "background-color 150ms" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "var(--canvas)" }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "var(--surface-white)" }}
               >
@@ -1100,12 +1099,12 @@ function SubInitiativesTab({ parentId, initiatives, onSelect, onNewSub }: {
           No sub-initiatives yet. Add one to group related program areas under this initiative.
         </div>
       ) : (
-        <div style={{ borderRadius: 10, border: "1px solid var(--border-default)", overflow: "hidden" }}>
+        <div style={{ borderRadius: 10, boxShadow: "var(--shadow-card)", overflow: "hidden" }}>
           {children.map((child, i) => {
             const isLast = i === children.length - 1
             return (
               <button key={child.id} type="button" onClick={() => onSelect(child.id)}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", border: "none", borderBottom: isLast ? "none" : "1px solid var(--border-default)", backgroundColor: "var(--surface-white)", cursor: "pointer", textAlign: "left", transition: "background-color 150ms" }}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", border: "none", borderBottom: isLast ? "none" : "var(--border-subtle)", backgroundColor: "var(--surface-white)", cursor: "pointer", textAlign: "left", transition: "background-color 150ms" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface-white)" }}
               >
@@ -1190,7 +1189,7 @@ function InitiativeDetail({
       )}
 
       {/* Header */}
-      <div style={{ flexShrink: 0, borderBottom: "1px solid var(--border-default)", backgroundColor: "var(--surface-white)", padding: "16px 32px 0" }}>
+      <div style={{ flexShrink: 0, borderBottom: "var(--border-subtle)", backgroundColor: "var(--surface-white)", padding: "16px 32px 0" }}>
 
         {/* Breadcrumb */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
@@ -1306,7 +1305,7 @@ function InitiativeRow({ initiative, onClick, onArchive, onRestore, indented }: 
         alignItems: "center",
         padding: `14px 20px`,
         paddingLeft: indented ? 48 : 20,
-        borderBottom: "1px solid var(--border-default)",
+        borderBottom: "var(--border-subtle)",
         cursor: "pointer",
         backgroundColor: hovered ? "var(--slate-tint)" : (initiative.isArchived ? "#F8F4EE" : "var(--surface-white)"),
         transition: "background-color 150ms",
@@ -1321,7 +1320,7 @@ function InitiativeRow({ initiative, onClick, onArchive, onRestore, indented }: 
             {initiative.name}
           </span>
           {initiative.isArchived && (
-            <span style={{ fontSize: 10, fontWeight: 500, color: "var(--ink-tertiary)", backgroundColor: "var(--border-default)", padding: "1px 6px", borderRadius: 20, flexShrink: 0 }}>
+            <span style={{ fontSize: 10, fontWeight: 500, color: "var(--ink-tertiary)", backgroundColor: "rgba(42, 42, 42, 0.08)", padding: "1px 6px", borderRadius: 20, flexShrink: 0 }}>
               Archived
             </span>
           )}
@@ -1358,13 +1357,13 @@ function InitiativeRow({ initiative, onClick, onArchive, onRestore, indented }: 
         >
           {initiative.isArchived ? (
             <button type="button" title="Restore" onClick={onRestore}
-              style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "var(--surface-white)", cursor: "pointer" }}
+              style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", cursor: "pointer" }}
             >
               <ArchiveRestore size={13} color="var(--evergreen)" />
             </button>
           ) : (
             <button type="button" title="Archive" onClick={onArchive}
-              style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid var(--border-default)", backgroundColor: "var(--surface-white)", cursor: "pointer" }}
+              style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "var(--surface-white)", cursor: "pointer" }}
             >
               <Archive size={13} color="var(--ink-secondary)" />
             </button>
@@ -1423,7 +1422,7 @@ function InitiativesList({ initiatives, onSelect, onArchive, onRestore, onNew }:
     <div className="flex flex-1 flex-col" style={{ overflow: "hidden", minHeight: 0 }}>
 
       {/* Page header */}
-      <div style={{ flexShrink: 0, padding: "20px 32px 14px", borderBottom: "1px solid var(--border-default)", backgroundColor: "var(--surface-white)" }}>
+      <div style={{ flexShrink: 0, padding: "20px 32px 14px", borderBottom: "var(--border-subtle)", backgroundColor: "var(--surface-white)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <h1 style={{ margin: 0, fontSize: 24, fontWeight: 500, fontFamily: "var(--font-lora)", color: "var(--ink)", letterSpacing: "-0.02em", lineHeight: "30px" }}>
@@ -1470,7 +1469,7 @@ function InitiativesList({ initiatives, onSelect, onArchive, onRestore, onNew }:
               <ChevronDown size={13} />
             </button>
             {focusOpen && (
-              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, minWidth: 210, backgroundColor: "var(--surface-white)", border: "1px solid var(--border-default)", borderRadius: 8, boxShadow: "0 4px 16px rgba(42,42,42,0.12)", zIndex: 200, padding: "4px 0" }}>
+              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, minWidth: 210, backgroundColor: "var(--surface-white)", borderRadius: 8, boxShadow: "0 4px 16px rgba(42,42,42,0.12)", zIndex: 200, padding: "4px 0" }}>
                 {FOCUS_AREAS.map((fa) => {
                   const sel = focusFilter.includes(fa)
                   return (
@@ -1486,7 +1485,7 @@ function InitiativesList({ initiatives, onSelect, onArchive, onRestore, onNew }:
                 })}
                 {focusFilter.length > 0 && (
                   <>
-                    <div style={{ height: 1, backgroundColor: "var(--border-default)", margin: "4px 0" }} />
+                    <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)", margin: "4px 0" }} />
                     <button type="button" onClick={() => setFocusFilter([])} style={{ width: "100%", padding: "6px 12px", border: "none", backgroundColor: "transparent", fontSize: 12, color: "var(--slate-secondary)", cursor: "pointer", textAlign: "left" }}>
                       Clear filter
                     </button>
@@ -1529,7 +1528,7 @@ function InitiativesList({ initiatives, onSelect, onArchive, onRestore, onNew }:
         ) : (
           <div>
             {/* Column headers */}
-            <div style={{ display: "flex", alignItems: "center", padding: "8px 20px", borderBottom: "1px solid var(--border-default)", backgroundColor: "var(--canvas)" }}>
+            <div style={{ display: "flex", alignItems: "center", padding: "8px 20px", borderBottom: "var(--border-subtle)", backgroundColor: "var(--canvas)" }}>
               <div style={{ flex: 1 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)" }}>Initiative</span>
               </div>

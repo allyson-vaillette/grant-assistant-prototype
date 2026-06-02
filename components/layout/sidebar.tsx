@@ -1,20 +1,12 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
 import {
-  Home,
-  LayoutList,
-  Telescope,
-  Layers,
-  Database,
-  Settings,
-  Sparkles,
-  PlusCircle,
-  ChevronLeft,
-  ChevronRight,
+  Home, LayoutList, Telescope, Layers, Database, Settings,
+  Sparkles, PlusCircle, ChevronLeft, ChevronRight, Bell, X,
 } from "lucide-react"
 import { NewProposalModal } from "@/components/proposals/NewProposalModal"
 
@@ -22,21 +14,245 @@ const SIDEBAR_WIDTH = 216
 const SIDEBAR_COLLAPSED_WIDTH = 64
 
 const MAIN_NAV = [
-  { label: "Home",        href: "/home",        icon: Home       },
-  { label: "Engagements", href: "/portfolio",    icon: LayoutList },
-  { label: "Discover",    href: "/discover",     icon: Telescope  },
+  { label: "Home",        href: "/home",      icon: Home       },
+  { label: "Engagements", href: "/portfolio",  icon: LayoutList },
+  { label: "Discover",    href: "/discover",   icon: Telescope  },
 ] as const
 
 const WORKSPACE_NAV = [
-  { label: "Initiatives", href: "/initiatives",  icon: Layers    },
-  { label: "Evidence",    href: "/evidence",     icon: Database  },
-  { label: "Settings",    href: "/settings",     icon: Settings  },
+  { label: "Initiatives", href: "/initiatives", icon: Layers    },
+  { label: "Evidence",    href: "/evidence",    icon: Database  },
+  { label: "Settings",    href: "/settings",    icon: Settings  },
 ] as const
+
+// ── Notification data ──────────────────────────────────────────────────────
+
+type NotifType = "task_assigned" | "task_due_soon" | "task_overdue" | "task_completed" | "task_reassigned" | "task_commented"
+
+interface Notification {
+  id: string
+  type: NotifType
+  actorInitials?: string
+  actorName?: string
+  description: string
+  opportunityName: string
+  timestamp: string
+  isToday: boolean
+  read: boolean
+  href: string
+}
+
+const INITIAL_NOTIFICATIONS: Notification[] = [
+  {
+    id: "n1", type: "task_assigned",
+    actorInitials: "MR", actorName: "Marcus R.",
+    description: "Marcus R. assigned you a task on Equitable Futures Grant",
+    opportunityName: "Equitable Futures Grant", timestamp: "2h ago", isToday: true, read: false,
+    href: "/opportunity/equitable-futures",
+  },
+  {
+    id: "n2", type: "task_due_soon",
+    description: "Complete narrative section is due in 48 hours",
+    opportunityName: "Equitable Futures Grant", timestamp: "4h ago", isToday: true, read: false,
+    href: "/opportunity/equitable-futures",
+  },
+  {
+    id: "n3", type: "task_overdue",
+    description: "Get budget sign-off from finance is overdue",
+    opportunityName: "Equitable Futures Grant", timestamp: "6h ago", isToday: true, read: false,
+    href: "/opportunity/equitable-futures",
+  },
+  {
+    id: "n4", type: "task_completed",
+    actorInitials: "JK", actorName: "Jamie K.",
+    description: "Jamie K. completed Upload evaluation framework",
+    opportunityName: "Equitable Futures Grant", timestamp: "8h ago", isToday: true, read: false,
+    href: "/opportunity/equitable-futures",
+  },
+  {
+    id: "n5", type: "task_reassigned",
+    actorInitials: "TS", actorName: "Taylor S.",
+    description: "Collect letters of support was reassigned away from you",
+    opportunityName: "Equitable Futures Grant", timestamp: "2d ago", isToday: false, read: true,
+    href: "/opportunity/equitable-futures",
+  },
+  {
+    id: "n6", type: "task_commented",
+    actorInitials: "PK", actorName: "Priya K.",
+    description: "Priya K. commented on Draft impact narrative",
+    opportunityName: "Housing Equity Initiative", timestamp: "3d ago", isToday: false, read: true,
+    href: "/opportunity/equitable-futures",
+  },
+]
+
+function notifIcon(type: NotifType): string {
+  if (type === "task_assigned")   return "assignment_ind"
+  if (type === "task_due_soon")   return "schedule"
+  if (type === "task_overdue")    return "warning"
+  if (type === "task_completed")  return "check_circle"
+  if (type === "task_reassigned") return "swap_horiz"
+  return "chat"
+}
+
+function notifIconColor(type: NotifType): string {
+  if (type === "task_overdue")   return "#B91C1C"
+  if (type === "task_due_soon")  return "#C47A10"
+  if (type === "task_completed") return "#3C5E4C"
+  return "var(--slate-secondary)"
+}
+
+// ── Notification Tray ──────────────────────────────────────────────────────
+
+function NotificationTray({
+  notifications, sidebarWidth, onClose, onMarkAllRead, onMarkRead,
+}: {
+  notifications: Notification[]
+  sidebarWidth: number
+  onClose: () => void
+  onMarkAllRead: () => void
+  onMarkRead: (id: string) => void
+}) {
+  const router = useRouter()
+  const todayNotifs = notifications.filter(n => n.isToday)
+  const earlierNotifs = notifications.filter(n => !n.isToday)
+
+  function handleNotifClick(n: Notification) {
+    onMarkRead(n.id)
+    onClose()
+    router.push(n.href)
+  }
+
+  function NotifRow({ n }: { n: Notification }) {
+    const [hovered, setHovered] = useState(false)
+    return (
+      <button
+        type="button"
+        onClick={() => handleNotifClick(n)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          display: "flex", alignItems: "flex-start", gap: 10,
+          padding: "10px 16px", width: "100%", background: "none", border: "none",
+          cursor: "pointer", textAlign: "left",
+          backgroundColor: hovered ? "var(--canvas)" : !n.read ? "rgba(74,96,128,0.04)" : "transparent",
+          borderLeft: !n.read ? "2px solid var(--slate-secondary)" : "2px solid transparent",
+          transition: "background-color 150ms",
+          position: "relative",
+        }}
+      >
+        {/* Actor avatar or type icon */}
+        <div style={{
+          width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+          backgroundColor: n.actorInitials ? "var(--slate-tint)" : "var(--canvas)",
+          border: "var(--border-subtle)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {n.actorInitials ? (
+            <span style={{ fontSize: 9, fontWeight: 700, color: "var(--slate-primary)", lineHeight: 1 }}>{n.actorInitials}</span>
+          ) : (
+            <span className="material-symbols-outlined" style={{ fontSize: 14, color: notifIconColor(n.type), lineHeight: 1, userSelect: "none" }}>
+              {notifIcon(n.type)}
+            </span>
+          )}
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: "0 0 2px", fontSize: 12, color: "var(--ink)", lineHeight: "16px", fontWeight: n.read ? 400 : 500 }}>
+            {n.description}
+          </p>
+          <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "14px" }}>
+            {n.timestamp}
+          </p>
+        </div>
+
+        {!n.read && (
+          <div style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "var(--slate-primary)", flexShrink: 0, marginTop: 5 }} />
+        )}
+      </button>
+    )
+  }
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        style={{ position: "fixed", inset: 0, zIndex: 44 }}
+        onClick={onClose}
+      />
+
+      {/* Tray */}
+      <div style={{
+        position: "fixed",
+        top: 0,
+        left: sidebarWidth,
+        width: 320,
+        height: "100vh",
+        backgroundColor: "#FFFFFF",
+        borderRight: "var(--border-subtle)",
+        boxShadow: "var(--elevation-raised)",
+        zIndex: 45,
+        display: "flex",
+        flexDirection: "column",
+        animation: "tray-slide-in 200ms ease",
+      }}>
+        <style>{`@keyframes tray-slide-in { from { transform: translateX(-12px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 16px 12px", borderBottom: "var(--border-subtle)", flexShrink: 0 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>Notifications</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button type="button" onClick={onMarkAllRead}
+              style={{ background: "none", border: "none", fontSize: 12, color: "var(--slate-secondary)", cursor: "pointer", padding: 0, fontWeight: 500 }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "underline" }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "none" }}
+            >
+              Mark all read
+            </button>
+            <button type="button" onClick={onClose}
+              style={{ width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "var(--border-subtle)", backgroundColor: "transparent", cursor: "pointer" }}
+            >
+              <X size={13} color="var(--ink-secondary)" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          {todayNotifs.length > 0 && (
+            <div>
+              <p style={{ margin: 0, padding: "10px 16px 4px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+                Today
+              </p>
+              {todayNotifs.map(n => <NotifRow key={n.id} n={n} />)}
+            </div>
+          )}
+          {earlierNotifs.length > 0 && (
+            <div>
+              <p style={{ margin: 0, padding: "10px 16px 4px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+                Earlier
+              </p>
+              {earlierNotifs.map(n => <NotifRow key={n.id} n={n} />)}
+            </div>
+          )}
+          {notifications.length === 0 && (
+            <div style={{ padding: "48px 16px", textAlign: "center" }}>
+              <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>No notifications yet.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Sidebar ────────────────────────────────────────────────────────────────
 
 export function Sidebar() {
   const pathname = usePathname()
   const [aiInput, setAiInput] = useState("")
   const [collapsed, setCollapsed] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS)
 
   useEffect(() => {
     const stored = localStorage.getItem("sidebar-collapsed")
@@ -47,6 +263,7 @@ export function Sidebar() {
     const next = !collapsed
     setCollapsed(next)
     localStorage.setItem("sidebar-collapsed", String(next))
+    if (notifOpen) setNotifOpen(false)
   }
 
   function isActive(href: string) {
@@ -54,355 +271,189 @@ export function Sidebar() {
     return pathname === href || pathname.startsWith(href + "/")
   }
 
-  const navPadding = collapsed ? "4px 8px" : "4px 8px"
+  function markAllRead() {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+  }
+
+  function markRead(id: string) {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+  }
+
+  const unreadCount = notifications.filter(n => !n.read).length
+  const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH
 
   return (
-    <aside
-      style={{
-        width: collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH,
-        flexShrink: 0,
-        background: "var(--gradient-ai-sidebar)",
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        position: "sticky",
-        top: 0,
-        zIndex: 40,
-        transition: "width 200ms ease-in-out",
-        overflow: "hidden",
-      }}
-    >
-      {/* Brand */}
-      <div
-        style={{
-          padding: "18px 16px 14px 16px",
-          flexShrink: 0,
-          display: "flex",
-          justifyContent: collapsed ? "center" : "flex-start",
-        }}
-      >
-        <Link
-          href="/home"
-          style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }}
-          title={collapsed ? "Grant Assistant" : undefined}
-        >
-          <div
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 7,
-              background: "rgba(255,255,255,0.15)",
-              border: "1px solid rgba(255,255,255,0.2)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#FFFFFF", lineHeight: 1 }}>G</span>
-          </div>
-          {!collapsed && (
-            <span
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: "#FFFFFF",
-                letterSpacing: "-0.01em",
-                lineHeight: "18px",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Grant Assistant
-            </span>
-          )}
-        </Link>
-      </div>
+    <>
+      {notifOpen && (
+        <NotificationTray
+          notifications={notifications}
+          sidebarWidth={sidebarWidth}
+          onClose={() => setNotifOpen(false)}
+          onMarkAllRead={markAllRead}
+          onMarkRead={markRead}
+        />
+      )}
 
-      {/* Nav groups */}
-      <nav
+      <aside
         style={{
-          flex: 1,
-          padding: navPadding,
+          width: sidebarWidth,
+          flexShrink: 0,
+          background: "var(--gradient-ai-sidebar)",
           display: "flex",
           flexDirection: "column",
-          gap: 0,
-          overflowY: "auto",
+          height: "100vh",
+          position: "sticky",
+          top: 0,
+          zIndex: 46,
+          transition: "width 200ms ease-in-out",
+          overflow: "hidden",
         }}
       >
-        {/* MAIN group label */}
-        {!collapsed ? (
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 600,
-              letterSpacing: "0.09em",
-              textTransform: "uppercase",
-              color: "rgba(255,255,255,0.35)",
-              padding: "10px 8px 6px 8px",
-              display: "block",
-            }}
-          >
-            Main
-          </span>
-        ) : (
-          <div style={{ height: 10 }} />
-        )}
+        {/* Brand */}
+        <div style={{ padding: "18px 16px 14px 16px", flexShrink: 0, display: "flex", justifyContent: collapsed ? "center" : "flex-start" }}>
+          <Link href="/home" style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }} title={collapsed ? "Grant Assistant" : undefined}>
+            <div style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#FFFFFF", lineHeight: 1 }}>G</span>
+            </div>
+            {!collapsed && (
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF", letterSpacing: "-0.01em", lineHeight: "18px", whiteSpace: "nowrap" }}>
+                Grant Assistant
+              </span>
+            )}
+          </Link>
+        </div>
 
-        {MAIN_NAV.map(({ label, href, icon: Icon }) => {
-          const active = isActive(href)
-          return (
-            <Link
-              key={href}
-              href={href}
-              title={collapsed ? label : undefined}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: collapsed ? "center" : "flex-start",
-                gap: collapsed ? 0 : 10,
-                padding: collapsed ? "8px 0" : "8px 10px",
-                borderRadius: 8,
-                textDecoration: "none",
-                backgroundColor: active ? "rgba(255,255,255,0.12)" : "transparent",
-                transition: "background-color 150ms",
-              }}
-              onMouseEnter={(e) => {
-                if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "rgba(255,255,255,0.07)"
-              }}
-              onMouseLeave={(e) => {
-                if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "transparent"
-              }}
-            >
-              <Icon size={16} style={{ flexShrink: 0, color: active ? "#FFFFFF" : "rgba(255,255,255,0.55)" }} />
-              {!collapsed && (
-                <span
-                  style={{
-                    fontSize: 13,
-                    fontWeight: active ? 600 : 400,
-                    color: active ? "#FFFFFF" : "rgba(255,255,255,0.65)",
-                    lineHeight: "16px",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {label}
-                </span>
-              )}
-            </Link>
-          )
-        })}
+        {/* Nav groups */}
+        <nav style={{ flex: 1, padding: "4px 8px", display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" }}>
+          {!collapsed ? (
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.09em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", padding: "10px 8px 6px 8px", display: "block" }}>
+              Main
+            </span>
+          ) : <div style={{ height: 10 }} />}
 
-        {/* WORKSPACE group label */}
-        {!collapsed ? (
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 600,
-              letterSpacing: "0.09em",
-              textTransform: "uppercase",
-              color: "rgba(255,255,255,0.35)",
-              padding: "14px 8px 6px 8px",
-              display: "block",
-            }}
-          >
-            Workspace
-          </span>
-        ) : (
-          <div
-            style={{
-              margin: "10px 4px",
-              borderTop: "1px solid rgba(255,255,255,0.12)",
-            }}
-          />
-        )}
+          {MAIN_NAV.map(({ label, href, icon: Icon }) => {
+            const active = isActive(href)
+            return (
+              <Link key={href} href={href} title={collapsed ? label : undefined}
+                style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: collapsed ? 0 : 10, padding: collapsed ? "8px 0" : "8px 10px", borderRadius: 8, textDecoration: "none", backgroundColor: active ? "rgba(255,255,255,0.12)" : "transparent", transition: "background-color 150ms" }}
+                onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "rgba(255,255,255,0.07)" }}
+                onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "transparent" }}
+              >
+                <Icon size={16} style={{ flexShrink: 0, color: active ? "#FFFFFF" : "rgba(255,255,255,0.55)" }} />
+                {!collapsed && <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? "#FFFFFF" : "rgba(255,255,255,0.65)", lineHeight: "16px", whiteSpace: "nowrap" }}>{label}</span>}
+              </Link>
+            )
+          })}
 
-        {WORKSPACE_NAV.map(({ label, href, icon: Icon }) => {
-          const active = isActive(href)
-          return (
-            <Link
-              key={href}
-              href={href}
-              title={collapsed ? label : undefined}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: collapsed ? "center" : "flex-start",
-                gap: collapsed ? 0 : 10,
-                padding: collapsed ? "8px 0" : "8px 10px",
-                borderRadius: 8,
-                textDecoration: "none",
-                backgroundColor: active ? "rgba(255,255,255,0.12)" : "transparent",
-                transition: "background-color 150ms",
-              }}
-              onMouseEnter={(e) => {
-                if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "rgba(255,255,255,0.07)"
-              }}
-              onMouseLeave={(e) => {
-                if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "transparent"
-              }}
-            >
-              <Icon size={16} style={{ flexShrink: 0, color: active ? "#FFFFFF" : "rgba(255,255,255,0.55)" }} />
-              {!collapsed && (
-                <span
-                  style={{
-                    fontSize: 13,
-                    fontWeight: active ? 600 : 400,
-                    color: active ? "#FFFFFF" : "rgba(255,255,255,0.65)",
-                    lineHeight: "16px",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {label}
-                </span>
-              )}
-            </Link>
-          )
-        })}
-      </nav>
+          {!collapsed ? (
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.09em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", padding: "14px 8px 6px 8px", display: "block" }}>
+              Workspace
+            </span>
+          ) : <div style={{ margin: "10px 4px", borderTop: "1px solid rgba(255,255,255,0.12)" }} />}
 
-      {/* New Proposal affordance — sits directly above the Ask Anything input */}
-      <NewProposalButton collapsed={collapsed} />
+          {WORKSPACE_NAV.map(({ label, href, icon: Icon }) => {
+            const active = isActive(href)
+            return (
+              <Link key={href} href={href} title={collapsed ? label : undefined}
+                style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: collapsed ? 0 : 10, padding: collapsed ? "8px 0" : "8px 10px", borderRadius: 8, textDecoration: "none", backgroundColor: active ? "rgba(255,255,255,0.12)" : "transparent", transition: "background-color 150ms" }}
+                onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "rgba(255,255,255,0.07)" }}
+                onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "transparent" }}
+              >
+                <Icon size={16} style={{ flexShrink: 0, color: active ? "#FFFFFF" : "rgba(255,255,255,0.55)" }} />
+                {!collapsed && <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? "#FFFFFF" : "rgba(255,255,255,0.65)", lineHeight: "16px", whiteSpace: "nowrap" }}>{label}</span>}
+              </Link>
+            )
+          })}
+        </nav>
 
-      {/* AI Bar */}
-      <div
-        style={{
-          padding: collapsed ? "0 8px 12px 8px" : "0 10px 12px 10px",
-          flexShrink: 0,
-        }}
-      >
-        {collapsed ? (
+        {/* Notification Bell */}
+        <div style={{ padding: collapsed ? "4px 8px 4px 8px" : "4px 10px 4px 10px", flexShrink: 0 }}>
           <button
             type="button"
-            title="Ask Grant Assistant"
-            onClick={toggleCollapsed}
+            onClick={() => setNotifOpen(v => !v)}
+            title={collapsed ? "Notifications" : undefined}
             style={{
-              width: "100%",
-              height: 40,
-              borderRadius: 10,
-              border: "0.5px solid rgba(173,157,174,0.3)",
-              background: "rgba(255,255,255,0.06)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start",
+              gap: collapsed ? 0 : 10, width: "100%", padding: collapsed ? "8px 0" : "8px 10px",
+              borderRadius: 8, border: "none", backgroundColor: notifOpen ? "rgba(255,255,255,0.12)" : "transparent",
+              cursor: "pointer", transition: "background-color 150ms", position: "relative",
             }}
+            onMouseEnter={(e) => { if (!notifOpen) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.07)" }}
+            onMouseLeave={(e) => { if (!notifOpen) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
           >
-            <Sparkles size={16} style={{ color: "#AD9DAE" }} />
-          </button>
-        ) : (
-          <div
-            style={{
-              borderRadius: 10,
-              border: "0.5px solid rgba(173,157,174,0.3)",
-              background: "rgba(255,255,255,0.06)",
-              padding: "10px 12px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Sparkles size={14} style={{ color: "#AD9DAE", flexShrink: 0 }} />
-              <input
-                type="text"
-                value={aiInput}
-                onChange={(e) => setAiInput(e.target.value)}
-                placeholder="Ask anything..."
-                style={{
-                  flex: 1,
-                  background: "none",
-                  border: "none",
-                  outline: "none",
-                  fontSize: 12,
-                  color: "rgba(255,255,255,0.75)",
-                  lineHeight: "16px",
-                }}
-              />
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              <Bell size={16} style={{ color: notifOpen ? "#FFFFFF" : "rgba(255,255,255,0.55)" }} />
+              {unreadCount > 0 && (
+                <div style={{
+                  position: "absolute", top: -5, right: -5,
+                  minWidth: 14, height: 14, borderRadius: 7,
+                  backgroundColor: "#DC2626", border: "1.5px solid var(--gradient-ai-sidebar)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <span style={{ fontSize: 8, fontWeight: 700, color: "#FFFFFF", lineHeight: 1, padding: "0 2px" }}>
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                </div>
+              )}
             </div>
-            {aiInput && (
-              <div
-                style={{
-                  marginTop: 8,
-                  padding: "8px 10px",
-                  borderRadius: 7,
-                  backgroundColor: "rgba(255,255,255,0.08)",
-                  fontSize: 12,
-                  color: "rgba(255,255,255,0.6)",
-                  lineHeight: "17px",
-                }}
-              >
-                I can help you with grant writing, discovering opportunities, and managing your portfolio. What would you like to know?
-              </div>
+            {!collapsed && (
+              <span style={{ fontSize: 13, fontWeight: notifOpen ? 600 : 400, color: notifOpen ? "#FFFFFF" : "rgba(255,255,255,0.65)", lineHeight: "16px", whiteSpace: "nowrap" }}>
+                Notifications
+              </span>
             )}
-          </div>
-        )}
-      </div>
-
-      {/* User footer */}
-      <div
-        style={{
-          flexShrink: 0,
-          padding: collapsed ? "10px 0 16px 0" : "10px 14px 16px 14px",
-          borderTop: "1px solid rgba(255,255,255,0.08)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: collapsed ? "center" : "flex-start",
-          gap: 10,
-        }}
-      >
-        <div
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: "50%",
-            background: "var(--gradient-avatar)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-          title={collapsed ? "Taylor S. — Whisker Haven" : undefined}
-        >
-          <span style={{ fontSize: 10, fontWeight: 700, color: "#FFFFFF", lineHeight: 1 }}>TS</span>
+          </button>
         </div>
-        {!collapsed && (
-          <div>
-            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#FFFFFF", lineHeight: "15px" }}>Taylor S.</p>
-            <p style={{ margin: 0, fontSize: 11, color: "rgba(255,255,255,0.45)", lineHeight: "14px" }}>Whisker Haven</p>
-          </div>
-        )}
-      </div>
 
-      {/* Collapse / expand toggle */}
-      <button
-        type="button"
-        onClick={toggleCollapsed}
-        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        style={{
-          flexShrink: 0,
-          width: "100%",
-          height: 36,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: collapsed ? "center" : "flex-end",
-          padding: collapsed ? 0 : "0 16px",
-          background: "rgba(255,255,255,0.04)",
-          border: "none",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
-          cursor: "pointer",
-          color: "rgba(255,255,255,0.4)",
-          transition: "background-color 150ms, color 150ms",
-        }}
-        onMouseEnter={(e) => {
-          const btn = e.currentTarget as HTMLButtonElement
-          btn.style.backgroundColor = "rgba(255,255,255,0.08)"
-          btn.style.color = "rgba(255,255,255,0.7)"
-        }}
-        onMouseLeave={(e) => {
-          const btn = e.currentTarget as HTMLButtonElement
-          btn.style.backgroundColor = "rgba(255,255,255,0.04)"
-          btn.style.color = "rgba(255,255,255,0.4)"
-        }}
-      >
-        {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-      </button>
-    </aside>
+        {/* New Proposal affordance */}
+        <NewProposalButton collapsed={collapsed} />
+
+        {/* AI Bar */}
+        <div style={{ padding: collapsed ? "0 8px 12px 8px" : "0 10px 12px 10px", flexShrink: 0 }}>
+          {collapsed ? (
+            <button type="button" title="Ask Grant Assistant" onClick={toggleCollapsed}
+              style={{ width: "100%", height: 40, borderRadius: 10, border: "0.5px solid rgba(173,157,174,0.3)", background: "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <Sparkles size={16} style={{ color: "#AD9DAE" }} />
+            </button>
+          ) : (
+            <div style={{ borderRadius: 10, border: "0.5px solid rgba(173,157,174,0.3)", background: "rgba(255,255,255,0.06)", padding: "10px 12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Sparkles size={14} style={{ color: "#AD9DAE", flexShrink: 0 }} />
+                <input type="text" value={aiInput} onChange={(e) => setAiInput(e.target.value)} placeholder="Ask anything..."
+                  style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 12, color: "rgba(255,255,255,0.75)", lineHeight: "16px" }}
+                />
+              </div>
+              {aiInput && (
+                <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 7, backgroundColor: "rgba(255,255,255,0.08)", fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: "17px" }}>
+                  I can help you with grant writing, discovering opportunities, and managing your portfolio. What would you like to know?
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* User footer */}
+        <div style={{ flexShrink: 0, padding: collapsed ? "10px 0 16px 0" : "10px 14px 16px 14px", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 10 }}>
+          <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--gradient-avatar)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} title={collapsed ? "Taylor S. — Whisker Haven" : undefined}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "#FFFFFF", lineHeight: 1 }}>TS</span>
+          </div>
+          {!collapsed && (
+            <div>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#FFFFFF", lineHeight: "15px" }}>Taylor S.</p>
+              <p style={{ margin: 0, fontSize: 11, color: "rgba(255,255,255,0.45)", lineHeight: "14px" }}>Whisker Haven</p>
+            </div>
+          )}
+        </div>
+
+        {/* Collapse / expand toggle */}
+        <button type="button" onClick={toggleCollapsed} title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          style={{ flexShrink: 0, width: "100%", height: 36, display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-end", padding: collapsed ? 0 : "0 16px", background: "rgba(255,255,255,0.04)", border: "none", borderTop: "1px solid rgba(255,255,255,0.06)", cursor: "pointer", color: "rgba(255,255,255,0.4)", transition: "background-color 150ms, color 150ms" }}
+          onMouseEnter={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.backgroundColor = "rgba(255,255,255,0.08)"; b.style.color = "rgba(255,255,255,0.7)" }}
+          onMouseLeave={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.backgroundColor = "rgba(255,255,255,0.04)"; b.style.color = "rgba(255,255,255,0.4)" }}
+        >
+          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        </button>
+      </aside>
+    </>
   )
 }
 
@@ -410,60 +461,19 @@ export function Sidebar() {
 
 function NewProposalButton({ collapsed }: { collapsed: boolean }) {
   const [open, setOpen] = useState(false)
-
   return (
     <>
-      <div
-        style={{
-          padding: collapsed ? "0 8px 8px 8px" : "0 10px 8px 10px",
-          flexShrink: 0,
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          title={collapsed ? "New Proposal" : undefined}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: collapsed ? "center" : "flex-start",
-            gap: collapsed ? 0 : 10,
-            width: "100%",
-            padding: collapsed ? "8px 0" : "8px 10px",
-            borderRadius: 8,
-            border: "none",
-            backgroundColor: "transparent",
-            cursor: "pointer",
-            transition: "background-color 150ms",
-          }}
-          onMouseEnter={(e) => {
-            ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(173,157,174,0.15)"
-          }}
-          onMouseLeave={(e) => {
-            ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"
-          }}
+      <div style={{ padding: collapsed ? "0 8px 8px 8px" : "0 10px 8px 10px", flexShrink: 0 }}>
+        <button type="button" onClick={() => setOpen(true)} title={collapsed ? "New Proposal" : undefined}
+          style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: collapsed ? 0 : 10, width: "100%", padding: collapsed ? "8px 0" : "8px 10px", borderRadius: 8, border: "none", backgroundColor: "transparent", cursor: "pointer", transition: "background-color 150ms" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(173,157,174,0.15)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
         >
           <PlusCircle size={16} style={{ flexShrink: 0, color: "var(--plum-soft)" }} />
-          {!collapsed && (
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "var(--plum-soft)",
-                lineHeight: "16px",
-                whiteSpace: "nowrap",
-              }}
-            >
-              New proposal
-            </span>
-          )}
+          {!collapsed && <span style={{ fontSize: 13, fontWeight: 600, color: "var(--plum-soft)", lineHeight: "16px", whiteSpace: "nowrap" }}>New proposal</span>}
         </button>
       </div>
-      <NewProposalModal
-        open={open}
-        onClose={() => setOpen(false)}
-        opportunityName="New Proposal"
-      />
+      <NewProposalModal open={open} onClose={() => setOpen(false)} opportunityName="New Proposal" />
     </>
   )
 }

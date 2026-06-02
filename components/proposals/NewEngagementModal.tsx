@@ -119,7 +119,7 @@ export function NewEngagementModal({ open, onClose, onCreate, lockedFunderName }
           width: 480,
           backgroundColor: "#FFFFFF",
           borderRadius: 14,
-          boxShadow: "0 16px 48px rgba(42,42,42,0.18)",
+          boxShadow: "var(--elevation-overlay)",
           display: "flex",
           flexDirection: "column",
           // overflow visible so the funder dropdown can escape the container
@@ -158,7 +158,7 @@ export function NewEngagementModal({ open, onClose, onCreate, lockedFunderName }
               alignItems: "center",
               justifyContent: "center",
               borderRadius: 6,
-              border: "1px solid var(--border-default)",
+              border: "var(--border-subtle)",
               backgroundColor: "transparent",
               cursor: "pointer",
               flexShrink: 0,
@@ -277,9 +277,9 @@ export function NewEngagementModal({ open, onClose, onCreate, lockedFunderName }
                       left: 0,
                       right: 0,
                       backgroundColor: "var(--surface-white)",
-                      border: "1px solid var(--border-default)",
+                      border: "var(--border-subtle)",
                       borderRadius: 9,
-                      boxShadow: "0 6px 20px rgba(42,42,42,0.12)",
+                      boxShadow: "var(--elevation-raised)",
                       zIndex: 400,
                       overflow: "hidden",
                     }}
@@ -296,7 +296,7 @@ export function NewEngagementModal({ open, onClose, onCreate, lockedFunderName }
                             width: "100%",
                             padding: "10px 14px",
                             border: "none",
-                            borderBottom: "1px solid var(--border-default)",
+                            borderBottom: "var(--border-subtle)",
                             backgroundColor: "transparent",
                             cursor: "pointer",
                             textAlign: "left",
@@ -318,7 +318,7 @@ export function NewEngagementModal({ open, onClose, onCreate, lockedFunderName }
                         </button>
                       ))
                     ) : (
-                      <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--border-default)" }}>
+                      <div style={{ padding: "10px 14px", borderBottom: "var(--border-subtle)" }}>
                         <span style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>No funders found</span>
                       </div>
                     )}
@@ -392,7 +392,7 @@ export function NewEngagementModal({ open, onClose, onCreate, lockedFunderName }
               style={{
                 display: "flex",
                 borderRadius: 9,
-                border: "1px solid var(--border-default)",
+                border: "var(--border-subtle)",
                 overflow: "hidden",
               }}
             >
@@ -427,7 +427,7 @@ export function NewEngagementModal({ open, onClose, onCreate, lockedFunderName }
             justifyContent: "space-between",
             alignItems: "center",
             padding: "16px 24px 20px",
-            borderTop: "1px solid var(--border-default)",
+            borderTop: "var(--border-subtle)",
             flexShrink: 0,
             borderRadius: "0 0 14px 14px",
             backgroundColor: "#FFFFFF",
@@ -453,7 +453,7 @@ function GhostBtn({ children, onClick }: { children: React.ReactNode; onClick: (
       style={{
         padding: "8px 18px",
         borderRadius: 8,
-        border: "1px solid var(--border-default)",
+        border: "var(--border-subtle)",
         backgroundColor: "transparent",
         fontSize: 13,
         color: "var(--ink)",

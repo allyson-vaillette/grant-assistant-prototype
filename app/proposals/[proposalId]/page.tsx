@@ -114,7 +114,7 @@ function Toast({ msg, visible }: { msg: string; visible: boolean }) {
         opacity: visible ? 1 : 0,
         transition: "transform 0.2s ease, opacity 0.2s ease",
         backgroundColor: "#FFFFFF",
-        border: "1px solid var(--border-default)",
+        boxShadow: "var(--shadow-card)",
         borderRadius: 12,
         padding: "10px 20px",
         boxShadow: "0 4px 16px rgba(42,42,42,0.12)",
@@ -289,7 +289,7 @@ function ProposalEditorContent() {
           justifyContent: "space-between",
           padding: "0 20px",
           backgroundColor: "var(--surface-white)",
-          borderBottom: "1px solid var(--border-default)",
+          borderBottom: "var(--border-subtle)",
           position: "relative",
         }}
       >
@@ -304,7 +304,7 @@ function ProposalEditorContent() {
               alignItems: "center",
               justifyContent: "center",
               borderRadius: 6,
-              border: "1px solid var(--border-default)",
+              border: "var(--border-subtle)",
               textDecoration: "none",
               flexShrink: 0,
             }}
@@ -403,7 +403,7 @@ function ProposalEditorContent() {
           padding: "0 20px",
           height: 40,
           backgroundColor: "var(--surface-white)",
-          borderBottom: "1px solid var(--border-default)",
+          borderBottom: "var(--border-subtle)",
         }}
       >
         {([Bold, Italic, Underline] as React.FC<{ size: number; color: string }>[]).map(
@@ -417,7 +417,7 @@ function ProposalEditorContent() {
           style={{
             width: 1,
             height: 16,
-            backgroundColor: "var(--border-default)",
+            backgroundColor: "rgba(42, 42, 42, 0.08)",
             margin: "0 4px",
           }}
         />
@@ -445,7 +445,7 @@ function ProposalEditorContent() {
           style={{
             width: 1,
             height: 16,
-            backgroundColor: "var(--border-default)",
+            backgroundColor: "rgba(42, 42, 42, 0.08)",
             margin: "0 4px",
           }}
         />
@@ -620,7 +620,7 @@ function ProposalEditorContent() {
             <div
               style={{
                 height: 1,
-                backgroundColor: "var(--border-default)",
+                backgroundColor: "rgba(42, 42, 42, 0.08)",
                 marginBottom: 36,
               }}
             />
@@ -693,7 +693,7 @@ function ProposalEditorContent() {
           style={{
             width: 340,
             flexShrink: 0,
-            borderLeft: "1px solid var(--border-default)",
+            borderLeft: "var(--border-subtle)",
             backgroundColor: "var(--canvas)",
             display: "flex",
             flexDirection: "column",
@@ -706,7 +706,7 @@ function ProposalEditorContent() {
             style={{
               flexShrink: 0,
               padding: "12px 16px 0",
-              borderBottom: "1px solid var(--border-default)",
+              borderBottom: "var(--border-subtle)",
               backgroundColor: "var(--canvas)",
             }}
           >
@@ -808,7 +808,7 @@ function ProposalEditorContent() {
                         borderRadius: 10,
                         backgroundColor:
                           msg.role === "ai" ? "var(--plum-tint)" : "var(--slate-tint)",
-                        border: "1px solid var(--border-default)",
+                        boxShadow: "var(--shadow-card)",
                         fontSize: 13,
                         color: "var(--ink)",
                         lineHeight: "19px",
@@ -841,7 +841,7 @@ function ProposalEditorContent() {
                         padding: "10px 14px",
                         borderRadius: 10,
                         backgroundColor: "var(--surface-white)",
-                        border: "1px solid var(--border-default)",
+                        boxShadow: "var(--shadow-card)",
                       }}
                     >
                       <span
@@ -900,7 +900,7 @@ function ProposalEditorContent() {
                       padding: "10px 12px",
                       borderRadius: 8,
                       backgroundColor: "var(--surface-white)",
-                      border: "1px solid var(--border-default)",
+                      boxShadow: "var(--shadow-card)",
                     }}
                   >
                     <span
@@ -958,7 +958,7 @@ function ProposalEditorContent() {
             <div
               style={{
                 flexShrink: 0,
-                borderTop: "1px solid var(--border-default)",
+                borderTop: "var(--border-subtle)",
                 padding: "10px 16px",
                 backgroundColor: "var(--canvas)",
               }}
@@ -971,7 +971,7 @@ function ProposalEditorContent() {
                   padding: "8px 12px",
                   borderRadius: 9,
                   backgroundColor: "var(--surface-white)",
-                  border: "1px solid var(--border-default)",
+                  boxShadow: "var(--shadow-card)",
                 }}
               >
                 <input
@@ -1032,7 +1032,7 @@ const topBarBtnStyle: React.CSSProperties = {
   padding: "6px 14px",
   borderRadius: 8,
   backgroundColor: "transparent",
-  border: "1px solid var(--border-default)",
+  border: "var(--border-subtle)",
   fontSize: 13,
   color: "var(--ink)",
   cursor: "pointer",

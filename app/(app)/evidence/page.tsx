@@ -194,7 +194,7 @@ function EvidenceRow({
         padding: "12px 14px",
         borderRadius: 10,
         backgroundColor: isSelected ? "#FFFFFF" : "transparent",
-        border: isSelected ? "1px solid var(--border-color)" : "1px solid transparent",
+        border: isSelected ? "var(--border-subtle)" : "1px solid transparent",
         borderLeft: isSelected ? "3px solid var(--slate-primary)" : "3px solid transparent",
         boxShadow: isSelected ? "0px 1px 4px rgba(28,24,64,0.06)" : "none",
         cursor: "pointer",
@@ -268,7 +268,7 @@ function DetailPanel({ item }: { item: EvidenceItem }) {
         overflowY: "auto",
         padding: "28px 40px",
         backgroundColor: "#FFFFFF",
-        borderLeft: "1px solid var(--border-color)",
+        borderLeft: "var(--border-subtle)",
         display: "flex",
         flexDirection: "column",
         gap: 0,
@@ -308,7 +308,7 @@ function DetailPanel({ item }: { item: EvidenceItem }) {
               style={{
                 padding: "5px 14px",
                 borderRadius: "var(--radius-button)",
-                border: "1px solid var(--border-color)",
+                border: "var(--border-subtle)",
                 backgroundColor: "transparent",
                 fontSize: 13,
                 color: "var(--ink)",
@@ -366,7 +366,7 @@ function DetailPanel({ item }: { item: EvidenceItem }) {
             borderRadius: "var(--radius-pill)",
             padding: "3px 10px",
             backgroundColor: "var(--subtle)",
-            border: "1px solid var(--border-color)",
+            border: "var(--border-subtle)",
             fontSize: 12,
             color: "var(--ink-secondary)",
           }}
@@ -405,7 +405,7 @@ function DetailPanel({ item }: { item: EvidenceItem }) {
           <div
             style={{
               borderRadius: "var(--radius-card)",
-              border: "1px solid var(--border-color)",
+              border: "var(--border-subtle)",
               overflow: "hidden",
             }}
           >
@@ -420,7 +420,7 @@ function DetailPanel({ item }: { item: EvidenceItem }) {
                   gap: 12,
                   borderBottom:
                     i < item.usageEntries.length - 1
-                      ? "1px solid var(--border-color)"
+                      ? "var(--border-subtle)"
                       : "none",
                 }}
               >
@@ -483,7 +483,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 }
 
 function Divider() {
-  return <div style={{ height: 1, backgroundColor: "var(--border-color)", margin: "4px 0 20px 0" }} />
+  return <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)", margin: "4px 0 20px 0" }} />
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────
@@ -529,7 +529,7 @@ export default function EvidencePage() {
           flexShrink: 0,
           padding: "20px 32px",
           backgroundColor: "#FFFFFF",
-          borderBottom: "1px solid var(--border-color)",
+          borderBottom: "var(--border-subtle)",
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
@@ -584,7 +584,7 @@ export default function EvidencePage() {
             width: 268,
             flexShrink: 0,
             backgroundColor: "#F3F0EA",
-            borderRight: "1px solid var(--border-color)",
+            borderRight: "var(--border-subtle)",
             overflowY: "auto",
             display: "flex",
             flexDirection: "column",
@@ -600,7 +600,7 @@ export default function EvidencePage() {
                 padding: "8px 12px",
                 borderRadius: "var(--radius-input)",
                 backgroundColor: "#FFFFFF",
-                border: "1px solid var(--border-color)",
+                boxShadow: "var(--shadow-card)",
               }}
             >
               <Search size={13} color="var(--ink-tertiary)" style={{ flexShrink: 0 }} />
@@ -639,7 +639,7 @@ export default function EvidencePage() {
                 padding: "4px 12px",
                 border: activeInitiatives.size === 0 && query === ""
                   ? "none"
-                  : "1px solid var(--border-color)",
+                  : "var(--border-subtle)",
                 backgroundColor: activeInitiatives.size === 0 && query === ""
                   ? "var(--slate-primary)"
                   : "transparent",
@@ -663,7 +663,7 @@ export default function EvidencePage() {
                   style={{
                     borderRadius: "var(--radius-pill)",
                     padding: "4px 12px",
-                    border: isActive ? "none" : "1px solid var(--border-color)",
+                    border: isActive ? "none" : "var(--border-subtle)",
                     backgroundColor: isActive ? "var(--slate-primary)" : "transparent",
                     fontSize: 12,
                     fontWeight: isActive ? 600 : 400,
