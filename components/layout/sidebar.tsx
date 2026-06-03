@@ -298,7 +298,7 @@ export function Sidebar() {
         style={{
           width: sidebarWidth,
           flexShrink: 0,
-          background: "var(--gradient-ai-sidebar)",
+          background: "var(--sidebar-gradient)",
           display: "flex",
           flexDirection: "column",
           height: "100vh",
@@ -326,7 +326,7 @@ export function Sidebar() {
         {/* Nav groups */}
         <nav style={{ flex: 1, padding: "4px 8px", display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" }}>
           {!collapsed ? (
-            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.09em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", padding: "10px 8px 6px 8px", display: "block" }}>
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.09em", textTransform: "uppercase", color: "rgba(255,255,255,0.40)", padding: "10px 8px 6px 8px", display: "block" }}>
               Main
             </span>
           ) : <div style={{ height: 10 }} />}
@@ -335,18 +335,18 @@ export function Sidebar() {
             const active = isActive(href)
             return (
               <Link key={href} href={href} title={collapsed ? label : undefined}
-                style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: collapsed ? 0 : 10, padding: collapsed ? "8px 0" : "8px 10px", borderRadius: 8, textDecoration: "none", backgroundColor: active ? "rgba(255,255,255,0.12)" : "transparent", transition: "background-color 150ms" }}
+                style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: collapsed ? 0 : 10, padding: collapsed ? "8px 0" : "8px 10px", borderRadius: 8, textDecoration: "none", backgroundColor: active ? "rgba(255,255,255,0.10)" : "transparent", transition: "background-color 150ms" }}
                 onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "rgba(255,255,255,0.07)" }}
                 onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "transparent" }}
               >
-                <Icon size={16} style={{ flexShrink: 0, color: active ? "#FFFFFF" : "rgba(255,255,255,0.55)" }} />
-                {!collapsed && <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? "#FFFFFF" : "rgba(255,255,255,0.65)", lineHeight: "16px", whiteSpace: "nowrap" }}>{label}</span>}
+                <Icon size={16} style={{ flexShrink: 0, color: active ? "#F0EEEA" : "#A39FB0" }} />
+                {!collapsed && <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? "#F0EEEA" : "#A39FB0", lineHeight: "16px", whiteSpace: "nowrap" }}>{label}</span>}
               </Link>
             )
           })}
 
           {!collapsed ? (
-            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.09em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", padding: "14px 8px 6px 8px", display: "block" }}>
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.09em", textTransform: "uppercase", color: "rgba(255,255,255,0.40)", padding: "14px 8px 6px 8px", display: "block" }}>
               Workspace
             </span>
           ) : <div style={{ margin: "10px 4px", borderTop: "1px solid rgba(255,255,255,0.12)" }} />}
@@ -355,12 +355,12 @@ export function Sidebar() {
             const active = isActive(href)
             return (
               <Link key={href} href={href} title={collapsed ? label : undefined}
-                style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: collapsed ? 0 : 10, padding: collapsed ? "8px 0" : "8px 10px", borderRadius: 8, textDecoration: "none", backgroundColor: active ? "rgba(255,255,255,0.12)" : "transparent", transition: "background-color 150ms" }}
+                style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: collapsed ? 0 : 10, padding: collapsed ? "8px 0" : "8px 10px", borderRadius: 8, textDecoration: "none", backgroundColor: active ? "rgba(255,255,255,0.10)" : "transparent", transition: "background-color 150ms" }}
                 onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "rgba(255,255,255,0.07)" }}
                 onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "transparent" }}
               >
-                <Icon size={16} style={{ flexShrink: 0, color: active ? "#FFFFFF" : "rgba(255,255,255,0.55)" }} />
-                {!collapsed && <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? "#FFFFFF" : "rgba(255,255,255,0.65)", lineHeight: "16px", whiteSpace: "nowrap" }}>{label}</span>}
+                <Icon size={16} style={{ flexShrink: 0, color: active ? "#F0EEEA" : "#A39FB0" }} />
+                {!collapsed && <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? "#F0EEEA" : "#A39FB0", lineHeight: "16px", whiteSpace: "nowrap" }}>{label}</span>}
               </Link>
             )
           })}
