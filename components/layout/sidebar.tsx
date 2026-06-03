@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
 import {
-  Home, LayoutList, Telescope, Layers, Database, Settings,
+  Home, GitMerge, Award, Building2, Telescope, Layers, Database, Settings,
   Sparkles, PlusCircle, ChevronLeft, ChevronRight, Bell, X,
 } from "lucide-react"
 import { NewProposalModal } from "@/components/proposals/NewProposalModal"
@@ -14,9 +14,11 @@ const SIDEBAR_WIDTH = 216
 const SIDEBAR_COLLAPSED_WIDTH = 64
 
 const MAIN_NAV = [
-  { label: "Home",        href: "/home",      icon: Home       },
-  { label: "Engagements", href: "/portfolio",  icon: LayoutList },
-  { label: "Discover",    href: "/discover",   icon: Telescope  },
+  { label: "Home",      href: "/home",      icon: Home      },
+  { label: "Discover",  href: "/discover",  icon: Telescope },
+  { label: "Pipeline",  href: "/pipeline",  icon: GitMerge  },
+  { label: "Portfolio", href: "/portfolio", icon: Award     },
+  { label: "Relationships", href: "/funders", icon: Building2 },
 ] as const
 
 const WORKSPACE_NAV = [

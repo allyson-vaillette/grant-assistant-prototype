@@ -96,7 +96,7 @@ const DEADLINES: Deadline[] = [
 
 const PIPELINE_STAGES: PipelineStage[] = [
   {
-    label: "Under review", sub: "Tracking stage", count: 4, stageFilter: "Tracking",
+    label: "Tracking", sub: "Under consideration", count: 4, stageFilter: "Tracking",
     hasUrgent: false, accentColor: "#A6B3C5",
     hoverLabel: "Under review",
     hoverItems: [
@@ -107,7 +107,7 @@ const PIPELINE_STAGES: PipelineStage[] = [
     ],
   },
   {
-    label: "In progress", sub: "Active stage", count: 5, stageFilter: "Active",
+    label: "Active", sub: "In progress", count: 5, stageFilter: "Active",
     hasUrgent: true, urgentLabel: "2 due soon", accentColor: "#4A6080",
     hoverLabel: "In progress",
     hoverItems: [
@@ -360,7 +360,7 @@ function PipelineBar({ stages, onStageClick }: { stages: PipelineStage[]; onStag
                 {stage.hoverItems.map((item, j) => (
                   <div
                     key={j}
-                    onClick={() => router.push(`/portfolio?stage=${stage.stageFilter}`)}
+                    onClick={() => stage.stageFilter === "Awarded" ? router.push("/portfolio") : router.push(`/pipeline?stage=${stage.stageFilter}`)}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--slate-tint)"; (e.currentTarget as HTMLDivElement).style.borderRadius = "6px" }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
                     style={{
@@ -462,7 +462,11 @@ export default function HomeDashboard() {
         {/* ── Pipeline ── */}
         <PipelineBar
           stages={PIPELINE_STAGES}
-          onStageClick={(stageFilter) => router.push(`/portfolio?stage=${stageFilter}`)}
+          onStageClick={(stageFilter) =>
+            stageFilter === "Awarded"
+              ? router.push("/portfolio")
+              : router.push(`/pipeline?stage=${stageFilter}`)
+          }
         />
 
         {/* ── Awarded trend card ── */}
@@ -474,7 +478,7 @@ export default function HomeDashboard() {
                 {AWARDED_ENGAGEMENTS.map((a, i) => (
                   <div
                     key={i}
-                    onClick={() => router.push("/portfolio?stage=Awarded")}
+                    onClick={() => router.push("/portfolio")}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--slate-tint)"; (e.currentTarget as HTMLDivElement).style.borderRadius = "6px" }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
                     style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "6px 4px", margin: "0 -4px", borderBottom: i < AWARDED_ENGAGEMENTS.length - 1 ? "1px solid var(--hair)" : "none", cursor: "pointer", transition: "background-color 100ms" }}
@@ -490,7 +494,7 @@ export default function HomeDashboard() {
             }
           >
             <div
-              onClick={() => router.push("/portfolio?stage=Awarded")}
+              onClick={() => router.push("/portfolio")}
               style={{ borderRadius: "var(--radius-card)", backgroundColor: "#FFFFFF", border: "1px solid var(--hair)", boxShadow: "none", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", gap: 16 }}
             >
               <div>
@@ -521,7 +525,7 @@ export default function HomeDashboard() {
               iconBg="var(--slate-tint)"
               label="New engagement"
               sub="Start tracking a funder relationship"
-              onClick={() => router.push("/portfolio")}
+              onClick={() => router.push("/funders")}
             />
             <QuickAction
               icon={<Telescope size={18} color="#2D5080" />}
