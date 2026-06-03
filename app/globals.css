@@ -51,9 +51,8 @@
     --ink-tertiary:  #738498;   /* placeholder, disabled — 3:1 on cream */
 
     /* ── Sidebar gradient ── */
-    /* Charcoal-top → slate-mid → muted-plum-bottom. Distinct from AI gradients:
-       AI uses deep indigo→violet (135deg diagonal). Sidebar uses near-neutral→plum (180deg vertical). */
-    --sidebar-gradient: linear-gradient(180deg, #292A2E 0%, #393350 48%, #5F4D75 100%);
+    /* Deep indigo top-left → deep violet-plum bottom-right (135deg diagonal). */
+    --sidebar-gradient: linear-gradient(135deg, #1C2358 0%, #3D2860 100%);
 
     /* ── AI Gradients — slate-to-plum identity signal ── */
     /* Deep indigo-navy → deep violet-plum, 135deg diagonal — distinct from sidebar. */
