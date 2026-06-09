@@ -348,7 +348,7 @@ export function OpportunityPeekPanel({ oppId, onClose, onFunderClick }: Props) {
             onMouseEnter={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink)" }}
             onMouseLeave={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "transparent"; el.style.color = "var(--ink-secondary)" }}
           >
-            Open <ExternalLink size={12} />
+            Details <ExternalLink size={12} />
           </button>
         </div>
       </div>
