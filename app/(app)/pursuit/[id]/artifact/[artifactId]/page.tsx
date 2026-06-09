@@ -89,7 +89,7 @@ export default function ArtifactEditorPage({
   const [content,    setContent]    = useState(artifact?.content ?? "")
   const [updatedAt,  setUpdatedAt]  = useState(artifact?.updatedAt ?? "")
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved")
-  const [snapshots,  setSnapshots]  = useState<string[]>([artifact?.content ?? ""])
+  const [_snapshots, setSnapshots]  = useState<string[]>([artifact?.content ?? ""])
 
   // ── Selection state ─────────────────────────────────────────────────────
   const [selection, setSelection] = useState<TextSelection | null>(null)
@@ -114,7 +114,7 @@ export default function ArtifactEditorPage({
     setSnapshots(prev => [...prev, c].slice(-MAX_SNAPSHOTS))
   }
 
-  function triggerAutosave(newContent: string) {
+  function triggerAutosave(_newContent: string) {
     setSaveStatus("saving")
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {

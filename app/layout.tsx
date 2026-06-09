@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import { Inter, Lora } from "next/font/google"
 import "./globals.css"
-import { PasscodeGate } from "@/components/PasscodeGate"
 
 const inter = Inter({
   subsets: ["latin"],
