@@ -20,10 +20,12 @@ const STATUS_BADGE: Record<PipelineStatus, { bg: string; color: string; label: s
   denied:      { bg: "#F1F1F2",              color: "#6B6B7E",               label: "Denied"       },
 }
 
-const STAGE_GROUPS: { stage: string; statuses: PipelineStatus[]; label: string }[] = [
-  { stage: "pre-apply", statuses: ["researching"],              label: "Pre-apply"  },
-  { stage: "apply",     statuses: ["applying"],                 label: "Applying"   },
-  { stage: "post-apply",statuses: ["submitted","awarded","denied"], label: "Post-apply" },
+const STATUS_GROUPS: { status: PipelineStatus; label: string; alwaysShow: boolean }[] = [
+  { status: "researching", label: "Researching", alwaysShow: true  },
+  { status: "applying",    label: "Applying",    alwaysShow: true  },
+  { status: "submitted",   label: "Submitted",   alwaysShow: true  },
+  { status: "awarded",     label: "Awarded",     alwaysShow: false },
+  { status: "denied",      label: "Denied",      alwaysShow: false },
 ]
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -171,11 +173,12 @@ export default function TrackerPage() {
           ))}
         </div>
 
-        {/* Pipeline grouped by stage */}
-        {STAGE_GROUPS.map(({ stage, statuses, label }) => {
-          const items = PIPELINE_OPPORTUNITIES.filter(p => statuses.includes(p.status))
+        {/* Pipeline grouped by status */}
+        {STATUS_GROUPS.map(({ status, label, alwaysShow }) => {
+          const items = PIPELINE_OPPORTUNITIES.filter(p => p.status === status)
+          if (!alwaysShow && items.length === 0) return null
           return (
-            <section key={stage} style={{ marginBottom: 36 }}>
+            <section key={status} style={{ marginBottom: 36 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <span style={{
                   fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase",
@@ -194,12 +197,10 @@ export default function TrackerPage() {
                   textAlign: "center",
                 }}>
                   <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>
-                    No pursuits in this stage.{" "}
-                    {stage === "pre-apply" && (
-                      <Link href="/discover" style={{ color: "var(--slate-secondary)", textDecoration: "none", fontWeight: 500 }}>
-                        Discover opportunities →
-                      </Link>
-                    )}
+                    No pursuits here yet.{" "}
+                    <Link href="/discover" style={{ color: "var(--slate-secondary)", textDecoration: "none", fontWeight: 500 }}>
+                      Discover opportunities →
+                    </Link>
                   </p>
                 </div>
               ) : (

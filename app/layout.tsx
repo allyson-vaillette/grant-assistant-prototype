@@ -39,7 +39,7 @@ export default function RootLayout({
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,400,0,0" />
       </head>
       <body className={`${inter.variable} ${lora.variable} ${inclusiveSans.variable} font-sans antialiased`}>
-        <PasscodeGate>{children}</PasscodeGate>
+        {children}
       </body>
     </html>
   )
