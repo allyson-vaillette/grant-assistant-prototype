@@ -115,18 +115,6 @@ function SectionHeader({ label }: { label: string }) {
   )
 }
 
-function SubGroupLabel({ label }: { label: string }) {
-  return (
-    <p style={{
-      margin: "0 0 8px",
-      fontSize: 10, fontWeight: 700,
-      letterSpacing: "0.07em", textTransform: "uppercase",
-      color: "var(--ink-tertiary)",
-    }}>
-      {label}
-    </p>
-  )
-}
 
 function EmptyState({ message }: { message: string }) {
   return (
@@ -530,33 +518,30 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Tasks — Yours + Waiting on the team */}
+        {/* Your tasks */}
         <section style={{ marginBottom: 40 }}>
-          <SectionHeader label="Tasks" />
+          <SectionHeader label="Your tasks" />
+          {tasks.length === 0 ? (
+            <EmptyState message="No tasks due today. You're all caught up." />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {tasks.map(t => <TaskRow key={t.id} task={t} />)}
+            </div>
+          )}
+        </section>
 
-          <div style={{ marginBottom: 24 }}>
-            <SubGroupLabel label="Yours" />
-            {tasks.length === 0 ? (
-              <EmptyState message="No tasks due today. You're all caught up." />
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {tasks.map(t => <TaskRow key={t.id} task={t} />)}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <SubGroupLabel label="Waiting on the team" />
-            {teamTasks.length === 0 ? (
-              <EmptyState message="No open tasks waiting on teammates." />
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {teamTasks.map(t => (
-                  <TeamTaskRow key={t.id} task={t} onNudge={nudge} />
-                ))}
-              </div>
-            )}
-          </div>
+        {/* Tasks pending with team */}
+        <section style={{ marginBottom: 40 }}>
+          <SectionHeader label="Tasks pending with team" />
+          {teamTasks.length === 0 ? (
+            <EmptyState message="No open tasks waiting on teammates." />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {teamTasks.map(t => (
+                <TeamTaskRow key={t.id} task={t} onNudge={nudge} />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Upcoming deadlines */}
