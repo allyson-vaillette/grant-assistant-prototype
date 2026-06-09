@@ -115,6 +115,19 @@ function SectionHeader({ label }: { label: string }) {
   )
 }
 
+function SubGroupLabel({ label }: { label: string }) {
+  return (
+    <p style={{
+      margin: "0 0 8px",
+      fontSize: 10, fontWeight: 700,
+      letterSpacing: "0.07em", textTransform: "uppercase",
+      color: "var(--ink-tertiary)",
+    }}>
+      {label}
+    </p>
+  )
+}
+
 function EmptyState({ message }: { message: string }) {
   return (
     <div style={{
@@ -298,6 +311,157 @@ function DeadlineRow({ pip, opp, funder }: {
   )
 }
 
+// ── StatusCard with hover/focus/tap panel ─────────────────────────────────────
+
+type StatusPursuit = { pip: PipelineOpportunity; opp: Opportunity | undefined; funder: Funder | undefined }
+
+function StatusCard({
+  status,
+  label,
+  activeColor,
+  pursuits,
+  isFirst,
+  isLast,
+}: {
+  status: PipelineStatus
+  label: string
+  activeColor: string
+  pursuits: StatusPursuit[]
+  isFirst: boolean
+  isLast: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const count = pursuits.length
+
+  // Compensate for removed overflow:hidden on strip container
+  const borderRadius = [
+    isFirst ? "11px" : "0",
+    isLast  ? "11px" : "0",
+    isLast  ? "11px" : "0",
+    isFirst ? "11px" : "0",
+  ].join(" ")
+
+  return (
+    <div
+      ref={containerRef}
+      style={{ flex: 1, position: "relative" }}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={() => setOpen(true)}
+      onBlur={(e) => {
+        // Keep open when focus moves to a child (e.g. a link inside the panel)
+        if (!containerRef.current?.contains(e.relatedTarget as Node)) {
+          setOpen(false)
+        }
+      }}
+    >
+      <div
+        style={{
+          padding: "16px 20px",
+          borderRight: !isLast ? "1px solid var(--hair)" : "none",
+          borderRadius,
+          backgroundColor: open ? "var(--surface-sunk)" : "transparent",
+          transition: "background-color 150ms",
+        }}
+      >
+        <p style={{
+          margin: "0 0 4px", fontSize: 10, fontWeight: 600,
+          letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)",
+        }}>
+          {label}
+        </p>
+        {/* Count routes to Tracker; always focusable so keyboard can open the panel */}
+        <Link
+          href="/tracker"
+          style={{ textDecoration: "none", display: "inline-block", outline: "none" }}
+          aria-label={`${count} ${label} — view in Tracker`}
+        >
+          <p style={{
+            margin: 0, fontSize: 24, fontWeight: 600, letterSpacing: "-0.02em",
+            color: count > 0 ? activeColor : "var(--hair)",
+            fontFamily: "var(--font-lora), Georgia, serif",
+          }}>
+            {count}
+          </p>
+        </Link>
+      </div>
+
+      {/* Pursuit panel */}
+      {open && (
+        <div
+          role="region"
+          aria-label={`${label} pursuits`}
+          style={{
+            position: "absolute",
+            top: "calc(100% + 6px)",
+            left: 0,
+            minWidth: 264,
+            zIndex: 50,
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--hair-2)",
+            borderRadius: 12,
+            boxShadow: "0 8px 24px rgba(28,24,64,0.12)",
+            overflow: "hidden",
+          }}
+        >
+          {pursuits.length === 0 ? (
+            <p style={{
+              margin: 0, padding: "14px 16px",
+              fontSize: 13, color: "var(--ink-tertiary)", textAlign: "center",
+            }}>
+              No pursuits here yet
+            </p>
+          ) : (
+            <div>
+              {pursuits.map(({ pip, opp, funder }, i) => (
+                <Link
+                  key={pip.id}
+                  href={`/pursuit/${pip.opportunityId}`}
+                  style={{ textDecoration: "none", display: "block" }}
+                >
+                  <div
+                    style={{
+                      padding: "11px 16px",
+                      borderTop: i > 0 ? "1px solid var(--hair)" : "none",
+                      transition: "background-color 150ms",
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--surface-sunk)" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
+                  >
+                    <p style={{
+                      margin: "0 0 1px", fontSize: 12, fontWeight: 600,
+                      color: "var(--ink)", lineHeight: "16px",
+                      textTransform: "uppercase", letterSpacing: "0.04em",
+                    }}>
+                      {funder?.name}
+                    </p>
+                    <p style={{
+                      margin: 0, fontSize: 13, fontWeight: 400,
+                      color: "var(--ink-secondary)", lineHeight: "17px",
+                    }}>
+                      {opp?.name}
+                    </p>
+                    {opp?.deadline && (
+                      <p style={{
+                        margin: "3px 0 0", fontSize: 11,
+                        color: "var(--ink-tertiary)", lineHeight: "14px",
+                      }}>
+                        Due {opp.deadline}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
@@ -308,6 +472,20 @@ export default function HomePage() {
   const teamTasks = getTeamTasks()
   const deadlines = getUpcomingDeadlines()
   const firstName = USER.name.split(" ")[0]
+
+  // Pre-group pipeline opportunities by status for the strip panels
+  const statusPursuits = Object.fromEntries(
+    PIPELINE_STRIP.map(s => [
+      s.status,
+      PIPELINE_OPPORTUNITIES
+        .filter(p => p.status === s.status)
+        .map(pip => ({
+          pip,
+          opp: getOpportunity(pip.opportunityId),
+          funder: getFunder(pip.funderId),
+        })),
+    ])
+  ) as Record<PipelineStatus, StatusPursuit[]>
 
   function nudge(name: string) {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
@@ -330,60 +508,55 @@ export default function HomePage() {
           <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>{ORG.name}</p>
         </div>
 
-        {/* Pipeline at a glance */}
+        {/* Pipeline at a glance — interactive status strip */}
         <div style={{
-          display: "flex", backgroundColor: "var(--surface)",
-          border: "1px solid var(--hair-2)", borderRadius: 12, overflow: "hidden", marginBottom: 40,
+          display: "flex",
+          backgroundColor: "var(--surface)",
+          border: "1px solid var(--hair-2)",
+          borderRadius: 12,
+          marginBottom: 40,
+          // overflow:hidden removed so panels can escape; first/last cards carry the corner radius
         }}>
-          {PIPELINE_STRIP.map((s, i) => {
-            const count = PIPELINE_OPPORTUNITIES.filter(p => p.status === s.status).length
-            return (
-              <Link key={s.status} href="/tracker" style={{ flex: 1, textDecoration: "none", display: "block" }}>
-                <div
-                  style={{
-                    padding: "16px 20px",
-                    borderRight: i < PIPELINE_STRIP.length - 1 ? "1px solid var(--hair)" : "none",
-                    transition: "background-color 150ms",
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--surface-sunk)" }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
-                >
-                  <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
-                    {s.label}
-                  </p>
-                  <p style={{ margin: 0, fontSize: 24, fontWeight: 600, letterSpacing: "-0.02em", color: count > 0 ? s.activeColor : "var(--hair)", fontFamily: "var(--font-lora), Georgia, serif" }}>
-                    {count}
-                  </p>
-                </div>
-              </Link>
-            )
-          })}
+          {PIPELINE_STRIP.map((s, i) => (
+            <StatusCard
+              key={s.status}
+              status={s.status}
+              label={s.label}
+              activeColor={s.activeColor}
+              pursuits={statusPursuits[s.status] ?? []}
+              isFirst={i === 0}
+              isLast={i === PIPELINE_STRIP.length - 1}
+            />
+          ))}
         </div>
 
-        {/* Today */}
+        {/* Tasks — Yours + Waiting on the team */}
         <section style={{ marginBottom: 40 }}>
-          <SectionHeader label="Today" />
-          {tasks.length === 0 ? (
-            <EmptyState message="No tasks due today. You're all caught up." />
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {tasks.map(t => <TaskRow key={t.id} task={t} />)}
-            </div>
-          )}
-        </section>
+          <SectionHeader label="Tasks" />
 
-        {/* Waiting on the team */}
-        <section style={{ marginBottom: 40 }}>
-          <SectionHeader label="Waiting on the team" />
-          {teamTasks.length === 0 ? (
-            <EmptyState message="No open tasks waiting on teammates." />
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {teamTasks.map(t => (
-                <TeamTaskRow key={t.id} task={t} onNudge={nudge} />
-              ))}
-            </div>
-          )}
+          <div style={{ marginBottom: 24 }}>
+            <SubGroupLabel label="Yours" />
+            {tasks.length === 0 ? (
+              <EmptyState message="No tasks due today. You're all caught up." />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {tasks.map(t => <TaskRow key={t.id} task={t} />)}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <SubGroupLabel label="Waiting on the team" />
+            {teamTasks.length === 0 ? (
+              <EmptyState message="No open tasks waiting on teammates." />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {teamTasks.map(t => (
+                  <TeamTaskRow key={t.id} task={t} onNudge={nudge} />
+                ))}
+              </div>
+            )}
+          </div>
         </section>
 
         {/* Upcoming deadlines */}
