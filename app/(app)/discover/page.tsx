@@ -1,13 +1,15 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
+import React, { useState, useEffect, useRef, useCallback, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Search, X, Check, ArrowRight } from "lucide-react"
 import {
   OPPORTUNITIES, MATCHES, PROJECTS,
   getFunder, getMatchForOpportunity,
 } from "@/lib/mock-data"
 import type { Opportunity, FunderType, MatchStrength, Match } from "@/lib/types"
+import { OpportunityPeekPanel } from "./OpportunityPeekPanel"
+import { FunderPeekPanel } from "./FunderPeekPanel"
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -27,7 +29,6 @@ const MATCH_CONFIG: Record<MatchStrength, { label: string; color: string; bg: st
 
 const PROJECT = PROJECTS[0]
 
-// Only strong matches surface in the top section — bias toward precision
 const STRONG_MATCHES = MATCHES
   .filter(m => m.matchStrength === "strong" && m.opportunityId)
   .map(m => ({ match: m, opp: OPPORTUNITIES.find(o => o.id === m.opportunityId) }))
@@ -80,12 +81,13 @@ function SkeletonMatchCard() {
 
 // ── Match card ─────────────────────────────────────────────────────────────
 
-function MatchCard({ match, opp, onDismiss }: {
+function MatchCard({ match, opp, onDismiss, onOppClick, onFunderClick }: {
   match: Match
   opp: Opportunity
   onDismiss: () => void
+  onOppClick: (oppId: string, el: HTMLElement) => void
+  onFunderClick: (funderId: string, el: HTMLElement) => void
 }) {
-  const router = useRouter()
   const funder = getFunder(opp.funderId)
   const cfg = MATCH_CONFIG[match.matchStrength]
   const primaryReason = match.reasons.positive[0]
@@ -94,8 +96,8 @@ function MatchCard({ match, opp, onDismiss }: {
     <div
       role="button"
       tabIndex={0}
-      onClick={() => router.push(`/opportunity/${opp.id}`)}
-      onKeyDown={(e) => e.key === "Enter" && router.push(`/opportunity/${opp.id}`)}
+      onClick={(e) => onOppClick(opp.id, e.currentTarget)}
+      onKeyDown={(e) => e.key === "Enter" && onOppClick(opp.id, e.currentTarget as HTMLElement)}
       style={{
         padding: "16px 20px",
         backgroundColor: "var(--surface)",
@@ -157,13 +159,28 @@ function MatchCard({ match, opp, onDismiss }: {
         <MatchDots strength={match.matchStrength} />
       </div>
 
-      {/* Opp name + funder */}
+      {/* Opp name */}
       <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 700, color: "var(--ink)", lineHeight: "20px", paddingRight: 24 }}>
         {opp.name}
       </p>
-      <p style={{ margin: "0 0 10px", fontSize: 12, color: "var(--ink-tertiary)" }}>
-        {funder?.name}
-      </p>
+
+      {/* Funder name — clickable */}
+      {funder && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onFunderClick(funder.id, e.currentTarget) }}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onFunderClick(funder.id, e.currentTarget as HTMLElement) } }}
+          style={{
+            background: "none", border: "none", padding: 0, margin: "0 0 10px", cursor: "pointer",
+            fontSize: 12, color: "var(--ink-tertiary)", textAlign: "left",
+            transition: "color 120ms",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
+        >
+          {funder.name}
+        </button>
+      )}
 
       {/* Amount + deadline */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
@@ -247,8 +264,11 @@ function EmptyMatches({ onBrowseAll }: { onBrowseAll: () => void }) {
 
 // ── Catalogue card ─────────────────────────────────────────────────────────
 
-function CatalogueCard({ opp }: { opp: Opportunity }) {
-  const router = useRouter()
+function CatalogueCard({ opp, onOppClick, onFunderClick }: {
+  opp: Opportunity
+  onOppClick: (oppId: string, el: HTMLElement) => void
+  onFunderClick: (funderId: string, el: HTMLElement) => void
+}) {
   const funder = getFunder(opp.funderId)
   const match = getMatchForOpportunity(opp.id)
 
@@ -256,8 +276,8 @@ function CatalogueCard({ opp }: { opp: Opportunity }) {
     <div
       role="button"
       tabIndex={0}
-      onClick={() => router.push(`/opportunity/${opp.id}`)}
-      onKeyDown={(e) => e.key === "Enter" && router.push(`/opportunity/${opp.id}`)}
+      onClick={(e) => onOppClick(opp.id, e.currentTarget)}
+      onKeyDown={(e) => e.key === "Enter" && onOppClick(opp.id, e.currentTarget as HTMLElement)}
       style={{
         padding: "14px 16px",
         backgroundColor: "var(--surface)",
@@ -292,11 +312,28 @@ function CatalogueCard({ opp }: { opp: Opportunity }) {
         {match && <MatchDots strength={match.matchStrength} />}
       </div>
 
-      {/* Name + funder */}
+      {/* Name */}
       <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: "var(--ink)", lineHeight: "18px" }}>
         {opp.name}
       </p>
-      <p style={{ margin: "0 0 10px", fontSize: 12, color: "var(--ink-tertiary)" }}>{funder?.name}</p>
+
+      {/* Funder name — clickable */}
+      {funder && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onFunderClick(funder.id, e.currentTarget) }}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onFunderClick(funder.id, e.currentTarget as HTMLElement) } }}
+          style={{
+            background: "none", border: "none", padding: 0, margin: "0 0 10px", cursor: "pointer",
+            fontSize: 12, color: "var(--ink-tertiary)", textAlign: "left",
+            transition: "color 120ms",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
+        >
+          {funder.name}
+        </button>
+      )}
 
       {/* Amount + deadline */}
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
@@ -313,20 +350,56 @@ function CatalogueCard({ opp }: { opp: Opportunity }) {
   )
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────
+// ── Discover page (inner) ──────────────────────────────────────────────────
 
-export default function DiscoverPage() {
+function DiscoverPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [matchesLoaded, setMatchesLoaded] = useState(false)
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
   const [query, setQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState<FunderType | "">("")
   const browseRef = useRef<HTMLDivElement>(null)
+  const lastFocusedRef = useRef<HTMLElement | null>(null)
 
-  // Matches resolve after the catalogue — simulate async analysis
+  const selectedOppId = searchParams.get("opp")
+  const selectedFunderId = searchParams.get("funder")
+
+  // Simulate async matching analysis
   useEffect(() => {
     const t = setTimeout(() => setMatchesLoaded(true), 1200)
     return () => clearTimeout(t)
   }, [])
+
+  // Return focus to triggering element when panel closes
+  const prevOppIdRef = useRef<string | null>(null)
+  const prevFunderIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (prevOppIdRef.current && !selectedOppId) {
+      lastFocusedRef.current?.focus()
+    }
+    prevOppIdRef.current = selectedOppId
+  }, [selectedOppId])
+  useEffect(() => {
+    if (prevFunderIdRef.current && !selectedFunderId) {
+      lastFocusedRef.current?.focus()
+    }
+    prevFunderIdRef.current = selectedFunderId
+  }, [selectedFunderId])
+
+  const handleOppClick = useCallback((oppId: string, el: HTMLElement) => {
+    lastFocusedRef.current = el
+    router.push(`/discover?opp=${oppId}`)
+  }, [router])
+
+  const handleFunderClick = useCallback((funderId: string, el: HTMLElement) => {
+    lastFocusedRef.current = el
+    router.push(`/discover?funder=${funderId}`)
+  }, [router])
+
+  const handleClose = useCallback(() => {
+    router.push("/discover")
+  }, [router])
 
   const visibleMatches = STRONG_MATCHES.filter(({ match }) => !dismissedIds.has(match.id))
 
@@ -354,123 +427,163 @@ export default function DiscoverPage() {
   })
 
   return (
-    <div style={{ height: "100%", overflowY: "auto", backgroundColor: "var(--canvas)" }}>
-      <div style={{ maxWidth: 880, margin: "0 auto", padding: "36px 32px 80px" }}>
+    <div style={{ height: "100%", position: "relative", overflow: "hidden", backgroundColor: "var(--canvas)" }}>
 
-        {/* Page header */}
-        <div style={{ marginBottom: 36 }}>
-          <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700, color: "var(--ink)" }}>
-            Discover
-          </h1>
-          <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>
-            Funding opportunities for {PROJECT.name}
-          </p>
-        </div>
+      {/* Scrollable list — stays visible behind the panel */}
+      <div style={{ height: "100%", overflowY: "auto" }}>
+        <div style={{ maxWidth: 880, margin: "0 auto", padding: "36px 32px 80px" }}>
 
-        {/* ── Matches ──────────────────────────────────────────────────── */}
-        <section style={{ marginBottom: 52 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 18, color: "var(--slate-primary)", userSelect: "none" }}>
-              auto_fix_high
-            </span>
-            <h2 style={{ margin: 0, fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
-              Matched for {PROJECT.name}
-            </h2>
-            {matchesLoaded && visibleMatches.length > 0 && (
-              <span style={{
-                display: "inline-flex", alignItems: "center", justifyContent: "center",
-                minWidth: 20, height: 20, padding: "0 6px", borderRadius: 10,
-                fontSize: 11, fontWeight: 700,
-                backgroundColor: "var(--evergreen-tint)", color: "var(--evergreen)",
-              }}>
-                {visibleMatches.length}
+          {/* Page header */}
+          <div style={{ marginBottom: 36 }}>
+            <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700, color: "var(--ink)" }}>
+              Discover
+            </h1>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>
+              Funding opportunities for {PROJECT.name}
+            </p>
+          </div>
+
+          {/* ── Matches ──────────────────────────────────────────────────── */}
+          <section style={{ marginBottom: 52 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 18, color: "var(--slate-primary)", userSelect: "none" }}>
+                auto_fix_high
               </span>
+              <h2 style={{ margin: 0, fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+                Matched for {PROJECT.name}
+              </h2>
+              {matchesLoaded && visibleMatches.length > 0 && (
+                <span style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  minWidth: 20, height: 20, padding: "0 6px", borderRadius: 10,
+                  fontSize: 11, fontWeight: 700,
+                  backgroundColor: "var(--evergreen-tint)", color: "var(--evergreen)",
+                }}>
+                  {visibleMatches.length}
+                </span>
+              )}
+            </div>
+
+            {!matchesLoaded ? (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+                <SkeletonMatchCard /><SkeletonMatchCard /><SkeletonMatchCard />
+              </div>
+            ) : visibleMatches.length === 0 ? (
+              <EmptyMatches onBrowseAll={scrollToBrowse} />
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+                {visibleMatches.map(({ match, opp }) => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    opp={opp}
+                    onDismiss={() => handleDismiss(match.id)}
+                    onOppClick={handleOppClick}
+                    onFunderClick={handleFunderClick}
+                  />
+                ))}
+              </div>
             )}
-          </div>
+          </section>
 
-          {!matchesLoaded ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-              <SkeletonMatchCard />
-              <SkeletonMatchCard />
-              <SkeletonMatchCard />
+          {/* ── Browse ───────────────────────────────────────────────────── */}
+          <section ref={browseRef}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <h2 style={{ margin: 0, fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+                Browse
+              </h2>
+              <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
+                {filtered.length} {filtered.length === 1 ? "opportunity" : "opportunities"}
+              </span>
             </div>
-          ) : visibleMatches.length === 0 ? (
-            <EmptyMatches onBrowseAll={scrollToBrowse} />
-          ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-              {visibleMatches.map(({ match, opp }) => (
-                <MatchCard
-                  key={match.id}
-                  match={match}
-                  opp={opp}
-                  onDismiss={() => handleDismiss(match.id)}
-                />
-              ))}
-            </div>
-          )}
-        </section>
 
-        {/* ── Browse ───────────────────────────────────────────────────── */}
-        <section ref={browseRef}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-            <h2 style={{ margin: 0, fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
-              Browse
-            </h2>
-            <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
-              {filtered.length} {filtered.length === 1 ? "opportunity" : "opportunities"}
-            </span>
-          </div>
-
-          {/* Toolbar */}
-          <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-            <div style={{
-              flex: 1, display: "flex", alignItems: "center", gap: 8,
-              padding: "8px 12px", borderRadius: "var(--radius-input)",
-              border: "1px solid var(--hair-2)",
-              backgroundColor: "var(--surface)",
-            }}>
-              <Search size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search opportunities and funders"
-                style={{
-                  flex: 1, background: "none", border: "none", outline: "none",
-                  fontSize: 13, color: "var(--ink)", lineHeight: "17px",
-                }}
-              />
-            </div>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as FunderType | "")}
-              style={{
+            {/* Toolbar */}
+            <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+              <div style={{
+                flex: 1, display: "flex", alignItems: "center", gap: 8,
                 padding: "8px 12px", borderRadius: "var(--radius-input)",
-                border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
-                fontSize: 12, color: "var(--ink-secondary)", outline: "none", cursor: "pointer",
-              }}
-            >
-              <option value="">All funder types</option>
-              {(Object.keys(FUNDER_TYPE_LABELS) as FunderType[]).map(t => (
-                <option key={t} value={t}>{FUNDER_TYPE_LABELS[t]}</option>
-              ))}
-            </select>
-          </div>
+                border: "1px solid var(--hair-2)",
+                backgroundColor: "var(--surface)",
+              }}>
+                <Search size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search opportunities and funders"
+                  style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 13, color: "var(--ink)", lineHeight: "17px" }}
+                />
+              </div>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value as FunderType | "")}
+                style={{
+                  padding: "8px 12px", borderRadius: "var(--radius-input)",
+                  border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
+                  fontSize: 12, color: "var(--ink-secondary)", outline: "none", cursor: "pointer",
+                }}
+              >
+                <option value="">All funder types</option>
+                {(Object.keys(FUNDER_TYPE_LABELS) as FunderType[]).map(t => (
+                  <option key={t} value={t}>{FUNDER_TYPE_LABELS[t]}</option>
+                ))}
+              </select>
+            </div>
 
-          {/* Cards */}
-          {filtered.length > 0 ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
-              {filtered.map(opp => (
-                <CatalogueCard key={opp.id} opp={opp} />
-              ))}
-            </div>
-          ) : (
-            <div style={{ padding: "56px 0", textAlign: "center" }}>
-              <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>No results for this search.</p>
-            </div>
-          )}
-        </section>
+            {/* Cards */}
+            {filtered.length > 0 ? (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+                {filtered.map(opp => (
+                  <CatalogueCard
+                    key={opp.id}
+                    opp={opp}
+                    onOppClick={handleOppClick}
+                    onFunderClick={handleFunderClick}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div style={{ padding: "56px 0", textAlign: "center" }}>
+                <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>No results for this search.</p>
+              </div>
+            )}
+          </section>
+        </div>
       </div>
+
+      {/* Opportunity peek panel */}
+      {selectedOppId && (
+        <OpportunityPeekPanel
+          key={selectedOppId}
+          oppId={selectedOppId}
+          onClose={handleClose}
+          onFunderClick={(funderId) => {
+            router.push(`/discover?funder=${funderId}`)
+          }}
+        />
+      )}
+
+      {/* Funder peek panel */}
+      {selectedFunderId && (
+        <FunderPeekPanel
+          key={selectedFunderId}
+          funderId={selectedFunderId}
+          onClose={handleClose}
+          onOppClick={(oppId) => {
+            router.push(`/discover?opp=${oppId}`)
+          }}
+        />
+      )}
     </div>
+  )
+}
+
+// ── Page export (Suspense required for useSearchParams) ────────────────────
+
+export default function DiscoverPageWrapper() {
+  return (
+    <Suspense>
+      <DiscoverPage />
+    </Suspense>
   )
 }
