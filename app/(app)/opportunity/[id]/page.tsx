@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, ExternalLink, Check, AlertTriangle, ChevronRight } from "lucide-react"
 import {
-  FUNDERS, OPPORTUNITIES, MATCHES,
+  FUNDERS, OPPORTUNITIES,
   getMatchForOpportunity, getPipelineForOpportunity,
 } from "@/lib/mock-data"
 import type { FunderType, MatchStrength } from "@/lib/types"
