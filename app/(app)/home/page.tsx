@@ -4,9 +4,10 @@ import { useState, useRef } from "react"
 import Link from "next/link"
 import { ChevronRight, Bell } from "lucide-react"
 import {
-  ORG, USER, TEAMMATES,
+  USER, TEAMMATES,
   PIPELINE_OPPORTUNITIES, OPPORTUNITIES, FUNDERS, TASKS,
 } from "@/lib/mock-data"
+import { useScope } from "@/lib/scope-context"
 import { phaseFromStatus } from "@/lib/types"
 import type { PipelineOpportunity, Opportunity, Funder, PipelinePhase } from "@/lib/types"
 
@@ -453,19 +454,28 @@ function StatusCard({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
+  const { scopeLabel, selectedProjectId } = useScope()
   const [toast, setToast] = useState<string | null>(null)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const tasks = getTodayTasks()
-  const teamTasks = getTeamTasks()
-  const deadlines = getUpcomingDeadlines()
   const firstName = USER.name.split(" ")[0]
+
+  const scopedPipelines = selectedProjectId
+    ? PIPELINE_OPPORTUNITIES.filter(p => p.projectId === selectedProjectId)
+    : PIPELINE_OPPORTUNITIES
+
+  const scopedPipelineIds = new Set(scopedPipelines.map(p => p.id))
+
+  // Filter tasks/deadlines to scoped pipelines
+  const tasks = getTodayTasks().filter(t => scopedPipelineIds.has(t.pipelineOpportunityId))
+  const teamTasks = getTeamTasks().filter(t => scopedPipelineIds.has(t.pipelineOpportunityId))
+  const deadlines = getUpcomingDeadlines().filter(({ pip }) => scopedPipelineIds.has(pip.id))
 
   // Pre-group pipeline opportunities by phase for the strip panels
   const phasePursuits = Object.fromEntries(
     PIPELINE_STRIP.map(s => [
       s.phase,
-      PIPELINE_OPPORTUNITIES
+      scopedPipelines
         .filter(p => phaseFromStatus(p.status) === s.phase)
         .map(pip => ({
           pip,
@@ -493,7 +503,7 @@ export default function HomePage() {
           }}>
             {greeting()}, {firstName}.
           </h1>
-          <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>{ORG.name}</p>
+          <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>{scopeLabel}</p>
         </div>
 
         {/* Pipeline at a glance — interactive status strip */}

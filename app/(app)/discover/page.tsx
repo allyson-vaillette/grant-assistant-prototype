@@ -4,9 +4,10 @@ import React, { useState, useEffect, useRef, useCallback, Suspense } from "react
 import { useRouter, useSearchParams } from "next/navigation"
 import { Search, X, Check, ArrowRight } from "lucide-react"
 import {
-  OPPORTUNITIES, MATCHES, PROJECTS,
+  OPPORTUNITIES, MATCHES, FUNDERS,
   getFunder, getMatchForOpportunity,
 } from "@/lib/mock-data"
+import { useScope } from "@/lib/scope-context"
 import type { Opportunity, FunderType, MatchStrength, Match } from "@/lib/types"
 import { OpportunityPeekPanel } from "./OpportunityPeekPanel"
 import { FunderPeekPanel } from "./FunderPeekPanel"
@@ -27,7 +28,34 @@ const MATCH_CONFIG: Record<MatchStrength, { label: string; color: string; bg: st
   partial: { label: "Partial match", color: "var(--ink-tertiary)",  bg: "var(--canvas)",          dots: 3 },
 }
 
-const PROJECT = PROJECTS[0]
+const MONTH_INDEX: Record<string, number> = {
+  Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+  Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
+}
+
+function parseDeadlineDate(str: string): Date | null {
+  if (!str || str === "Rolling") return null
+  const m = str.match(/^([A-Za-z]{3})\s+(\d{1,2}),\s+(\d{4})$/)
+  if (m) {
+    const monthIdx = MONTH_INDEX[m[1]]
+    if (monthIdx !== undefined) return new Date(parseInt(m[3]), monthIdx, parseInt(m[2]))
+  }
+  return null
+}
+
+function parseAmount(str: string | undefined): number | null {
+  if (!str) return null
+  const digits = str.replace(/[^0-9]/g, "")
+  return digits ? parseInt(digits) : null
+}
+
+// Derive filter options from data
+const ALL_FOCUS_AREAS = Array.from(new Set([
+  ...FUNDERS.flatMap(f => f.focusAreas),
+  ...OPPORTUNITIES.flatMap(o => o.focusAreas ?? []),
+])).sort()
+
+const ALL_GEOGRAPHIES = Array.from(new Set(FUNDERS.map(f => f.geography))).sort()
 
 const STRONG_MATCHES = MATCHES
   .filter(m => m.matchStrength === "strong" && m.opportunityId)
@@ -207,7 +235,7 @@ function MatchCard({ match, opp, onDismiss, onOppClick, onFunderClick }: {
 
 // ── Empty matches ──────────────────────────────────────────────────────────
 
-function EmptyMatches({ onBrowseAll }: { onBrowseAll: () => void }) {
+function EmptyMatches({ scopeLabel, onBrowseAll }: { scopeLabel: string; onBrowseAll: () => void }) {
   return (
     <div style={{
       padding: "28px 32px",
@@ -226,7 +254,7 @@ function EmptyMatches({ onBrowseAll }: { onBrowseAll: () => void }) {
         </p>
       </div>
       <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "20px", maxWidth: 520 }}>
-        Add program details to the {PROJECT.name} project — focus areas, geography, and eligibility criteria — so Grant Assistant can surface strong fits.
+        Add program details to {scopeLabel} — focus areas, geography, and eligibility criteria — so Grant Assistant can surface strong fits.
       </p>
       <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
         <button
@@ -350,15 +378,51 @@ function CatalogueCard({ opp, onOppClick, onFunderClick }: {
   )
 }
 
+// ── Filter select ──────────────────────────────────────────────────────────
+
+function FilterSelect({
+  value, onChange, children, minWidth,
+}: {
+  value: string
+  onChange: (v: string) => void
+  children: React.ReactNode
+  minWidth?: number
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={{
+        padding: "7px 10px", borderRadius: "var(--radius-input)",
+        border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
+        fontSize: 12, color: value ? "var(--ink)" : "var(--ink-secondary)",
+        outline: "none", cursor: "pointer",
+        minWidth: minWidth ?? 0,
+      }}
+    >
+      {children}
+    </select>
+  )
+}
+
 // ── Discover page (inner) ──────────────────────────────────────────────────
 
 function DiscoverPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { scopeLabel } = useScope()
   const [matchesLoaded, setMatchesLoaded] = useState(false)
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
+
+  // Browse filter state
   const [query, setQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState<FunderType | "">("")
+  const [focusAreaFilter, setFocusAreaFilter] = useState("")
+  const [geographyFilter, setGeographyFilter] = useState("")
+  const [awardRangeFilter, setAwardRangeFilter] = useState("")
+  const [deadlineFilter, setDeadlineFilter] = useState("")
+  const [sortBy, setSortBy] = useState<"match" | "deadline" | "award">("match")
+
   const browseRef = useRef<HTMLDivElement>(null)
   const lastFocusedRef = useRef<HTMLElement | null>(null)
 
@@ -411,20 +475,96 @@ function DiscoverPage() {
     browseRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
 
-  const filtered = OPPORTUNITIES.filter((opp) => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const filtered: Opportunity[] = OPPORTUNITIES.filter((opp) => {
     const funder = getFunder(opp.funderId)
     if (!funder) return false
+
+    // Funder type
     if (typeFilter && funder.type !== typeFilter) return false
+
+    // Focus area — check funder focusAreas and opp focusAreas
+    if (focusAreaFilter) {
+      const inFunder = funder.focusAreas.includes(focusAreaFilter)
+      const inOpp = (opp.focusAreas ?? []).includes(focusAreaFilter)
+      if (!inFunder && !inOpp) return false
+    }
+
+    // Geography
+    if (geographyFilter && funder.geography !== geographyFilter) return false
+
+    // Award range
+    if (awardRangeFilter) {
+      const amt = parseAmount(opp.amount)
+      if (amt === null) return false
+      if (awardRangeFilter === "under-25k" && amt >= 25000) return false
+      if (awardRangeFilter === "25k-50k" && (amt < 25000 || amt > 50000)) return false
+      if (awardRangeFilter === "over-50k" && amt <= 50000) return false
+    }
+
+    // Deadline (within N days from today)
+    if (deadlineFilter) {
+      const days = parseInt(deadlineFilter)
+      const deadline = parseDeadlineDate(opp.deadline ?? "")
+      if (!deadline) return false
+      deadline.setHours(0, 0, 0, 0)
+      const msPerDay = 1000 * 60 * 60 * 24
+      const daysUntil = Math.ceil((deadline.getTime() - today.getTime()) / msPerDay)
+      if (daysUntil < 0 || daysUntil > days) return false
+    }
+
+    // Semantic search (name, funder name, focus areas, description)
     if (query.trim()) {
       const q = query.toLowerCase()
-      if (
-        !opp.name.toLowerCase().includes(q) &&
-        !funder.name.toLowerCase().includes(q) &&
-        !(opp.focusAreas ?? []).some(fa => fa.toLowerCase().includes(q))
-      ) return false
+      const searchable = [
+        opp.name,
+        funder.name,
+        funder.description ?? "",
+        opp.description ?? "",
+        ...(opp.focusAreas ?? []),
+        ...funder.focusAreas,
+        opp.eligibility ?? "",
+      ].join(" ").toLowerCase()
+      if (!searchable.includes(q)) return false
     }
+
     return true
   })
+
+  // Sort
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === "deadline") {
+      const da = parseDeadlineDate(a.deadline ?? "")
+      const db = parseDeadlineDate(b.deadline ?? "")
+      if (!da && !db) return 0
+      if (!da) return 1
+      if (!db) return -1
+      return da.getTime() - db.getTime()
+    }
+    if (sortBy === "award") {
+      const aa = parseAmount(a.amount) ?? -1
+      const ab = parseAmount(b.amount) ?? -1
+      return ab - aa
+    }
+    // "match" — sort by matchScore desc, then original order
+    const ma = getMatchForOpportunity(a.id)
+    const mb = getMatchForOpportunity(b.id)
+    const sa = ma?.matchScore ?? 0
+    const sb = mb?.matchScore ?? 0
+    return sb - sa
+  })
+
+  const hasActiveFilters = !!(typeFilter || focusAreaFilter || geographyFilter || awardRangeFilter || deadlineFilter)
+
+  function clearFilters() {
+    setTypeFilter("")
+    setFocusAreaFilter("")
+    setGeographyFilter("")
+    setAwardRangeFilter("")
+    setDeadlineFilter("")
+  }
 
   return (
     <div style={{ height: "100%", position: "relative", overflow: "hidden", backgroundColor: "var(--canvas)" }}>
@@ -439,7 +579,7 @@ function DiscoverPage() {
               Discover
             </h1>
             <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>
-              Funding opportunities for {PROJECT.name}
+              Funding opportunities for {scopeLabel}
             </p>
           </div>
 
@@ -450,7 +590,7 @@ function DiscoverPage() {
                 auto_fix_high
               </span>
               <h2 style={{ margin: 0, fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
-                Matched for {PROJECT.name}
+                Matched for {scopeLabel}
               </h2>
               {matchesLoaded && visibleMatches.length > 0 && (
                 <span style={{
@@ -469,7 +609,7 @@ function DiscoverPage() {
                 <SkeletonMatchCard /><SkeletonMatchCard /><SkeletonMatchCard />
               </div>
             ) : visibleMatches.length === 0 ? (
-              <EmptyMatches onBrowseAll={scrollToBrowse} />
+              <EmptyMatches scopeLabel={scopeLabel} onBrowseAll={scrollToBrowse} />
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
                 {visibleMatches.map(({ match, opp }) => (
@@ -488,52 +628,118 @@ function DiscoverPage() {
 
           {/* ── Browse ───────────────────────────────────────────────────── */}
           <section ref={browseRef}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
               <h2 style={{ margin: 0, fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
                 Browse
               </h2>
               <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
-                {filtered.length} {filtered.length === 1 ? "opportunity" : "opportunities"}
+                {sorted.length} {sorted.length === 1 ? "opportunity" : "opportunities"}
               </span>
             </div>
 
-            {/* Toolbar */}
-            <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-              <div style={{
-                flex: 1, display: "flex", alignItems: "center", gap: 8,
-                padding: "8px 12px", borderRadius: "var(--radius-input)",
-                border: "1px solid var(--hair-2)",
-                backgroundColor: "var(--surface)",
-              }}>
-                <Search size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search opportunities and funders"
-                  style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 13, color: "var(--ink)", lineHeight: "17px" }}
-                />
-              </div>
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value as FunderType | "")}
-                style={{
-                  padding: "8px 12px", borderRadius: "var(--radius-input)",
-                  border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
-                  fontSize: 12, color: "var(--ink-secondary)", outline: "none", cursor: "pointer",
-                }}
-              >
+            {/* Search row */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "8px 12px", borderRadius: "var(--radius-input)",
+              border: "1px solid var(--hair-2)",
+              backgroundColor: "var(--surface)",
+              marginBottom: 10,
+            }}>
+              <Search size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search opportunities and funders"
+                style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 13, color: "var(--ink)", lineHeight: "17px" }}
+              />
+              {query && (
+                <button type="button" onClick={() => setQuery("")}
+                  style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "var(--ink-tertiary)", padding: 0 }}
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+
+            {/* Filter + sort row */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+              <FilterSelect value={typeFilter} onChange={(v) => setTypeFilter(v as FunderType | "")}>
                 <option value="">All funder types</option>
                 {(Object.keys(FUNDER_TYPE_LABELS) as FunderType[]).map(t => (
                   <option key={t} value={t}>{FUNDER_TYPE_LABELS[t]}</option>
                 ))}
-              </select>
+              </FilterSelect>
+
+              <FilterSelect value={focusAreaFilter} onChange={setFocusAreaFilter}>
+                <option value="">All focus areas</option>
+                {ALL_FOCUS_AREAS.map(fa => (
+                  <option key={fa} value={fa}>{fa}</option>
+                ))}
+              </FilterSelect>
+
+              <FilterSelect value={geographyFilter} onChange={setGeographyFilter}>
+                <option value="">All geographies</option>
+                {ALL_GEOGRAPHIES.map(g => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </FilterSelect>
+
+              <FilterSelect value={awardRangeFilter} onChange={setAwardRangeFilter}>
+                <option value="">Any award size</option>
+                <option value="under-25k">Up to $25k</option>
+                <option value="25k-50k">$25k – $50k</option>
+                <option value="over-50k">Over $50k</option>
+              </FilterSelect>
+
+              <FilterSelect value={deadlineFilter} onChange={setDeadlineFilter}>
+                <option value="">Any deadline</option>
+                <option value="30">Within 30 days</option>
+                <option value="60">Within 60 days</option>
+                <option value="90">Within 90 days</option>
+              </FilterSelect>
+
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 4,
+                    padding: "7px 10px", borderRadius: "var(--radius-input)",
+                    border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+                    fontSize: 12, color: "var(--ink-tertiary)", cursor: "pointer",
+                    transition: "background-color 120ms, color 120ms",
+                  }}
+                  onMouseEnter={(e) => {
+                    const el = e.currentTarget as HTMLButtonElement
+                    el.style.backgroundColor = "var(--canvas)"
+                    el.style.color = "var(--ink-secondary)"
+                  }}
+                  onMouseLeave={(e) => {
+                    const el = e.currentTarget as HTMLButtonElement
+                    el.style.backgroundColor = "transparent"
+                    el.style.color = "var(--ink-tertiary)"
+                  }}
+                >
+                  <X size={11} /> Clear
+                </button>
+              )}
+
+              {/* Sort — pushed right */}
+              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>Sort</span>
+                <FilterSelect value={sortBy} onChange={(v) => setSortBy(v as "match" | "deadline" | "award")}>
+                  <option value="match">Best match</option>
+                  <option value="deadline">Soonest deadline</option>
+                  <option value="award">Award size</option>
+                </FilterSelect>
+              </div>
             </div>
 
             {/* Cards */}
-            {filtered.length > 0 ? (
+            {sorted.length > 0 ? (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
-                {filtered.map(opp => (
+                {sorted.map(opp => (
                   <CatalogueCard
                     key={opp.id}
                     opp={opp}
@@ -544,7 +750,14 @@ function DiscoverPage() {
               </div>
             ) : (
               <div style={{ padding: "56px 0", textAlign: "center" }}>
-                <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>No results for this search.</p>
+                <p style={{ margin: "0 0 8px", fontSize: 13, color: "var(--ink-tertiary)" }}>No results match these filters.</p>
+                {hasActiveFilters && (
+                  <button type="button" onClick={clearFilters}
+                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--slate-secondary)", textDecoration: "underline", padding: 0 }}
+                  >
+                    Clear all filters
+                  </button>
+                )}
               </div>
             )}
           </section>

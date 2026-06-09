@@ -5,8 +5,9 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Telescope, ChevronDown } from "lucide-react"
 import {
-  ORG, FUNDERS, OPPORTUNITIES, PIPELINE_OPPORTUNITIES,
+  FUNDERS, OPPORTUNITIES, PIPELINE_OPPORTUNITIES,
 } from "@/lib/mock-data"
+import { useScope } from "@/lib/scope-context"
 import type { PipelineOpportunity, PipelineStatus, PipelinePhase } from "@/lib/types"
 import { phaseFromStatus } from "@/lib/types"
 
@@ -258,6 +259,7 @@ function PursuitCard({
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function TrackerPage() {
+  const { scopeLabel, selectedProjectId } = useScope()
   const [pipelines, setPipelines] = useState(() => [...PIPELINE_OPPORTUNITIES])
 
   function handleStatusChange(id: string, status: PipelineStatus) {
@@ -273,7 +275,11 @@ export default function TrackerPage() {
     )
   }
 
-  const stats = pipelineStats(pipelines)
+  const scopedPipelines = selectedProjectId
+    ? pipelines.filter(p => p.projectId === selectedProjectId)
+    : pipelines
+
+  const stats = pipelineStats(scopedPipelines)
 
   return (
     <div style={{ flex: 1, overflowY: "auto", backgroundColor: "var(--canvas)" }}>
@@ -288,7 +294,7 @@ export default function TrackerPage() {
       }}>
         <div>
           <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Tracker</span>
-          <span style={{ fontSize: 13, color: "var(--ink-tertiary)", marginLeft: 8 }}>{ORG.name}</span>
+          <span style={{ fontSize: 13, color: "var(--ink-tertiary)", marginLeft: 8 }}>{scopeLabel}</span>
         </div>
         <Link href="/discover" style={{ textDecoration: "none" }}>
           <button
@@ -333,7 +339,7 @@ export default function TrackerPage() {
 
         {/* Pipeline grouped by phase */}
         {PHASES.map(({ phase, label, alwaysShow }) => {
-          const items = pipelines.filter(p => phaseFromStatus(p.status) === phase)
+          const items = scopedPipelines.filter(p => phaseFromStatus(p.status) === phase)
           if (!alwaysShow && items.length === 0) return null
           return (
             <section key={phase} style={{ marginBottom: 36 }}>

@@ -2,12 +2,14 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import {
   House, LayoutList, Telescope, Settings,
-  Sparkles, ChevronLeft, ChevronRight, Bell, X,
+  Sparkles, ChevronLeft, ChevronRight, ChevronDown, Bell, X, Check,
 } from "lucide-react"
+import { useScope } from "@/lib/scope-context"
+import { ORG } from "@/lib/mock-data"
 
 const SIDEBAR_WIDTH = 216
 const SIDEBAR_COLLAPSED_WIDTH = 64
@@ -214,6 +216,103 @@ function NotificationTray({
   )
 }
 
+// ── Scope Switcher ─────────────────────────────────────────────────────────
+
+function ScopeSwitcher({ collapsed, sidebarWidth }: { collapsed: boolean; sidebarWidth: number }) {
+  const { selectedProjectId, setSelectedProjectId, hasPrograms, scopeLabel, realProjects } = useScope()
+  const [open, setOpen] = useState(false)
+  const [dropdownTop, setDropdownTop] = useState(0)
+  const btnRef = useRef<HTMLButtonElement>(null)
+
+  function handleToggle() {
+    if (btnRef.current) {
+      setDropdownTop(btnRef.current.getBoundingClientRect().bottom + 4)
+    }
+    setOpen(v => !v)
+  }
+
+  if (collapsed) return null
+
+  if (!hasPrograms) {
+    return (
+      <div style={{ padding: "0 16px 10px" }}>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", lineHeight: "14px", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {ORG.name}
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      {open && (
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 98 }} onClick={() => setOpen(false)} />
+          <div style={{
+            position: "fixed",
+            top: dropdownTop,
+            left: 8,
+            width: sidebarWidth - 16,
+            backgroundColor: "#FFFFFF",
+            borderRadius: 8,
+            border: "1px solid var(--hair)",
+            boxShadow: "var(--elevation-raised)",
+            zIndex: 99,
+            overflow: "hidden",
+          }}>
+            <button type="button" onClick={() => { setSelectedProjectId(null); setOpen(false) }}
+              style={{
+                width: "100%", padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between",
+                background: selectedProjectId === null ? "var(--slate-tint)" : "transparent",
+                border: "none", cursor: "pointer", textAlign: "left", transition: "background 150ms",
+              }}
+              onMouseEnter={(e) => { if (selectedProjectId !== null) (e.currentTarget as HTMLButtonElement).style.background = "var(--canvas)" }}
+              onMouseLeave={(e) => { if (selectedProjectId !== null) (e.currentTarget as HTMLButtonElement).style.background = "transparent" }}
+            >
+              <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)", lineHeight: "16px" }}>{ORG.name}</span>
+              {selectedProjectId === null && <Check size={12} style={{ color: "var(--slate-primary)", flexShrink: 0 }} />}
+            </button>
+            <div style={{ height: 1, backgroundColor: "var(--hair)", margin: "2px 0" }} />
+            {realProjects.map(p => (
+              <button key={p.id} type="button" onClick={() => { setSelectedProjectId(p.id); setOpen(false) }}
+                style={{
+                  width: "100%", padding: "8px 12px 8px 20px", display: "flex", alignItems: "center", justifyContent: "space-between",
+                  background: selectedProjectId === p.id ? "var(--slate-tint)" : "transparent",
+                  border: "none", cursor: "pointer", textAlign: "left", transition: "background 150ms",
+                }}
+                onMouseEnter={(e) => { if (selectedProjectId !== p.id) (e.currentTarget as HTMLButtonElement).style.background = "var(--canvas)" }}
+                onMouseLeave={(e) => { if (selectedProjectId !== p.id) (e.currentTarget as HTMLButtonElement).style.background = "transparent" }}
+              >
+                <span style={{ fontSize: 12, color: "var(--ink-secondary)", lineHeight: "16px" }}>{p.name}</span>
+                {selectedProjectId === p.id && <Check size={12} style={{ color: "var(--slate-primary)", flexShrink: 0 }} />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      <div style={{ padding: "0 8px 8px" }}>
+        <button ref={btnRef} type="button" onClick={handleToggle}
+          style={{
+            width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "5px 8px", borderRadius: 7,
+            border: "1px solid rgba(255,255,255,0.14)",
+            background: open ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.06)",
+            cursor: "pointer", transition: "background 150ms",
+          }}
+          onMouseEnter={(e) => { if (!open) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.09)" }}
+          onMouseLeave={(e) => { if (!open) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)" }}
+        >
+          <span style={{ fontSize: 11, fontWeight: 500, color: "rgba(255,255,255,0.75)", lineHeight: "14px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, textAlign: "left" }}>
+            {scopeLabel}
+          </span>
+          <ChevronDown size={11} style={{ color: "rgba(255,255,255,0.45)", flexShrink: 0, marginLeft: 4 }} />
+        </button>
+      </div>
+    </>
+  )
+}
+
 // ── Sidebar ────────────────────────────────────────────────────────────────
 
 export function Sidebar() {
@@ -272,7 +371,7 @@ export function Sidebar() {
         zIndex: 46, transition: "width 200ms ease-in-out", overflow: "hidden",
       }}>
         {/* Brand */}
-        <div style={{ padding: "18px 16px 14px 16px", flexShrink: 0, display: "flex", justifyContent: collapsed ? "center" : "flex-start" }}>
+        <div style={{ padding: "18px 16px 10px 16px", flexShrink: 0, display: "flex", justifyContent: collapsed ? "center" : "flex-start" }}>
           <Link href="/home" style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }} title={collapsed ? "Grant Assistant" : undefined}>
             <div style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: "#FFFFFF", lineHeight: 1 }}>G</span>
@@ -284,6 +383,9 @@ export function Sidebar() {
             )}
           </Link>
         </div>
+
+        {/* Scope switcher */}
+        <ScopeSwitcher collapsed={collapsed} sidebarWidth={sidebarWidth} />
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: "4px 8px", display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" }}>

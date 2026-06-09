@@ -61,6 +61,20 @@ export const PROJECTS: Project[] = [
     description: "Default project for all grant pursuits",
     isDefault: true,
   },
+  {
+    id: "proj-spay-neuter",
+    organizationId: "org-1",
+    name: "Spay/Neuter Initiative",
+    description: "Community spay/neuter and TNR programs",
+    isDefault: false,
+  },
+  {
+    id: "proj-kitten-season",
+    organizationId: "org-1",
+    name: "Kitten Season Campaign",
+    description: "Seasonal kitten rescue, foster, and adoption programs",
+    isDefault: false,
+  },
 ]
 
 // ── Funders ────────────────────────────────────────────────────────────────
