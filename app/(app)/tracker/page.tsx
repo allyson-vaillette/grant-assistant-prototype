@@ -60,7 +60,7 @@ function PursuitCard({ pip }: { pip: PipelineOpportunity }) {
   const badge = STATUS_BADGE[pip.status]
 
   return (
-    <Link href={`/opportunity/${pip.opportunityId}/workspace`} style={{ textDecoration: "none", display: "block" }}>
+    <Link href={`/pursuit/${pip.opportunityId}`} style={{ textDecoration: "none", display: "block" }}>
       <div
         style={{
           backgroundColor: "var(--surface)",

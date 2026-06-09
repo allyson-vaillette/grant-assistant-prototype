@@ -8,7 +8,7 @@ import {
 } from "lucide-react"
 import {
   FUNDERS, OPPORTUNITIES,
-  getArtifact, getPipelineOpportunity,
+  getArtifact, getPipelineForOpportunity,
 } from "@/lib/mock-data"
 import type { ArtifactStage } from "@/lib/types"
 
@@ -79,8 +79,8 @@ export default function ArtifactEditorPage({
 }: {
   params: { id: string; artifactId: string }
 }) {
-  // params.id is the pipeline/pursuit ID
-  const pip      = getPipelineOpportunity(params.id)
+  // params.id is the opportunity ID
+  const pip      = getPipelineForOpportunity(params.id)
   const artifact = getArtifact(params.artifactId)
   const funder   = pip ? FUNDERS.find(f => f.id === pip.funderId)      : null
   const opp      = pip ? OPPORTUNITIES.find(o => o.id === pip.opportunityId) : null

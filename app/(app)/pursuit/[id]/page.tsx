@@ -140,11 +140,11 @@ function TabBar({ active, onChange, counts }: {
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
-export default function WorkspacePage({ params }: { params: { id: string } }) {
+// params.id is the opportunity ID
+export default function PursuitPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>("artifacts")
 
-  // params.id is the opportunity ID
   const pip    = getPipelineForOpportunity(params.id)
   const opp    = OPPORTUNITIES.find(o => o.id === params.id)
   const funder = pip ? FUNDERS.find(f => f.id === pip.funderId) : null
@@ -153,7 +153,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", backgroundColor: "var(--canvas)" }}>
         <div style={{ textAlign: "center" }}>
-          <p style={{ fontSize: 15, color: "var(--ink-tertiary)", marginBottom: 16 }}>Opportunity not found.</p>
+          <p style={{ fontSize: 15, color: "var(--ink-tertiary)", marginBottom: 16 }}>Pursuit not found.</p>
           <Link href="/tracker" style={{ fontSize: 13, color: "var(--slate-secondary)", textDecoration: "none" }}>← Back to Tracker</Link>
         </div>
       </div>
@@ -274,7 +274,7 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                   return (
                     <Link
                       key={art.id}
-                      href={`/opportunity/${params.id}/workspace/artifact/${art.id}`}
+                      href={`/pursuit/${params.id}/artifact/${art.id}`}
                       style={{ textDecoration: "none" }}
                     >
                       <div

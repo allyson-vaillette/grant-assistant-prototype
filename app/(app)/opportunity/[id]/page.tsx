@@ -41,35 +41,27 @@ function MatchDots({ strength }: { strength: MatchStrength }) {
   )
 }
 
-// ── Pursue state machine ───────────────────────────────────────────────────
+// ── Pursue state ───────────────────────────────────────────────────────────
 
 type PursuePhase =
   | { tag: "idle" }
-  | { tag: "picking" }         // project picker open (only when PROJECTS.length > 1)
   | { tag: "loading" }
   | { tag: "error"; message: string }
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
-export default function OpportunityPage({ params }: { params: { id: string } }) {
+export default function OpportunityDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
-  const opp = OPPORTUNITIES.find((o) => o.id === params.id)
+  const opp    = OPPORTUNITIES.find((o) => o.id === params.id)
   const funder = opp ? FUNDERS.find((f) => f.id === opp.funderId) : null
-  const match = opp ? getMatchForOpportunity(opp.id) : null
+  const match  = opp ? getMatchForOpportunity(opp.id) : null
 
-  // Default project — in a real app this would come from Tracker route context
-  const defaultProject = PROJECTS[0]
-  const [selectedProjectId, setSelectedProjectId] = useState(defaultProject?.id ?? "")
-  const [phase, setPhase] = useState<PursuePhase>({ tag: "idle" })
-
-  const activeProjectId = PROJECTS.length === 1
-    ? (PROJECTS[0]?.id ?? "")
-    : selectedProjectId
-
-  // Recompute after any pursue so the already-pursuing state updates
+  const defaultProject   = PROJECTS[0]
   const existingPipeline = opp
-    ? getPipelineForOpportunityAndProject(opp.id, activeProjectId)
+    ? getPipelineForOpportunityAndProject(opp.id, defaultProject?.id ?? "")
     : null
+
+  const [phase, setPhase] = useState<PursuePhase>({ tag: "idle" })
 
   if (!opp || !funder) {
     return (
@@ -85,29 +77,15 @@ export default function OpportunityPage({ params }: { params: { id: string } }) 
     )
   }
 
-  // ── Pursue handler ─────────────────────────────────────────────────────
-
-  function handlePursueClick() {
-    // If multiple projects, open picker first
-    if (PROJECTS.length > 1 && phase.tag === "idle") {
-      setPhase({ tag: "picking" })
-      return
-    }
-    executePursue(activeProjectId)
-  }
-
-  async function executePursue(projectId: string) {
-    if (!opp) return
+  async function handlePursue() {
     setPhase({ tag: "loading" })
     try {
-      const pip = createPipelineOpportunity(opp.id, projectId)
-      router.push(`/opportunity/${pip.opportunityId}/workspace`)
+      createPipelineOpportunity(opp!.id, defaultProject?.id ?? "")
+      router.push(`/pursuit/${opp!.id}`)
     } catch {
-      setPhase({ tag: "error", message: "Something went wrong. Your pursuit was not created — please try again." })
+      setPhase({ tag: "error", message: "Something went wrong. Please try again." })
     }
   }
-
-  // ── Render ─────────────────────────────────────────────────────────────
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column", backgroundColor: "var(--canvas)" }}>
@@ -274,37 +252,6 @@ export default function OpportunityPage({ params }: { params: { id: string } }) 
         padding: "0 32px",
       }}>
 
-        {/* Project picker (only when multiple projects) */}
-        {PROJECTS.length > 1 && phase.tag === "picking" && (
-          <div style={{
-            borderBottom: "1px solid var(--hair)",
-            padding: "16px 0",
-            display: "flex", alignItems: "center", gap: 16,
-          }}>
-            <span style={{ fontSize: 13, color: "var(--ink-secondary)", whiteSpace: "nowrap" }}>Add to project</span>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {PROJECTS.map(proj => (
-                <label key={proj.id}
-                  style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "var(--ink)" }}
-                >
-                  <input
-                    type="radio"
-                    name="project"
-                    value={proj.id}
-                    checked={selectedProjectId === proj.id}
-                    onChange={() => setSelectedProjectId(proj.id)}
-                    style={{ accentColor: "var(--slate-primary)", width: 14, height: 14 }}
-                  />
-                  {proj.name}
-                  {proj.isDefault && (
-                    <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>(default)</span>
-                  )}
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Error banner */}
         {phase.tag === "error" && (
           <div style={{
@@ -316,16 +263,13 @@ export default function OpportunityPage({ params }: { params: { id: string } }) 
             <span style={{ fontSize: 13, color: "var(--error)", flex: 1 }}>{phase.message}</span>
             <button
               type="button"
-              onClick={() => executePursue(activeProjectId)}
+              onClick={handlePursue}
               style={{
                 padding: "6px 14px", borderRadius: 7,
                 border: "1px solid var(--error)", backgroundColor: "transparent",
                 fontSize: 12, fontWeight: 600, color: "var(--error)", cursor: "pointer",
-                transition: "background-color 120ms",
                 whiteSpace: "nowrap",
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--error-light)" }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
             >
               Try again
             </button>
@@ -334,13 +278,11 @@ export default function OpportunityPage({ params }: { params: { id: string } }) 
 
         {/* Main action row */}
         <div style={{ height: 64, display: "flex", alignItems: "center", gap: 14 }}>
-
           {existingPipeline ? (
-            // Already pursuing this opp+project
             <>
               <button
                 type="button"
-                onClick={() => router.push(`/opportunity/${opp.id}/workspace`)}
+                onClick={() => router.push(`/pursuit/${opp.id}`)}
                 style={{
                   display: "flex", alignItems: "center", gap: 7,
                   padding: "9px 20px", borderRadius: 9,
@@ -358,7 +300,6 @@ export default function OpportunityPage({ params }: { params: { id: string } }) 
               </span>
             </>
           ) : phase.tag === "loading" ? (
-            // Creating...
             <button
               type="button"
               disabled
@@ -371,44 +312,10 @@ export default function OpportunityPage({ params }: { params: { id: string } }) 
             >
               <Loader2 size={15} className="animate-spin" /> Creating pursuit…
             </button>
-          ) : phase.tag === "picking" ? (
-            // Project picker confirm/cancel
-            <>
-              <button
-                type="button"
-                onClick={() => executePursue(selectedProjectId)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 7,
-                  padding: "9px 20px", borderRadius: 9,
-                  backgroundColor: "var(--slate-primary)", border: "none",
-                  fontSize: 14, fontWeight: 600, color: "#fff", cursor: "pointer",
-                  transition: "background-color 150ms",
-                }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
-              >
-                Pursue <ChevronRight size={15} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setPhase({ tag: "idle" })}
-                style={{
-                  padding: "9px 16px", borderRadius: 9,
-                  border: "1px solid var(--hair-2)", backgroundColor: "transparent",
-                  fontSize: 13, color: "var(--ink-secondary)", cursor: "pointer",
-                  transition: "background-color 120ms",
-                }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
-              >
-                Cancel
-              </button>
-            </>
           ) : (
-            // Idle — primary Pursue button
             <button
               type="button"
-              onClick={handlePursueClick}
+              onClick={handlePursue}
               style={{
                 display: "flex", alignItems: "center", gap: 7,
                 padding: "9px 20px", borderRadius: 9,
@@ -422,7 +329,6 @@ export default function OpportunityPage({ params }: { params: { id: string } }) 
               Pursue <ChevronRight size={15} />
             </button>
           )}
-
         </div>
       </div>
     </div>

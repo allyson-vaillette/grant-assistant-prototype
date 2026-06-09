@@ -45,21 +45,21 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
     description: "Marcus R. assigned you a task on Petco Love Grant",
     opportunityName: "Petco Love Lost & Found Grant 2026",
     timestamp: "2h ago", isToday: true, read: false,
-    href: "/opportunity/opp-1/workspace",
+    href: "/pursuit/opp-1",
   },
   {
     id: "n2", type: "task_due_soon",
     description: "Complete narrative section is due in 48 hours",
     opportunityName: "Petco Love Lost & Found Grant 2026",
     timestamp: "4h ago", isToday: true, read: false,
-    href: "/opportunity/opp-1/workspace",
+    href: "/pursuit/opp-1",
   },
   {
     id: "n3", type: "task_overdue",
     description: "Get budget sign-off is overdue",
     opportunityName: "Petco Love Lost & Found Grant 2026",
     timestamp: "6h ago", isToday: true, read: false,
-    href: "/opportunity/opp-1/workspace",
+    href: "/pursuit/opp-1",
   },
   {
     id: "n4", type: "task_completed",
@@ -67,7 +67,7 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
     description: "Jamie K. completed Upload 2025 annual report",
     opportunityName: "Petco Love Lost & Found Grant 2026",
     timestamp: "8h ago", isToday: true, read: false,
-    href: "/opportunity/opp-1/workspace",
+    href: "/pursuit/opp-1",
   },
   {
     id: "n5", type: "task_reassigned",
@@ -75,7 +75,7 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
     description: "Follow up with program officer was reassigned to you",
     opportunityName: "ASPCA Saving Lives Grant",
     timestamp: "2d ago", isToday: false, read: true,
-    href: "/opportunity/opp-2/workspace",
+    href: "/pursuit/opp-2",
   },
 ]
 
@@ -235,7 +235,7 @@ export function Sidebar() {
   }
 
   function isActive(href: string) {
-    if (href === "/tracker") return pathname === "/" || pathname === "/tracker" || pathname.startsWith("/tracker/") || (pathname.startsWith("/opportunity/") && pathname.includes("/workspace"))
+    if (href === "/tracker") return pathname === "/" || pathname === "/tracker" || pathname.startsWith("/tracker/") || pathname.startsWith("/pursuit/")
     return pathname === href || pathname.startsWith(href + "/")
   }
 
