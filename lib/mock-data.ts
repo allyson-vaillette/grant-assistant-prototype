@@ -442,3 +442,35 @@ export function getMatchForOpportunity(oppId: string): Match | undefined {
 export function getPipelineForOpportunity(oppId: string): PipelineOpportunity | undefined {
   return PIPELINE_OPPORTUNITIES.find((p) => p.opportunityId === oppId)
 }
+
+export function getPipelineForOpportunityAndProject(
+  oppId: string,
+  projectId: string,
+): PipelineOpportunity | undefined {
+  return PIPELINE_OPPORTUNITIES.find(
+    (p) => p.opportunityId === oppId && p.projectId === projectId,
+  )
+}
+
+export function createPipelineOpportunity(
+  opportunityId: string,
+  projectId: string,
+): PipelineOpportunity {
+  const existing = getPipelineForOpportunityAndProject(opportunityId, projectId)
+  if (existing) return existing
+
+  const opp = getOpportunity(opportunityId)
+  if (!opp) throw new Error("Opportunity not found")
+
+  const pip: PipelineOpportunity = {
+    id: `pip-${PIPELINE_OPPORTUNITIES.length + 1}-${opportunityId}`,
+    organizationId: ORG.id,
+    projectId,
+    funderId: opp.funderId,
+    opportunityId,
+    status: "researching",
+  }
+
+  PIPELINE_OPPORTUNITIES.push(pip)
+  return pip
+}

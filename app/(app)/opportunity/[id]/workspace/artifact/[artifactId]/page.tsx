@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useCallback } from "react"
 import Link from "next/link"
 import {
   ArrowLeft, Download, Sparkles, Loader2,
@@ -8,7 +8,7 @@ import {
 } from "lucide-react"
 import {
   FUNDERS, OPPORTUNITIES,
-  getArtifact, getPipelineOpportunity,
+  getArtifact, getPipelineForOpportunity,
 } from "@/lib/mock-data"
 import type { ArtifactStage } from "@/lib/types"
 
@@ -16,12 +16,12 @@ import type { ArtifactStage } from "@/lib/types"
 
 const STAGE_BADGE: Record<ArtifactStage, { label: string; bg: string; color: string }> = {
   "pre-apply":  { label: "Pre-apply",  bg: "var(--terracotta-tint)", color: "var(--terracotta)"      },
-  "apply":      { label: "Apply",      bg: "var(--slate-tint)",      color: "var(--slate-secondary)" },
-  "post-apply": { label: "Post-apply", bg: "var(--evergreen-tint)",  color: "var(--evergreen)"       },
+  "apply":      { label: "Apply",      bg: "var(--slate-tint)",      color: "var(--slate-secondary)"  },
+  "post-apply": { label: "Post-apply", bg: "var(--evergreen-tint)",  color: "var(--evergreen)"        },
 }
 
-const MAX_SNAPSHOTS  = 5
-const AUTOSAVE_DELAY = 1500
+const MAX_SNAPSHOTS   = 5
+const AUTOSAVE_DELAY  = 1500
 
 // ── Mock AI ────────────────────────────────────────────────────────────────
 
@@ -42,11 +42,14 @@ function mockAIRevise(
     return `${trimmed} Our organization's demonstrated track record — a 97% live release rate across more than 4,200 rescues — underscores our capacity to deliver measurable, sustained impact with this investment, in direct alignment with the funder's stated priorities.`
   }
 
-  const paras   = content.split(/\n\n+/).filter(s => s.trim())
+  // Document-level revision
+  const paras = content.split(/\n\n+/).filter(s => s.trim())
+
   const opening = (paras[0] ?? "").replace(
     "dedicated to rescuing cats and kittens in need and placing them in loving homes",
     "committed to ending preventable cat euthanasia in San Diego County through direct rescue, foster care, and evidence-based community programs",
   )
+
   const evaluationPara =
     "We track outcomes rigorously: monthly intake-to-outcome reports, live release rate benchmarking against national no-kill standards, and community reach metrics reviewed by our board quarterly. This data-driven accountability ensures every grant dollar is traceable to a life saved."
 
@@ -55,8 +58,8 @@ function mockAIRevise(
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type AIScope  = "document" | "section"
-type AIPhase  = "idle" | "generating" | "preview" | "error"
+type AIScope = "document" | "section"
+type AIPhase = "idle" | "generating" | "preview" | "error"
 
 interface TextSelection {
   start: number
@@ -67,6 +70,7 @@ interface TextSelection {
 interface Proposal {
   scope: AIScope
   proposed: string
+  // For section scope only:
   selectionStart?: number
   selectionEnd?: number
   originalSelection?: string
@@ -79,34 +83,33 @@ export default function ArtifactEditorPage({
 }: {
   params: { id: string; artifactId: string }
 }) {
-  // params.id is the pipeline/pursuit ID
-  const pip      = getPipelineOpportunity(params.id)
+  // Data lookup — params.id is the opportunity ID
   const artifact = getArtifact(params.artifactId)
-  const funder   = pip ? FUNDERS.find(f => f.id === pip.funderId)      : null
-  const opp      = pip ? OPPORTUNITIES.find(o => o.id === pip.opportunityId) : null
+  const pip      = getPipelineForOpportunity(params.id)
+  const funder   = pip ? FUNDERS.find(f => f.id === pip.funderId) : null
+  const opp      = OPPORTUNITIES.find(o => o.id === params.id)
 
   // ── Document state ──────────────────────────────────────────────────────
-  const [content,    setContent]    = useState(artifact?.content ?? "")
-  const [updatedAt,  setUpdatedAt]  = useState(artifact?.updatedAt ?? "")
+  const [content, setContent]       = useState(artifact?.content ?? "")
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved")
-  const [snapshots,  setSnapshots]  = useState<string[]>([artifact?.content ?? ""])
+  const [savedLabel, setSavedLabel] = useState(`Updated ${artifact?.updatedAt ?? ""}`)
+  const [snapshots, setSnapshots]   = useState<string[]>([artifact?.content ?? ""])
 
   // ── Selection state ─────────────────────────────────────────────────────
   const [selection, setSelection] = useState<TextSelection | null>(null)
 
   // ── AI state ────────────────────────────────────────────────────────────
-  const [aiScope,  setAiScope]  = useState<AIScope>("document")
-  const [prompt,   setPrompt]   = useState("")
-  const [aiPhase,  setAiPhase]  = useState<AIPhase>("idle")
-  const [aiError,  setAiError]  = useState("")
+  const [aiScope, setAiScope]   = useState<AIScope>("document")
+  const [prompt, setPrompt]     = useState("")
+  const [aiPhase, setAiPhase]   = useState<AIPhase>("idle")
+  const [aiError, setAiError]   = useState("")
   const [proposal, setProposal] = useState<Proposal | null>(null)
 
   const textareaRef  = useRef<HTMLTextAreaElement>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const abortRef     = useRef<AbortController | null>(null)
 
-  const isPreview  = aiPhase === "preview"
-  const canGenerate = !!prompt.trim() && !(aiScope === "section" && !selection)
+  const isPreview = aiPhase === "preview"
 
   // ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -118,10 +121,7 @@ export default function ArtifactEditorPage({
     setSaveStatus("saving")
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
-      const now = new Date()
-      setUpdatedAt(
-        now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-      )
+      setSavedLabel("Updated just now")
       setSaveStatus("saved")
     }, AUTOSAVE_DELAY)
   }
@@ -143,7 +143,6 @@ export default function ArtifactEditorPage({
       setAiScope("section")
     } else {
       setSelection(null)
-      setAiScope("document")
     }
   }
 
@@ -156,6 +155,7 @@ export default function ArtifactEditorPage({
     const ctrl = new AbortController()
     abortRef.current = ctrl
 
+    // Snapshot before proposing — guarantees discard reliability
     pushSnapshot(content)
 
     const scopeAtGenerate     = aiScope
@@ -180,10 +180,10 @@ export default function ArtifactEditorPage({
       )
 
       setProposal({
-        scope:             scopeAtGenerate,
-        proposed:          result,
-        selectionStart:    selectionAtGenerate?.start,
-        selectionEnd:      selectionAtGenerate?.end,
+        scope: scopeAtGenerate,
+        proposed: result,
+        selectionStart: selectionAtGenerate?.start,
+        selectionEnd: selectionAtGenerate?.end,
         originalSelection: selectionAtGenerate?.text,
       })
       setAiPhase("preview")
@@ -210,7 +210,7 @@ export default function ArtifactEditorPage({
     if (
       proposal.scope === "section" &&
       proposal.selectionStart !== undefined &&
-      proposal.selectionEnd   !== undefined
+      proposal.selectionEnd !== undefined
     ) {
       newContent =
         content.slice(0, proposal.selectionStart) +
@@ -220,17 +220,17 @@ export default function ArtifactEditorPage({
       newContent = proposal.proposed
     }
 
-    pushSnapshot(content)
+    pushSnapshot(content)   // snapshot pre-accept for safety
     setContent(newContent)
     triggerAutosave(newContent)
     setProposal(null)
     setAiPhase("idle")
     setPrompt("")
     setSelection(null)
-    setAiScope("document")
   }
 
   function handleDiscard() {
+    // Content was never mutated during preview — discard just clears the proposal
     setProposal(null)
     setAiPhase("idle")
   }
@@ -239,19 +239,11 @@ export default function ArtifactEditorPage({
 
   if (!artifact || !pip || !funder || !opp) {
     return (
-      <div style={{
-        flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-        backgroundColor: "var(--canvas)",
-      }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", backgroundColor: "var(--canvas)" }}>
         <div style={{ textAlign: "center" }}>
-          <p style={{ fontSize: 15, color: "var(--ink-tertiary)", marginBottom: 16 }}>
-            Artifact not found.
-          </p>
-          <Link
-            href={`/pursuit/${params.id}`}
-            style={{ fontSize: 13, color: "var(--slate-secondary)", textDecoration: "none" }}
-          >
-            ← Back to workspace
+          <p style={{ fontSize: 15, color: "var(--ink-tertiary)", marginBottom: 16 }}>Artifact not found.</p>
+          <Link href={`/opportunity/${params.id}/workspace`} style={{ fontSize: 13, color: "var(--slate-secondary)", textDecoration: "none" }}>
+            ← Back to opportunity
           </Link>
         </div>
       </div>
@@ -259,24 +251,19 @@ export default function ArtifactEditorPage({
   }
 
   const stageCfg = STAGE_BADGE[artifact.stage]
+  const canGenerate = !!prompt.trim() && !(aiScope === "section" && !selection)
 
   return (
-    <div style={{
-      flex: 1, display: "flex", flexDirection: "column",
-      overflow: "hidden",
-      backgroundColor: "var(--canvas)",
-    }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", backgroundColor: "var(--canvas)" }}>
 
-      {/* ── Top bar ────────────────────────────────────────────────────── */}
+      {/* ── Top bar ──────────────────────────────────────────────────────── */}
       <div style={{
         flexShrink: 0, height: 52,
         backgroundColor: "var(--surface)", borderBottom: "1px solid var(--hair)",
         padding: "0 20px",
         display: "flex", alignItems: "center", gap: 10,
       }}>
-
-        {/* Breadcrumb / back */}
-        <Link href={`/pursuit/${params.id}`} style={{ textDecoration: "none" }}>
+        <Link href={`/opportunity/${params.id}/workspace`} style={{ textDecoration: "none" }}>
           <button
             type="button"
             style={{
@@ -285,77 +272,53 @@ export default function ArtifactEditorPage({
               fontSize: 13, color: "var(--ink-tertiary)", padding: 0,
               transition: "color 120ms",
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink)" }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink)" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
           >
-            <ArrowLeft size={14} />
-            {funder.name}
+            <ArrowLeft size={14} /> {funder.name}
           </button>
         </Link>
-
         <span style={{ color: "var(--hair-2)", fontSize: 16 }}>·</span>
-
         <span style={{
           fontSize: 13, color: "var(--ink-tertiary)",
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 280,
         }}>
           {artifact.name}
         </span>
-
         <span style={{
-          padding: "2px 8px", borderRadius: "var(--radius-pill)",
+          padding: "2px 8px", borderRadius: 20,
           fontSize: 10, fontWeight: 600,
           backgroundColor: stageCfg.bg, color: stageCfg.color,
-          flexShrink: 0,
         }}>
           {stageCfg.label}
         </span>
 
         <div style={{ flex: 1 }} />
 
-        {/* Save status */}
         <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>
-          {saveStatus === "saving" ? "Saving…" : `Updated ${updatedAt}`}
+          {saveStatus === "saving" ? "Saving…" : savedLabel}
         </span>
 
-        {/* Export */}
         <button
           type="button"
           style={{
             display: "flex", alignItems: "center", gap: 5,
-            padding: "6px 12px", borderRadius: "var(--radius-button)",
-            border: "1px solid var(--hair-2)", backgroundColor: "transparent",
-            fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)", cursor: "pointer",
-            transition: "background-color 120ms",
+            padding: "6px 14px", borderRadius: 7,
+            border: "none", backgroundColor: "var(--slate-primary)",
+            fontSize: 12, fontWeight: 600, color: "#FFFFFF", cursor: "pointer",
+            transition: "background-color 150ms",
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
         >
           <Download size={12} /> Export
         </button>
-
-        {/* Done */}
-        <Link href={`/pursuit/${params.id}`} style={{ textDecoration: "none" }}>
-          <button
-            type="button"
-            style={{
-              padding: "6px 16px", borderRadius: "var(--radius-button)",
-              border: "none", backgroundColor: "var(--slate-primary)",
-              fontSize: 12, fontWeight: 600, color: "#FFFFFF", cursor: "pointer",
-              transition: "background-color 150ms",
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
-          >
-            Done
-          </button>
-        </Link>
       </div>
 
-      {/* ── Main ───────────────────────────────────────────────────────── */}
+      {/* ── Main ─────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
 
-        {/* ── Editor pane ──────────────────────────────────────────── */}
+        {/* ── Editor pane ──────────────────────────────────────────────── */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
           {/* Preview notice */}
@@ -381,7 +344,6 @@ export default function ArtifactEditorPage({
 
           {/* Scrollable editor */}
           <div style={{ flex: 1, overflowY: "auto", padding: "40px 64px" }}>
-
             <h1
               contentEditable={!isPreview}
               suppressContentEditableWarning
@@ -393,8 +355,12 @@ export default function ArtifactEditorPage({
                 opacity: isPreview ? 0.55 : 1,
                 transition: "opacity 200ms",
               }}
-              onFocus={e  => { (e.currentTarget as HTMLHeadingElement).style.borderBottomColor = "var(--slate-tint)" }}
-              onBlur={e   => { (e.currentTarget as HTMLHeadingElement).style.borderBottomColor = "transparent" }}
+              onFocus={(e) => {
+                (e.currentTarget as HTMLHeadingElement).style.borderBottomColor = "var(--slate-tint)"
+              }}
+              onBlur={(e) => {
+                (e.currentTarget as HTMLHeadingElement).style.borderBottomColor = "transparent"
+              }}
             >
               {artifact.name}
             </h1>
@@ -421,16 +387,14 @@ export default function ArtifactEditorPage({
           </div>
         </div>
 
-        {/* ── AI panel ─────────────────────────────────────────────── */}
+        {/* ── AI panel ─────────────────────────────────────────────────── */}
         <div style={{
           width: 300, flexShrink: 0,
           borderLeft: "1px solid var(--hair)",
           backgroundColor: "var(--surface)",
           display: "flex", flexDirection: "column",
           height: "100%",
-          boxShadow: "var(--shadow-panel)",
         }}>
-
           {/* Panel header */}
           <div style={{
             flexShrink: 0,
@@ -441,7 +405,7 @@ export default function ArtifactEditorPage({
             <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>AI Assist</span>
           </div>
 
-          {/* Panel body */}
+          {/* Panel body — scrollable */}
           <div style={{ flex: 1, overflowY: "auto" }}>
 
             {/* ── IDLE / ERROR ── */}
@@ -452,7 +416,7 @@ export default function ArtifactEditorPage({
                 {aiPhase === "error" && (
                   <div style={{
                     display: "flex", gap: 8, alignItems: "flex-start",
-                    padding: "10px 12px", borderRadius: "var(--radius-button)",
+                    padding: "10px 12px", borderRadius: 8,
                     backgroundColor: "var(--error-light)",
                     border: "1px solid rgba(185,28,28,0.2)",
                   }}>
@@ -496,7 +460,7 @@ export default function ArtifactEditorPage({
                           disabled={disabled}
                           onClick={() => !disabled && setAiScope(scope)}
                           style={{
-                            flex: 1, padding: "7px 8px", borderRadius: "var(--radius-button)",
+                            flex: 1, padding: "7px 8px", borderRadius: 8,
                             border: `1px solid ${active ? "var(--slate-primary)" : "var(--hair-2)"}`,
                             backgroundColor: active ? "var(--slate-tint)" : "transparent",
                             fontSize: 12, fontWeight: active ? 600 : 400,
@@ -516,9 +480,10 @@ export default function ArtifactEditorPage({
                     })}
                   </div>
 
+                  {/* Scope hint */}
                   <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "15px" }}>
                     {aiScope === "section" && selection
-                      ? `${selection.text.length} chars selected`
+                      ? `${selection.text.length} characters selected`
                       : aiScope === "section"
                       ? "Select text in the editor to target a section"
                       : "Entire document will be revised"}
@@ -536,8 +501,8 @@ export default function ArtifactEditorPage({
                   </p>
                   <textarea
                     value={prompt}
-                    onChange={e => setPrompt(e.target.value)}
-                    onKeyDown={e => {
+                    onChange={(e) => setPrompt(e.target.value)}
+                    onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey && canGenerate) {
                         e.preventDefault()
                         handleGenerate()
@@ -550,7 +515,7 @@ export default function ArtifactEditorPage({
                     }
                     rows={3}
                     style={{
-                      width: "100%", padding: "8px 10px", borderRadius: "var(--radius-input)",
+                      width: "100%", padding: "8px 10px", borderRadius: 8,
                       border: "1px solid var(--hair-2)",
                       backgroundColor: "var(--canvas)",
                       fontSize: 12, color: "var(--ink)", lineHeight: "18px",
@@ -558,8 +523,8 @@ export default function ArtifactEditorPage({
                       boxSizing: "border-box",
                       transition: "border-color 120ms",
                     }}
-                    onFocus={e  => { (e.currentTarget as HTMLTextAreaElement).style.borderColor = "var(--slate-soft)" }}
-                    onBlur={e   => { (e.currentTarget as HTMLTextAreaElement).style.borderColor = "var(--hair-2)" }}
+                    onFocus={(e) => { (e.currentTarget as HTMLTextAreaElement).style.borderColor = "var(--slate-soft)" }}
+                    onBlur={(e) => { (e.currentTarget as HTMLTextAreaElement).style.borderColor = "var(--hair-2)" }}
                   />
                 </div>
 
@@ -569,7 +534,7 @@ export default function ArtifactEditorPage({
                   disabled={!canGenerate}
                   onClick={handleGenerate}
                   style={{
-                    width: "100%", padding: "9px 0", borderRadius: "var(--radius-button)", border: "none",
+                    width: "100%", padding: "9px 0", borderRadius: 8, border: "none",
                     backgroundColor: canGenerate ? "var(--slate-primary)" : "var(--hair-2)",
                     color: canGenerate ? "#fff" : "var(--ink-tertiary)",
                     fontSize: 13, fontWeight: 600,
@@ -577,11 +542,11 @@ export default function ArtifactEditorPage({
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                     transition: "background-color 150ms",
                   }}
-                  onMouseEnter={e => {
+                  onMouseEnter={(e) => {
                     if (canGenerate)
                       (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A"
                   }}
-                  onMouseLeave={e => {
+                  onMouseLeave={(e) => {
                     if (canGenerate)
                       (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)"
                   }}
@@ -589,6 +554,7 @@ export default function ArtifactEditorPage({
                   <Sparkles size={13} /> Generate revision
                 </button>
 
+                {/* Reassurance */}
                 <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "16px" }}>
                   Changes preview before they apply. Nothing updates until you accept.
                 </p>
@@ -618,13 +584,13 @@ export default function ArtifactEditorPage({
                   type="button"
                   onClick={handleCancel}
                   style={{
-                    width: "100%", padding: "8px 0", borderRadius: "var(--radius-button)",
+                    width: "100%", padding: "8px 0", borderRadius: 8,
                     border: "1px solid var(--hair-2)", backgroundColor: "transparent",
                     fontSize: 13, color: "var(--ink-secondary)", cursor: "pointer",
                     transition: "background-color 120ms",
                   }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
                 >
                   Cancel
                 </button>
@@ -654,7 +620,7 @@ export default function ArtifactEditorPage({
                         Original
                       </p>
                       <div style={{
-                        padding: "10px 12px", borderRadius: "var(--radius-button)",
+                        padding: "10px 12px", borderRadius: 8,
                         backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)",
                         fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "18px",
                         maxHeight: 130, overflowY: "auto",
@@ -670,7 +636,7 @@ export default function ArtifactEditorPage({
                         Proposed
                       </p>
                       <div style={{
-                        padding: "10px 12px", borderRadius: "var(--radius-button)",
+                        padding: "10px 12px", borderRadius: 8,
                         backgroundColor: "var(--evergreen-tint)",
                         border: "1px solid rgba(60,94,76,0.18)",
                         fontSize: 12, color: "var(--ink-secondary)", lineHeight: "18px",
@@ -692,7 +658,7 @@ export default function ArtifactEditorPage({
                       Proposed document
                     </p>
                     <div style={{
-                      padding: "10px 12px", borderRadius: "var(--radius-button)",
+                      padding: "10px 12px", borderRadius: 8,
                       backgroundColor: "var(--evergreen-tint)",
                       border: "1px solid rgba(60,94,76,0.18)",
                       fontSize: 11, color: "var(--ink-secondary)", lineHeight: "17px",
@@ -710,14 +676,14 @@ export default function ArtifactEditorPage({
                     type="button"
                     onClick={handleAccept}
                     style={{
-                      flex: 1, padding: "9px 0", borderRadius: "var(--radius-button)", border: "none",
+                      flex: 1, padding: "9px 0", borderRadius: 8, border: "none",
                       backgroundColor: "var(--evergreen)", color: "#fff",
                       fontSize: 13, fontWeight: 600, cursor: "pointer",
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                       transition: "background-color 150ms",
                     }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#2E4A3A" }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--evergreen)" }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#2E4A3A" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--evergreen)" }}
                   >
                     <Check size={13} /> Accept
                   </button>
@@ -725,14 +691,14 @@ export default function ArtifactEditorPage({
                     type="button"
                     onClick={handleDiscard}
                     style={{
-                      flex: 1, padding: "9px 0", borderRadius: "var(--radius-button)",
+                      flex: 1, padding: "9px 0", borderRadius: 8,
                       border: "1px solid var(--hair-2)", backgroundColor: "transparent",
                       fontSize: 13, color: "var(--ink-secondary)", cursor: "pointer",
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                       transition: "background-color 120ms",
                     }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
                   >
                     <X size={13} /> Discard
                   </button>
