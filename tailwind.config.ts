@@ -119,7 +119,6 @@ const config: Config = {
       /* ── Font family ── */
       fontFamily: {
         sans: [
-          "var(--font-inclusive-sans)",
           "var(--font-inter)",
           "system-ui",
           "sans-serif",

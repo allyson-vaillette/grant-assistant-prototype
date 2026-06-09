@@ -168,7 +168,7 @@ export default function TrackerPage() {
               borderRight: i < 2 ? "1px solid var(--hair)" : "none",
             }}>
               <p style={{ margin: "0 0 3px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>{s.label}</p>
-              <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.02em" }}>{s.value}</p>
+              <p style={{ margin: 0, fontSize: 22, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.02em", fontFamily: "var(--font-lora), Georgia, serif" }}>{s.value}</p>
             </div>
           ))}
         </div>
