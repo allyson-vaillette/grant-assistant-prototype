@@ -278,6 +278,22 @@ export const ATTACHMENTS: Attachment[] = [
 
 export const TASKS: Task[] = [
   {
+    id: "task-5",
+    pipelineOpportunityId: "pip-1",
+    title: "Attach 501(c)(3) determination letter",
+    assigneeId: "user-1",
+    dueDate: "Jun 5, 2026",
+    completed: false,
+  },
+  {
+    id: "task-6",
+    pipelineOpportunityId: "pip-1",
+    title: "Review draft proposal with program director",
+    assigneeId: "user-1",
+    dueDate: "Jun 9, 2026",
+    completed: false,
+  },
+  {
     id: "task-1",
     pipelineOpportunityId: "pip-1",
     title: "Complete program narrative section",

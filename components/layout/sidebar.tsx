@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 
 import {
-  LayoutList, Telescope, Settings,
+  House, LayoutList, Telescope, Settings,
   Sparkles, ChevronLeft, ChevronRight, Bell, X,
 } from "lucide-react"
 
@@ -13,8 +13,9 @@ const SIDEBAR_WIDTH = 216
 const SIDEBAR_COLLAPSED_WIDTH = 64
 
 const MAIN_NAV = [
-  { label: "Tracker",  href: "/tracker",  icon: LayoutList },
-  { label: "Discover", href: "/discover", icon: Telescope  },
+  { label: "Home",    href: "/home",    icon: House      },
+  { label: "Tracker", href: "/tracker", icon: LayoutList },
+  { label: "Discover", href: "/discover", icon: Telescope },
 ] as const
 
 const WORKSPACE_NAV = [
@@ -235,7 +236,8 @@ export function Sidebar() {
   }
 
   function isActive(href: string) {
-    if (href === "/tracker") return pathname === "/" || pathname === "/tracker" || pathname.startsWith("/tracker/") || pathname.startsWith("/pursuit/")
+    if (href === "/home") return pathname === "/" || pathname === "/home"
+    if (href === "/tracker") return pathname === "/tracker" || pathname.startsWith("/tracker/") || pathname.startsWith("/pursuit/")
     return pathname === href || pathname.startsWith(href + "/")
   }
 
@@ -271,7 +273,7 @@ export function Sidebar() {
       }}>
         {/* Brand */}
         <div style={{ padding: "18px 16px 14px 16px", flexShrink: 0, display: "flex", justifyContent: collapsed ? "center" : "flex-start" }}>
-          <Link href="/tracker" style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }} title={collapsed ? "Grant Assistant" : undefined}>
+          <Link href="/home" style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }} title={collapsed ? "Grant Assistant" : undefined}>
             <div style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: "#FFFFFF", lineHeight: 1 }}>G</span>
             </div>
