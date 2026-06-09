@@ -29,6 +29,23 @@ export const USER: User = {
   initials: "TS",
 }
 
+export const TEAMMATES: User[] = [
+  {
+    id: "user-2",
+    organizationId: "org-1",
+    name: "Jordan M.",
+    email: "jordan@whiskerhaven.org",
+    initials: "JM",
+  },
+  {
+    id: "user-3",
+    organizationId: "org-1",
+    name: "Sam L.",
+    email: "sam@whiskerhaven.org",
+    initials: "SL",
+  },
+]
+
 export const MEMBERSHIP: Membership = {
   id: "mem-1",
   userId: "user-1",
@@ -194,6 +211,25 @@ export const PIPELINE_OPPORTUNITIES: PipelineOpportunity[] = [
     submittedAt: "Mar 15, 2026",
     notes: "Submitted with strong outcome data. Awaiting reviewer assignment.",
   },
+  {
+    id: "pip-3",
+    organizationId: "org-1",
+    projectId: "proj-general",
+    funderId: "funder-found-animals",
+    opportunityId: "opp-4",
+    status: "researching",
+    notes: "Identified as a strong fit. Confirming San Diego service area eligibility before applying.",
+  },
+  {
+    id: "pip-4",
+    organizationId: "org-1",
+    projectId: "proj-general",
+    funderId: "funder-petsmart",
+    opportunityId: "opp-5",
+    status: "awarded",
+    submittedAt: "Jan 20, 2026",
+    notes: "Awarded $45,000 in March 2026. Funds received and deposited.",
+  },
 ]
 
 // ── Artifacts ─────────────────────────────────────────────────────────────
@@ -322,6 +358,30 @@ export const TASKS: Task[] = [
     title: "Follow up with program officer",
     assigneeId: "user-1",
     dueDate: "Jun 20, 2026",
+    completed: false,
+  },
+  {
+    id: "task-7",
+    pipelineOpportunityId: "pip-1",
+    title: "Collect board signatures on conflict of interest form",
+    assigneeId: "user-2",
+    dueDate: "Jun 7, 2026",
+    completed: false,
+  },
+  {
+    id: "task-8",
+    pipelineOpportunityId: "pip-1",
+    title: "Send updated budget to program officer",
+    assigneeId: "user-2",
+    dueDate: "Jun 15, 2026",
+    completed: false,
+  },
+  {
+    id: "task-9",
+    pipelineOpportunityId: "pip-2",
+    title: "Gather Q1 live release rate data for ASPCA report",
+    assigneeId: "user-3",
+    dueDate: "Jun 8, 2026",
     completed: false,
   },
 ]

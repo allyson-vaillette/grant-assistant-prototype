@@ -1,14 +1,24 @@
 "use client"
 
+import { useState, useRef } from "react"
 import Link from "next/link"
-import { Telescope, Sparkles, ChevronRight } from "lucide-react"
+import { Telescope, Sparkles, ChevronRight, Bell } from "lucide-react"
 import {
-  ORG, USER,
+  ORG, USER, TEAMMATES,
   PIPELINE_OPPORTUNITIES, OPPORTUNITIES, FUNDERS, TASKS,
 } from "@/lib/mock-data"
-import type { PipelineOpportunity, Opportunity, Funder } from "@/lib/types"
+import type { PipelineOpportunity, Opportunity, Funder, PipelineStatus } from "@/lib/types"
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Status strip config ────────────────────────────────────────────────────────
+
+const PIPELINE_STRIP: { status: PipelineStatus; label: string; activeColor: string }[] = [
+  { status: "researching", label: "Researching", activeColor: "var(--ink-tertiary)"  },
+  { status: "applying",    label: "Applying",    activeColor: "var(--slate-primary)" },
+  { status: "submitted",   label: "Submitted",   activeColor: "var(--plum-soft)"     },
+  { status: "awarded",     label: "Awarded",     activeColor: "var(--evergreen)"     },
+]
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const MONTH_INDEX: Record<string, number> = {
   Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
@@ -28,25 +38,7 @@ function parseDate(str: string): Date | null {
 
 function getFunder(id: string): Funder | undefined { return FUNDERS.find(f => f.id === id) }
 function getOpportunity(id: string): Opportunity | undefined { return OPPORTUNITIES.find(o => o.id === id) }
-
-function pipelineStats() {
-  const total = PIPELINE_OPPORTUNITIES.length
-  const inPlay = PIPELINE_OPPORTUNITIES.reduce((sum, p) => {
-    const amt = getOpportunity(p.opportunityId)?.amount?.replace(/[^0-9]/g, "")
-    return sum + (amt ? parseInt(amt) : 0)
-  }, 0)
-  const submitted = PIPELINE_OPPORTUNITIES
-    .filter(p => ["submitted", "awarded", "denied"].includes(p.status))
-    .reduce((sum, p) => {
-      const amt = getOpportunity(p.opportunityId)?.amount?.replace(/[^0-9]/g, "")
-      return sum + (amt ? parseInt(amt) : 0)
-    }, 0)
-  return { total, inPlay, submitted }
-}
-
-function formatDollars(n: number) {
-  return "$" + n.toLocaleString()
-}
+function getTeammate(id: string) { return TEAMMATES.find(t => t.id === id) }
 
 function greeting() {
   const h = new Date().getHours()
@@ -68,6 +60,28 @@ function getTodayTasks() {
     })
 }
 
+function getTeamTasks() {
+  const now = new Date(); now.setHours(0, 0, 0, 0)
+  return TASKS
+    .filter(t => !t.completed && !!t.assigneeId && t.assigneeId !== USER.id)
+    .flatMap(t => {
+      const teammate = getTeammate(t.assigneeId!)
+      if (!teammate) return []
+      let isOverdue = false
+      if (t.dueDate) {
+        const d = parseDate(t.dueDate)
+        if (d) { d.setHours(0, 0, 0, 0); isOverdue = d < now }
+      }
+      return [{ ...t, teammate, isOverdue }]
+    })
+    .sort((a, b) => {
+      if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1
+      const da = a.dueDate ? (parseDate(a.dueDate)?.getTime() ?? Infinity) : Infinity
+      const db = b.dueDate ? (parseDate(b.dueDate)?.getTime() ?? Infinity) : Infinity
+      return da - db
+    })
+}
+
 function getUpcomingDeadlines() {
   const now = new Date(); now.setHours(0, 0, 0, 0)
   return PIPELINE_OPPORTUNITIES
@@ -85,7 +99,7 @@ function getUpcomingDeadlines() {
     .slice(0, 4)
 }
 
-// ── Shared sub-components ────────────────────────────────────────────────────
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 function SectionHeader({ label }: { label: string }) {
   return (
@@ -104,11 +118,8 @@ function SectionHeader({ label }: { label: string }) {
 function EmptyState({ message }: { message: string }) {
   return (
     <div style={{
-      backgroundColor: "var(--surface-sunk)",
-      border: "1px dashed var(--hair-2)",
-      borderRadius: 10,
-      padding: "18px 20px",
-      textAlign: "center",
+      backgroundColor: "var(--surface-sunk)", border: "1px dashed var(--hair-2)",
+      borderRadius: 10, padding: "18px 20px", textAlign: "center",
     }}>
       <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>{message}</p>
     </div>
@@ -128,17 +139,10 @@ function TaskRow({ task }: { task: ReturnType<typeof getTodayTasks>[number] }) {
           backgroundColor: "var(--surface)",
           border: `1px solid ${task.isOverdue ? "rgba(185,28,28,0.15)" : "var(--hair-2)"}`,
           borderLeft: task.isOverdue ? "3px solid var(--error)" : "1px solid var(--hair-2)",
-          borderRadius: 10,
-          padding: "12px 16px",
-          cursor: "pointer",
-          transition: "box-shadow 150ms",
+          borderRadius: 10, padding: "12px 16px", cursor: "pointer", transition: "box-shadow 150ms",
         }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px rgba(28,24,64,0.07)"
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLDivElement).style.boxShadow = "none"
-        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px rgba(28,24,64,0.07)" }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none" }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "space-between" }}>
           <div style={{ minWidth: 0 }}>
@@ -170,6 +174,92 @@ function TaskRow({ task }: { task: ReturnType<typeof getTodayTasks>[number] }) {
   )
 }
 
+function TeamTaskRow({
+  task,
+  onNudge,
+}: {
+  task: ReturnType<typeof getTeamTasks>[number]
+  onNudge: (name: string) => void
+}) {
+  const pip = PIPELINE_OPPORTUNITIES.find(p => p.id === task.pipelineOpportunityId)
+  const opp = pip ? getOpportunity(pip.opportunityId) : undefined
+  const funder = pip ? getFunder(pip.funderId) : undefined
+
+  return (
+    <div style={{
+      backgroundColor: "var(--surface)",
+      border: `1px solid ${task.isOverdue ? "rgba(185,28,28,0.15)" : "var(--hair-2)"}`,
+      borderLeft: task.isOverdue ? "3px solid var(--error)" : "1px solid var(--hair-2)",
+      borderRadius: 10, padding: "12px 16px",
+      display: "flex", alignItems: "center", gap: 12,
+    }}>
+      <div style={{
+        width: 28, height: 28, borderRadius: "50%",
+        backgroundColor: "var(--slate-tint)", border: "1px solid var(--hair)",
+        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+      }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: "var(--slate-primary)", lineHeight: 1 }}>
+          {task.teammate.initials}
+        </span>
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ margin: "0 0 3px", fontSize: 13, fontWeight: 500, color: "var(--ink)", lineHeight: "18px" }}>
+          {task.title}
+        </p>
+        <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "15px" }}>
+          <span style={{ fontWeight: 600 }}>{task.teammate.name}</span>
+          {funder && (
+            <span> · <span style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", fontSize: 10 }}>{funder.name}</span></span>
+          )}
+          {opp?.name && <span> · {opp.name}</span>}
+        </p>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        {task.isOverdue ? (
+          <span style={{
+            padding: "2px 7px", borderRadius: 20,
+            fontSize: 10, fontWeight: 600, letterSpacing: "0.03em",
+            backgroundColor: "var(--error-light)", color: "var(--error)",
+          }}>
+            Overdue
+          </span>
+        ) : task.dueDate ? (
+          <span style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>
+            Due {task.dueDate}
+          </span>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => onNudge(task.teammate.name)}
+          style={{
+            display: "flex", alignItems: "center", gap: 4,
+            padding: "4px 10px", borderRadius: 6,
+            border: "1px solid var(--hair)", backgroundColor: "var(--canvas)",
+            fontSize: 11, fontWeight: 600, color: "var(--ink-secondary)",
+            cursor: "pointer", transition: "background-color 150ms, border-color 150ms",
+            flexShrink: 0,
+          }}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            el.style.backgroundColor = "var(--surface)"
+            el.style.borderColor = "var(--ink-tertiary)"
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            el.style.backgroundColor = "var(--canvas)"
+            el.style.borderColor = "var(--hair)"
+          }}
+        >
+          <Bell size={11} />
+          Nudge
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function DeadlineRow({ pip, opp, funder }: {
   pip: PipelineOpportunity
   opp: Opportunity | undefined
@@ -179,19 +269,11 @@ function DeadlineRow({ pip, opp, funder }: {
     <Link href={`/pursuit/${pip.opportunityId}`} style={{ textDecoration: "none", display: "block" }}>
       <div
         style={{
-          backgroundColor: "var(--surface)",
-          border: "1px solid var(--hair-2)",
-          borderRadius: 10,
-          padding: "12px 16px",
-          cursor: "pointer",
-          transition: "box-shadow 150ms",
+          backgroundColor: "var(--surface)", border: "1px solid var(--hair-2)",
+          borderRadius: 10, padding: "12px 16px", cursor: "pointer", transition: "box-shadow 150ms",
         }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px rgba(28,24,64,0.07)"
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLDivElement).style.boxShadow = "none"
-        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px rgba(28,24,64,0.07)" }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none" }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "space-between" }}>
           <div style={{ minWidth: 0 }}>
@@ -219,10 +301,19 @@ function DeadlineRow({ pip, opp, funder }: {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const stats = pipelineStats()
+  const [toast, setToast] = useState<string | null>(null)
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const tasks = getTodayTasks()
+  const teamTasks = getTeamTasks()
   const deadlines = getUpcomingDeadlines()
   const firstName = USER.name.split(" ")[0]
+
+  function nudge(name: string) {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    setToast(`Reminder sent to ${name}`)
+    toastTimerRef.current = setTimeout(() => setToast(null), 3000)
+  }
 
   return (
     <div style={{ flex: 1, overflowY: "auto", backgroundColor: "var(--canvas)" }}>
@@ -231,44 +322,42 @@ export default function HomePage() {
         {/* Greeting */}
         <div style={{ marginBottom: 32 }}>
           <h1 style={{
-            margin: "0 0 4px",
-            fontSize: 22,
-            fontWeight: 700,
-            color: "var(--ink)",
-            letterSpacing: "-0.01em",
-            lineHeight: 1.25,
+            margin: "0 0 4px", fontSize: 22, fontWeight: 700, color: "var(--ink)",
+            letterSpacing: "-0.01em", lineHeight: 1.25,
           }}>
             {greeting()}, {firstName}.
           </h1>
           <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>{ORG.name}</p>
         </div>
 
-        {/* Stats glance */}
+        {/* Pipeline at a glance */}
         <div style={{
-          display: "flex", gap: 1,
-          backgroundColor: "var(--surface)",
-          border: "1px solid var(--hair-2)",
-          borderRadius: 12,
-          overflow: "hidden",
-          marginBottom: 40,
+          display: "flex", backgroundColor: "var(--surface)",
+          border: "1px solid var(--hair-2)", borderRadius: 12, overflow: "hidden", marginBottom: 40,
         }}>
-          {[
-            { label: "In pipeline", value: String(stats.total) },
-            { label: "Total in play", value: formatDollars(stats.inPlay) },
-            { label: "Submitted", value: formatDollars(stats.submitted) },
-          ].map((s, i) => (
-            <div key={i} style={{
-              flex: 1, padding: "16px 20px",
-              borderRight: i < 2 ? "1px solid var(--hair)" : "none",
-            }}>
-              <p style={{ margin: "0 0 3px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
-                {s.label}
-              </p>
-              <p style={{ margin: 0, fontSize: 22, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.02em", fontFamily: "var(--font-lora), Georgia, serif" }}>
-                {s.value}
-              </p>
-            </div>
-          ))}
+          {PIPELINE_STRIP.map((s, i) => {
+            const count = PIPELINE_OPPORTUNITIES.filter(p => p.status === s.status).length
+            return (
+              <Link key={s.status} href="/tracker" style={{ flex: 1, textDecoration: "none", display: "block" }}>
+                <div
+                  style={{
+                    padding: "16px 20px",
+                    borderRight: i < PIPELINE_STRIP.length - 1 ? "1px solid var(--hair)" : "none",
+                    transition: "background-color 150ms",
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--surface-sunk)" }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
+                >
+                  <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+                    {s.label}
+                  </p>
+                  <p style={{ margin: 0, fontSize: 24, fontWeight: 600, letterSpacing: "-0.02em", color: count > 0 ? s.activeColor : "var(--hair)", fontFamily: "var(--font-lora), Georgia, serif" }}>
+                    {count}
+                  </p>
+                </div>
+              </Link>
+            )
+          })}
         </div>
 
         {/* Today */}
@@ -279,6 +368,20 @@ export default function HomePage() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {tasks.map(t => <TaskRow key={t.id} task={t} />)}
+            </div>
+          )}
+        </section>
+
+        {/* Waiting on the team */}
+        <section style={{ marginBottom: 40 }}>
+          <SectionHeader label="Waiting on the team" />
+          {teamTasks.length === 0 ? (
+            <EmptyState message="No open tasks waiting on teammates." />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {teamTasks.map(t => (
+                <TeamTaskRow key={t.id} task={t} onNudge={nudge} />
+              ))}
             </div>
           )}
         </section>
@@ -304,11 +407,8 @@ export default function HomePage() {
             <Link href="/discover" style={{ textDecoration: "none", flex: 1 }}>
               <div
                 style={{
-                  backgroundColor: "var(--surface)",
-                  border: "1px solid var(--hair-2)",
-                  borderRadius: 12,
-                  padding: "20px",
-                  cursor: "pointer",
+                  backgroundColor: "var(--surface)", border: "1px solid var(--hair-2)",
+                  borderRadius: 12, padding: "20px", cursor: "pointer",
                   transition: "box-shadow 150ms, border-color 150ms",
                   display: "flex", flexDirection: "column", gap: 10,
                 }}
@@ -324,10 +424,8 @@ export default function HomePage() {
                 }}
               >
                 <div style={{
-                  width: 36, height: 36, borderRadius: 9,
-                  backgroundColor: "var(--slate-tint)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0,
+                  width: 36, height: 36, borderRadius: 9, backgroundColor: "var(--slate-tint)",
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                 }}>
                   <Telescope size={18} style={{ color: "var(--slate-primary)" }} />
                 </div>
@@ -344,12 +442,8 @@ export default function HomePage() {
 
             <div
               style={{
-                flex: 1,
-                backgroundColor: "var(--surface)",
-                border: "1px solid var(--hair-2)",
-                borderRadius: 12,
-                padding: "20px",
-                cursor: "pointer",
+                flex: 1, backgroundColor: "var(--surface)", border: "1px solid var(--hair-2)",
+                borderRadius: 12, padding: "20px", cursor: "pointer",
                 transition: "box-shadow 150ms, border-color 150ms",
                 display: "flex", flexDirection: "column", gap: 10,
               }}
@@ -365,10 +459,8 @@ export default function HomePage() {
               }}
             >
               <div style={{
-                width: 36, height: 36, borderRadius: 9,
-                background: "var(--gradient-ai-cta)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                flexShrink: 0,
+                width: 36, height: 36, borderRadius: 9, background: "var(--gradient-ai-cta)",
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
               }}>
                 <Sparkles size={18} style={{ color: "#FFFFFF" }} />
               </div>
@@ -385,6 +477,20 @@ export default function HomePage() {
         </section>
 
       </div>
+
+      {/* Nudge toast */}
+      {toast && (
+        <div style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 100,
+          backgroundColor: "var(--ink)", color: "#FFFFFF",
+          padding: "10px 16px", borderRadius: 10,
+          fontSize: 13, fontWeight: 500, lineHeight: "18px",
+          boxShadow: "0 4px 16px rgba(28,24,64,0.25)",
+          pointerEvents: "none",
+        }}>
+          {toast}
+        </div>
+      )}
     </div>
   )
 }
