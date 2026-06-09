@@ -52,7 +52,7 @@
 
     /* ── Sidebar gradient ── */
     /* Deep indigo top-left → deep violet-plum bottom-right (135deg diagonal). */
-    --sidebar-gradient: linear-gradient(135deg, #1C2358 0%, #3D2860 100%);
+    --sidebar-gradient: linear-gradient(165deg, #1B2E58 0%, #2B2459 55%, #3C1A4B 100%);
 
     /* ── AI Gradients — slate-to-plum identity signal ── */
     /* Deep indigo-navy → deep violet-plum, 135deg diagonal — distinct from sidebar. */
