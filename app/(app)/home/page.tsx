@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react"
 import Link from "next/link"
-import { Telescope, Sparkles, ChevronRight, Bell } from "lucide-react"
+import { ChevronRight, Bell } from "lucide-react"
 import {
   ORG, USER, TEAMMATES,
   PIPELINE_OPPORTUNITIES, OPPORTUNITIES, FUNDERS, TASKS,
@@ -571,82 +571,6 @@ export default function HomePage() {
               ))}
             </div>
           )}
-        </section>
-
-        {/* Quick actions */}
-        <section>
-          <SectionHeader label="Quick actions" />
-          <div style={{ display: "flex", gap: 12 }}>
-            <Link href="/discover" style={{ textDecoration: "none", flex: 1 }}>
-              <div
-                style={{
-                  backgroundColor: "var(--surface)", border: "1px solid var(--hair-2)",
-                  borderRadius: 12, padding: "20px", cursor: "pointer",
-                  transition: "box-shadow 150ms, border-color 150ms",
-                  display: "flex", flexDirection: "column", gap: 10,
-                }}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget as HTMLDivElement
-                  el.style.boxShadow = "0 2px 12px rgba(28,24,64,0.08)"
-                  el.style.borderColor = "rgba(74,96,128,0.25)"
-                }}
-                onMouseLeave={(e) => {
-                  const el = e.currentTarget as HTMLDivElement
-                  el.style.boxShadow = "none"
-                  el.style.borderColor = "var(--hair-2)"
-                }}
-              >
-                <div style={{
-                  width: 36, height: 36, borderRadius: 9, backgroundColor: "var(--slate-tint)",
-                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                }}>
-                  <Telescope size={18} style={{ color: "var(--slate-primary)" }} />
-                </div>
-                <div>
-                  <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
-                    Discover opportunities
-                  </p>
-                  <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)" }}>
-                    Browse and match with new funders
-                  </p>
-                </div>
-              </div>
-            </Link>
-
-            <div
-              style={{
-                flex: 1, backgroundColor: "var(--surface)", border: "1px solid var(--hair-2)",
-                borderRadius: 12, padding: "20px", cursor: "pointer",
-                transition: "box-shadow 150ms, border-color 150ms",
-                display: "flex", flexDirection: "column", gap: 10,
-              }}
-              onMouseEnter={(e) => {
-                const el = e.currentTarget as HTMLDivElement
-                el.style.boxShadow = "0 2px 12px rgba(28,24,64,0.08)"
-                el.style.borderColor = "rgba(74,96,128,0.25)"
-              }}
-              onMouseLeave={(e) => {
-                const el = e.currentTarget as HTMLDivElement
-                el.style.boxShadow = "none"
-                el.style.borderColor = "var(--hair-2)"
-              }}
-            >
-              <div style={{
-                width: 36, height: 36, borderRadius: 9, background: "var(--gradient-ai-cta)",
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-              }}>
-                <Sparkles size={18} style={{ color: "#FFFFFF" }} />
-              </div>
-              <div>
-                <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
-                  Ask Grant Assistant
-                </p>
-                <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)" }}>
-                  Get help with proposals and strategy
-                </p>
-              </div>
-            </div>
-          </div>
         </section>
 
       </div>
