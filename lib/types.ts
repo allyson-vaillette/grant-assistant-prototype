@@ -1,12 +1,37 @@
 // ── Status & Stage ────────────────────────────────────────────────────────
 
-export type PipelineStatus = "researching" | "applying" | "submitted" | "awarded" | "denied"
+export type PipelineStatus =
+  | "researching"
+  | "planned"
+  | "loi-in-progress"
+  | "loi-submitted"
+  | "application-in-progress"
+  | "application-submitted"
+  | "declined"
+  | "abandoned"
+  | "awarded-active"
+  | "awarded-closed"
+
+export type PipelinePhase = "researching" | "applications" | "awards"
+
 export type ArtifactStage = "pre-apply" | "apply" | "post-apply"
 
+export function phaseFromStatus(status: PipelineStatus): PipelinePhase {
+  if (status === "researching") return "researching"
+  if (status === "awarded-active" || status === "awarded-closed") return "awards"
+  return "applications"
+}
+
 export function stageFromStatus(status: PipelineStatus): ArtifactStage {
-  if (status === "researching") return "pre-apply"
-  if (status === "applying") return "apply"
-  return "post-apply"
+  if (status === "researching" || status === "planned") return "pre-apply"
+  if (
+    status === "application-submitted" ||
+    status === "declined" ||
+    status === "abandoned" ||
+    status === "awarded-active" ||
+    status === "awarded-closed"
+  ) return "post-apply"
+  return "apply"
 }
 
 // ── Core entities ─────────────────────────────────────────────────────────

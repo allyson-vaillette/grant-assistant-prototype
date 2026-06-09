@@ -7,15 +7,15 @@ import {
   ORG, USER, TEAMMATES,
   PIPELINE_OPPORTUNITIES, OPPORTUNITIES, FUNDERS, TASKS,
 } from "@/lib/mock-data"
-import type { PipelineOpportunity, Opportunity, Funder, PipelineStatus } from "@/lib/types"
+import { phaseFromStatus } from "@/lib/types"
+import type { PipelineOpportunity, Opportunity, Funder, PipelinePhase } from "@/lib/types"
 
 // ── Status strip config ────────────────────────────────────────────────────────
 
-const PIPELINE_STRIP: { status: PipelineStatus; label: string; activeColor: string }[] = [
-  { status: "researching", label: "Researching", activeColor: "var(--ink-tertiary)"  },
-  { status: "applying",    label: "Applying",    activeColor: "var(--slate-primary)" },
-  { status: "submitted",   label: "Submitted",   activeColor: "var(--plum-soft)"     },
-  { status: "awarded",     label: "Awarded",     activeColor: "var(--evergreen)"     },
+const PIPELINE_STRIP: { phase: PipelinePhase; label: string; activeColor: string }[] = [
+  { phase: "researching",  label: "Researching",  activeColor: "var(--ink-tertiary)" },
+  { phase: "applications", label: "Applications", activeColor: "var(--plum-soft)"    },
+  { phase: "awards",       label: "Awards",       activeColor: "var(--evergreen)"    },
 ]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -85,7 +85,7 @@ function getTeamTasks() {
 function getUpcomingDeadlines() {
   const now = new Date(); now.setHours(0, 0, 0, 0)
   return PIPELINE_OPPORTUNITIES
-    .filter(p => !["awarded", "denied"].includes(p.status))
+    .filter(p => !["application-submitted", "declined", "abandoned", "awarded-active", "awarded-closed"].includes(p.status))
     .flatMap(p => {
       const opp = getOpportunity(p.opportunityId)
       const funder = getFunder(p.funderId)
@@ -304,14 +304,14 @@ function DeadlineRow({ pip, opp, funder }: {
 type StatusPursuit = { pip: PipelineOpportunity; opp: Opportunity | undefined; funder: Funder | undefined }
 
 function StatusCard({
-  status: _status,
+  phase: _phase,
   label,
   activeColor,
   pursuits,
   isFirst,
   isLast,
 }: {
-  status: PipelineStatus
+  phase: PipelinePhase
   label: string
   activeColor: string
   pursuits: StatusPursuit[]
@@ -461,19 +461,19 @@ export default function HomePage() {
   const deadlines = getUpcomingDeadlines()
   const firstName = USER.name.split(" ")[0]
 
-  // Pre-group pipeline opportunities by status for the strip panels
-  const statusPursuits = Object.fromEntries(
+  // Pre-group pipeline opportunities by phase for the strip panels
+  const phasePursuits = Object.fromEntries(
     PIPELINE_STRIP.map(s => [
-      s.status,
+      s.phase,
       PIPELINE_OPPORTUNITIES
-        .filter(p => p.status === s.status)
+        .filter(p => phaseFromStatus(p.status) === s.phase)
         .map(pip => ({
           pip,
           opp: getOpportunity(pip.opportunityId),
           funder: getFunder(pip.funderId),
         })),
     ])
-  ) as Record<PipelineStatus, StatusPursuit[]>
+  ) as Record<PipelinePhase, StatusPursuit[]>
 
   function nudge(name: string) {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
@@ -507,11 +507,11 @@ export default function HomePage() {
         }}>
           {PIPELINE_STRIP.map((s, i) => (
             <StatusCard
-              key={s.status}
-              status={s.status}
+              key={s.phase}
+              phase={s.phase}
               label={s.label}
               activeColor={s.activeColor}
-              pursuits={statusPursuits[s.status] ?? []}
+              pursuits={phasePursuits[s.phase] ?? []}
               isFirst={i === 0}
               isLast={i === PIPELINE_STRIP.length - 1}
             />

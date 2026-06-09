@@ -1,31 +1,66 @@
 "use client"
 
+import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
-import { Telescope } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Telescope, ChevronDown } from "lucide-react"
 import {
-  ORG,
-  FUNDERS,
-  OPPORTUNITIES,
-  PIPELINE_OPPORTUNITIES,
+  ORG, FUNDERS, OPPORTUNITIES, PIPELINE_OPPORTUNITIES,
 } from "@/lib/mock-data"
-import type { PipelineOpportunity, PipelineStatus } from "@/lib/types"
+import type { PipelineOpportunity, PipelineStatus, PipelinePhase } from "@/lib/types"
+import { phaseFromStatus } from "@/lib/types"
 
-// ── Status config ──────────────────────────────────────────────────────────
+// ── Phase config ───────────────────────────────────────────────────────────
 
-const STATUS_BADGE: Record<PipelineStatus, { bg: string; color: string; label: string }> = {
-  researching: { bg: "var(--slate-tint)",    color: "var(--ink-tertiary)",   label: "Researching"  },
-  applying:    { bg: "var(--slate-light)",   color: "var(--slate-primary)",  label: "Applying"     },
-  submitted:   { bg: "var(--plum-tint)",     color: "var(--plum-soft)",      label: "Submitted"    },
-  awarded:     { bg: "var(--evergreen-tint)",color: "var(--evergreen)",      label: "Awarded"      },
-  denied:      { bg: "#F1F1F2",              color: "#6B6B7E",               label: "Denied"       },
+const PHASES: { phase: PipelinePhase; label: string; alwaysShow: boolean }[] = [
+  { phase: "researching",  label: "Researching",  alwaysShow: true  },
+  { phase: "applications", label: "Applications", alwaysShow: true  },
+  { phase: "awards",       label: "Awards",       alwaysShow: false },
+]
+
+const PHASE_COLOR: Record<PipelinePhase, { bg: string; color: string }> = {
+  researching:  { bg: "var(--slate-tint)",     color: "var(--ink-tertiary)" },
+  applications: { bg: "var(--plum-tint)",      color: "var(--plum-soft)"   },
+  awards:       { bg: "var(--evergreen-tint)", color: "var(--evergreen)"   },
 }
 
-const STATUS_GROUPS: { status: PipelineStatus; label: string; alwaysShow: boolean }[] = [
-  { status: "researching", label: "Researching", alwaysShow: true  },
-  { status: "applying",    label: "Applying",    alwaysShow: true  },
-  { status: "submitted",   label: "Submitted",   alwaysShow: true  },
-  { status: "awarded",     label: "Awarded",     alwaysShow: false },
-  { status: "denied",      label: "Denied",      alwaysShow: false },
+const STATUS_LABEL: Record<PipelineStatus, string> = {
+  "researching":              "Researching",
+  "planned":                  "Planned",
+  "loi-in-progress":          "LOI In Progress",
+  "loi-submitted":            "LOI Submitted",
+  "application-in-progress":  "Application In Progress",
+  "application-submitted":    "Application Submitted",
+  "declined":                 "Declined",
+  "abandoned":                "Abandoned",
+  "awarded-active":           "Awarded — Active",
+  "awarded-closed":           "Awarded — Closed",
+}
+
+const STATUS_GROUPS_FOR_DROPDOWN: { phase: PipelinePhase; label: string; statuses: PipelineStatus[] }[] = [
+  {
+    phase: "researching",
+    label: "Researching",
+    statuses: ["researching"],
+  },
+  {
+    phase: "applications",
+    label: "Applications",
+    statuses: [
+      "planned",
+      "loi-in-progress",
+      "loi-submitted",
+      "application-in-progress",
+      "application-submitted",
+      "declined",
+      "abandoned",
+    ],
+  },
+  {
+    phase: "awards",
+    label: "Awards",
+    statuses: ["awarded-active", "awarded-closed"],
+  },
 ]
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -33,16 +68,14 @@ const STATUS_GROUPS: { status: PipelineStatus; label: string; alwaysShow: boolea
 function getFunder(id: string) { return FUNDERS.find(f => f.id === id) }
 function getOpportunity(id: string) { return OPPORTUNITIES.find(o => o.id === id) }
 
-function pipelineStats() {
-  const total = PIPELINE_OPPORTUNITIES.length
-  const inPlay = PIPELINE_OPPORTUNITIES.reduce((sum, p) => {
+function pipelineStats(pipelines: PipelineOpportunity[]) {
+  const total = pipelines.length
+  const inPlay = pipelines.reduce((sum, p) => {
     const opp = getOpportunity(p.opportunityId)
     const amt = opp?.amount?.replace(/[^0-9]/g, "")
     return sum + (amt ? parseInt(amt) : 0)
   }, 0)
-  const submitted = PIPELINE_OPPORTUNITIES.filter(p =>
-    ["submitted","awarded","denied"].includes(p.status)
-  ).reduce((sum, p) => {
+  const submitted = pipelines.filter(p => !!p.submittedAt).reduce((sum, p) => {
     const opp = getOpportunity(p.opportunityId)
     const amt = opp?.amount?.replace(/[^0-9]/g, "")
     return sum + (amt ? parseInt(amt) : 0)
@@ -54,68 +87,193 @@ function formatDollars(n: number) {
   return "$" + n.toLocaleString()
 }
 
-// ── Pipeline card ──────────────────────────────────────────────────────────
+function todayStr() {
+  const d = new Date()
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`
+}
 
-function PursuitCard({ pip }: { pip: PipelineOpportunity }) {
-  const funder = getFunder(pip.funderId)
-  const opp = getOpportunity(pip.opportunityId)
-  const badge = STATUS_BADGE[pip.status]
+// ── Status badge (clickable dropdown) ─────────────────────────────────────
+
+function StatusBadge({
+  status,
+  onStatusChange,
+}: {
+  status: PipelineStatus
+  onStatusChange: (s: PipelineStatus) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const phase = phaseFromStatus(status)
+  const color = PHASE_COLOR[phase]
+
+  useEffect(() => {
+    if (!open) return
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener("mousedown", onDown)
+    return () => document.removeEventListener("mousedown", onDown)
+  }, [open])
 
   return (
-    <Link href={`/pursuit/${pip.opportunityId}`} style={{ textDecoration: "none", display: "block" }}>
-      <div
+    <div ref={ref} style={{ position: "relative", flexShrink: 0 }}>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen(v => !v) }}
         style={{
-          backgroundColor: "var(--surface)",
-          border: "1px solid var(--hair-2)",
-          borderRadius: 12,
-          padding: "16px 20px",
-          cursor: "pointer",
-          transition: "box-shadow 150ms, border-color 150ms",
+          display: "inline-flex", alignItems: "center", gap: 4,
+          padding: "3px 8px 3px 10px", borderRadius: 20,
+          fontSize: 11, fontWeight: 600, lineHeight: "16px",
+          backgroundColor: color.bg, color: color.color,
+          border: "none", cursor: "pointer",
+          transition: "opacity 120ms",
         }}
-        onMouseEnter={(e) => {
-          const el = e.currentTarget as HTMLDivElement
-          el.style.boxShadow = "0 2px 12px rgba(28,24,64,0.08)"
-          el.style.borderColor = "rgba(74,96,128,0.25)"
-        }}
-        onMouseLeave={(e) => {
-          const el = e.currentTarget as HTMLDivElement
-          el.style.boxShadow = "none"
-          el.style.borderColor = "var(--hair-2)"
-        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "0.8" }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "1" }}
       >
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 6 }}>
-          <div style={{ minWidth: 0 }}>
-            <p style={{ margin: "0 0 3px", fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--ink-tertiary)", lineHeight: 1 }}>
-              {funder?.name}
-            </p>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--ink)", lineHeight: "19px" }}>
-              {opp?.name}
-            </p>
-          </div>
-          <span style={{ flexShrink: 0, display: "inline-block", padding: "3px 9px", borderRadius: 20, fontSize: 11, fontWeight: 600, backgroundColor: badge.bg, color: badge.color, lineHeight: "16px" }}>
-            {badge.label}
-          </span>
-        </div>
+        {STATUS_LABEL[status]}
+        <ChevronDown size={10} />
+      </button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 10 }}>
-          {opp?.amount && (
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--slate-primary)" }}>{opp.amount}</span>
-          )}
-          {opp?.deadline && (
-            <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>
-              {pip.status === "submitted" ? `Submitted ${pip.submittedAt}` : `Due ${opp.deadline}`}
-            </span>
-          )}
+      {open && (
+        <div
+          style={{
+            position: "absolute", top: "calc(100% + 4px)", right: 0,
+            width: 230, zIndex: 200,
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--hair-2)",
+            borderRadius: 10,
+            boxShadow: "0 8px 24px rgba(28,24,64,0.12)",
+            overflow: "hidden",
+          }}
+        >
+          {STATUS_GROUPS_FOR_DROPDOWN.map((group, gi) => (
+            <div key={group.phase}>
+              {gi > 0 && <div style={{ height: 1, backgroundColor: "var(--hair)" }} />}
+              <p style={{
+                margin: 0, padding: "8px 12px 4px",
+                fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                textTransform: "uppercase", color: "var(--ink-tertiary)",
+              }}>
+                {group.label}
+              </p>
+              {group.statuses.map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onStatusChange(s); setOpen(false) }}
+                  style={{
+                    display: "block", width: "100%",
+                    padding: "7px 12px", textAlign: "left",
+                    border: "none",
+                    backgroundColor: s === status ? "var(--surface-sunk)" : "transparent",
+                    cursor: "pointer", fontSize: 12,
+                    color: s === status ? "var(--ink)" : "var(--ink-secondary)",
+                    fontWeight: s === status ? 600 : 400,
+                    transition: "background-color 100ms",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (s !== status) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface-sunk)"
+                  }}
+                  onMouseLeave={(e) => {
+                    if (s !== status) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"
+                  }}
+                >
+                  {STATUS_LABEL[s]}
+                </button>
+              ))}
+            </div>
+          ))}
         </div>
+      )}
+    </div>
+  )
+}
+
+// ── Pursuit card ───────────────────────────────────────────────────────────
+
+function PursuitCard({
+  pip,
+  onStatusChange,
+}: {
+  pip: PipelineOpportunity
+  onStatusChange: (id: string, s: PipelineStatus) => void
+}) {
+  const router = useRouter()
+  const funder = getFunder(pip.funderId)
+  const opp    = getOpportunity(pip.opportunityId)
+
+  return (
+    <div
+      style={{
+        backgroundColor: "var(--surface)",
+        border: "1px solid var(--hair-2)",
+        borderRadius: 12,
+        padding: "16px 20px",
+        cursor: "pointer",
+        transition: "box-shadow 150ms, border-color 150ms",
+      }}
+      onClick={() => router.push(`/pursuit/${pip.opportunityId}`)}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.boxShadow = "0 2px 12px rgba(28,24,64,0.08)"
+        el.style.borderColor = "rgba(74,96,128,0.25)"
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.boxShadow = "none"
+        el.style.borderColor = "var(--hair-2)"
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 6 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <p style={{ margin: "0 0 3px", fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--ink-tertiary)", lineHeight: 1 }}>
+            {funder?.name}
+          </p>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--ink)", lineHeight: "19px" }}>
+            {opp?.name}
+          </p>
+        </div>
+        <StatusBadge
+          status={pip.status}
+          onStatusChange={(s) => onStatusChange(pip.id, s)}
+        />
       </div>
-    </Link>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 10 }}>
+        {opp?.amount && (
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--slate-primary)" }}>{opp.amount}</span>
+        )}
+        {pip.submittedAt ? (
+          <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>Submitted {pip.submittedAt}</span>
+        ) : opp?.deadline ? (
+          <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>Due {opp.deadline}</span>
+        ) : null}
+      </div>
+    </div>
   )
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function TrackerPage() {
-  const stats = pipelineStats()
+  const [pipelines, setPipelines] = useState(() => [...PIPELINE_OPPORTUNITIES])
+
+  function handleStatusChange(id: string, status: PipelineStatus) {
+    setPipelines(prev =>
+      prev.map(p => {
+        if (p.id !== id) return p
+        const next: PipelineOpportunity = { ...p, status }
+        if (status === "application-submitted" && !p.submittedAt) {
+          next.submittedAt = todayStr()
+        }
+        return next
+      })
+    )
+  }
+
+  const stats = pipelineStats(pipelines)
 
   return (
     <div style={{ flex: 1, overflowY: "auto", backgroundColor: "var(--canvas)" }}>
@@ -173,12 +331,12 @@ export default function TrackerPage() {
           ))}
         </div>
 
-        {/* Pipeline grouped by status */}
-        {STATUS_GROUPS.map(({ status, label, alwaysShow }) => {
-          const items = PIPELINE_OPPORTUNITIES.filter(p => p.status === status)
+        {/* Pipeline grouped by phase */}
+        {PHASES.map(({ phase, label, alwaysShow }) => {
+          const items = pipelines.filter(p => phaseFromStatus(p.status) === phase)
           if (!alwaysShow && items.length === 0) return null
           return (
-            <section key={status} style={{ marginBottom: 36 }}>
+            <section key={phase} style={{ marginBottom: 36 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <span style={{
                   fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase",
@@ -205,7 +363,9 @@ export default function TrackerPage() {
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {items.map(pip => <PursuitCard key={pip.id} pip={pip} />)}
+                  {items.map(pip => (
+                    <PursuitCard key={pip.id} pip={pip} onStatusChange={handleStatusChange} />
+                  ))}
                 </div>
               )}
             </section>

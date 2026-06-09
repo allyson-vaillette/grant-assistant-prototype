@@ -1,32 +1,71 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, FileText, Paperclip, CheckSquare, Square, ExternalLink } from "lucide-react"
+import { ArrowLeft, FileText, Paperclip, CheckSquare, Square, ExternalLink, ChevronDown } from "lucide-react"
 import {
   FUNDERS, OPPORTUNITIES,
   getArtifactsForPipeline, getAttachmentsForPipeline, getTasksForPipeline,
   getPipelineForOpportunity,
 } from "@/lib/mock-data"
-import type { PipelineStatus, ArtifactStage, AttachmentCategory } from "@/lib/types"
+import type { PipelineStatus, PipelinePhase, ArtifactStage, AttachmentCategory } from "@/lib/types"
+import { phaseFromStatus } from "@/lib/types"
 
-// ── Status config ──────────────────────────────────────────────────────────
+// ── Phase + status config ──────────────────────────────────────────────────
 
-const STATUS_STEPS: { status: PipelineStatus; label: string }[] = [
-  { status: "researching", label: "Researching" },
-  { status: "applying",    label: "Applying"    },
-  { status: "submitted",   label: "Submitted"   },
-  { status: "awarded",     label: "Awarded"     },
-]
+const PHASES_ORDER: PipelinePhase[] = ["researching", "applications", "awards"]
 
-const STATUS_BADGE: Record<PipelineStatus, { bg: string; color: string }> = {
-  researching: { bg: "var(--slate-tint)",     color: "var(--ink-tertiary)"  },
-  applying:    { bg: "var(--slate-light)",    color: "var(--slate-primary)" },
-  submitted:   { bg: "var(--plum-tint)",      color: "var(--plum-soft)"     },
-  awarded:     { bg: "var(--evergreen-tint)", color: "var(--evergreen)"     },
-  denied:      { bg: "#F1F1F2",               color: "#6B6B7E"              },
+const PHASE_LABEL: Record<PipelinePhase, string> = {
+  researching:  "Researching",
+  applications: "Applications",
+  awards:       "Awards",
 }
+
+const PHASE_COLOR: Record<PipelinePhase, { bg: string; dot: string; text: string }> = {
+  researching:  { bg: "var(--slate-tint)",     dot: "var(--ink-tertiary)", text: "var(--ink-tertiary)" },
+  applications: { bg: "var(--plum-tint)",      dot: "var(--plum-soft)",   text: "var(--plum-soft)"   },
+  awards:       { bg: "var(--evergreen-tint)", dot: "var(--evergreen)",   text: "var(--evergreen)"   },
+}
+
+const STATUS_LABEL: Record<PipelineStatus, string> = {
+  "researching":              "Researching",
+  "planned":                  "Planned",
+  "loi-in-progress":          "LOI In Progress",
+  "loi-submitted":            "LOI Submitted",
+  "application-in-progress":  "Application In Progress",
+  "application-submitted":    "Application Submitted",
+  "declined":                 "Declined",
+  "abandoned":                "Abandoned",
+  "awarded-active":           "Awarded — Active",
+  "awarded-closed":           "Awarded — Closed",
+}
+
+const STATUS_GROUPS_FOR_DROPDOWN: { phase: PipelinePhase; label: string; statuses: PipelineStatus[] }[] = [
+  {
+    phase: "researching",
+    label: "Researching",
+    statuses: ["researching"],
+  },
+  {
+    phase: "applications",
+    label: "Applications",
+    statuses: [
+      "planned",
+      "loi-in-progress",
+      "loi-submitted",
+      "application-in-progress",
+      "application-submitted",
+      "declined",
+      "abandoned",
+    ],
+  },
+  {
+    phase: "awards",
+    label: "Awards",
+    statuses: ["awarded-active", "awarded-closed"],
+  },
+]
 
 const STAGE_BADGE: Record<ArtifactStage, { label: string; bg: string; color: string }> = {
   "pre-apply":  { label: "Pre-apply",  bg: "var(--terracotta-tint)", color: "var(--terracotta)"      },
@@ -50,50 +89,153 @@ const CATEGORY_LABEL: Record<AttachmentCategory, string> = {
   other:          "File",
 }
 
-// ── Status stepper ─────────────────────────────────────────────────────────
+// ── Phase indicator ────────────────────────────────────────────────────────
 
-function StatusStepper({ current }: { current: PipelineStatus }) {
-  const isDenied = current === "denied"
-  const currentIdx = isDenied ? 2 : STATUS_STEPS.findIndex(s => s.status === current)
+function PhaseIndicator({ current }: { current: PipelinePhase }) {
+  const currentIdx = PHASES_ORDER.indexOf(current)
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
-      {STATUS_STEPS.map((step, i) => {
-        const done   = i < currentIdx
-        const active = i === currentIdx && !isDenied
+    <div style={{ display: "flex", alignItems: "center" }}>
+      {PHASES_ORDER.map((phase, i) => {
+        const done    = i < currentIdx
+        const active  = i === currentIdx
+        const pending = i > currentIdx
+        const cfg     = PHASE_COLOR[phase]
         return (
-          <div key={step.status} style={{ display: "flex", alignItems: "center" }}>
+          <div key={phase} style={{ display: "flex", alignItems: "center" }}>
             <div style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "4px 10px", borderRadius: 20,
-              backgroundColor: active ? "var(--slate-tint)" : "transparent",
+              backgroundColor: active ? cfg.bg : "transparent",
             }}>
               <div style={{
-                width: 8, height: 8, borderRadius: "50%",
-                backgroundColor: done || active ? "var(--slate-primary)" : "var(--hair-2)",
-                border: done || active ? "none" : "1.5px solid var(--ink-tertiary)",
+                width: 7, height: 7, borderRadius: "50%",
+                backgroundColor: active || done ? cfg.dot : "transparent",
+                border: active || done ? "none" : "1.5px solid var(--hair-2)",
                 opacity: done ? 0.5 : 1,
               }} />
               <span style={{
-                fontSize: 12, fontWeight: active ? 600 : 400,
-                color: active ? "var(--slate-primary)" : "var(--ink-tertiary)",
-                opacity: done ? 0.7 : 1,
+                fontSize: 12,
+                fontWeight: active ? 600 : 400,
+                color: active ? cfg.text : pending ? "var(--hair-2)" : "var(--ink-tertiary)",
+                opacity: done ? 0.65 : 1,
               }}>
-                {step.label}
+                {PHASE_LABEL[phase]}
               </span>
             </div>
-            {i < STATUS_STEPS.length - 1 && (
-              <div style={{ width: 20, height: 1, backgroundColor: done ? "var(--slate-soft)" : "var(--hair-2)" }} />
+            {i < PHASES_ORDER.length - 1 && (
+              <div style={{ width: 20, height: 1, backgroundColor: done ? cfg.dot : "var(--hair-2)", opacity: done ? 0.3 : 1 }} />
             )}
           </div>
         )
       })}
-      {isDenied && (
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <div style={{ width: 20, height: 1, backgroundColor: "var(--hair-2)" }} />
-          <div style={{ padding: "4px 10px", borderRadius: 20, backgroundColor: "#F1F1F2" }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#6B6B7E" }}>Denied</span>
-          </div>
+    </div>
+  )
+}
+
+// ── Status picker (dropdown) ───────────────────────────────────────────────
+
+function StatusPicker({
+  status,
+  onStatusChange,
+}: {
+  status: PipelineStatus
+  onStatusChange: (s: PipelineStatus) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const phase = phaseFromStatus(status)
+  const cfg   = PHASE_COLOR[phase]
+
+  useEffect(() => {
+    if (!open) return
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener("mousedown", onDown)
+    return () => document.removeEventListener("mousedown", onDown)
+  }, [open])
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          padding: "5px 10px 5px 12px", borderRadius: 8,
+          border: "1px solid var(--hair-2)",
+          backgroundColor: "var(--canvas)",
+          cursor: "pointer",
+          fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)",
+          transition: "background-color 120ms, border-color 120ms",
+        }}
+        onMouseEnter={(e) => {
+          const el = e.currentTarget as HTMLButtonElement
+          el.style.backgroundColor = "var(--surface)"
+          el.style.borderColor = "rgba(74,96,128,0.3)"
+        }}
+        onMouseLeave={(e) => {
+          const el = e.currentTarget as HTMLButtonElement
+          el.style.backgroundColor = "var(--canvas)"
+          el.style.borderColor = "var(--hair-2)"
+        }}
+      >
+        <span style={{
+          display: "inline-block", width: 7, height: 7, borderRadius: "50%",
+          backgroundColor: cfg.dot, flexShrink: 0,
+        }} />
+        {STATUS_LABEL[status]}
+        <ChevronDown size={11} style={{ color: "var(--ink-tertiary)" }} />
+      </button>
+
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 4px)", right: 0,
+          width: 240, zIndex: 200,
+          backgroundColor: "var(--surface)",
+          border: "1px solid var(--hair-2)",
+          borderRadius: 10,
+          boxShadow: "0 8px 24px rgba(28,24,64,0.12)",
+          overflow: "hidden",
+        }}>
+          {STATUS_GROUPS_FOR_DROPDOWN.map((group, gi) => (
+            <div key={group.phase}>
+              {gi > 0 && <div style={{ height: 1, backgroundColor: "var(--hair)" }} />}
+              <p style={{
+                margin: 0, padding: "8px 12px 4px",
+                fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                textTransform: "uppercase", color: "var(--ink-tertiary)",
+              }}>
+                {group.label}
+              </p>
+              {group.statuses.map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => { onStatusChange(s); setOpen(false) }}
+                  style={{
+                    display: "block", width: "100%",
+                    padding: "7px 12px", textAlign: "left",
+                    border: "none",
+                    backgroundColor: s === status ? "var(--surface-sunk)" : "transparent",
+                    cursor: "pointer", fontSize: 12,
+                    color: s === status ? "var(--ink)" : "var(--ink-secondary)",
+                    fontWeight: s === status ? 600 : 400,
+                    transition: "background-color 100ms",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (s !== status) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface-sunk)"
+                  }}
+                  onMouseLeave={(e) => {
+                    if (s !== status) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"
+                  }}
+                >
+                  {STATUS_LABEL[s]}
+                </button>
+              ))}
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -140,12 +282,24 @@ function TabBar({ active, onChange, counts }: {
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
+function todayStr() {
+  const d = new Date()
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`
+}
+
 // params.id is the opportunity ID
 export default function PursuitPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>("artifacts")
 
-  const pip    = getPipelineForOpportunity(params.id)
+  const initialPip = getPipelineForOpportunity(params.id)
+  const [currentStatus, setCurrentStatus] = useState<PipelineStatus>(
+    initialPip?.status ?? "researching"
+  )
+  const [submittedAt, setSubmittedAt] = useState<string | undefined>(initialPip?.submittedAt)
+
+  const pip    = initialPip
   const opp    = OPPORTUNITIES.find(o => o.id === params.id)
   const funder = pip ? FUNDERS.find(f => f.id === pip.funderId) : null
 
@@ -160,12 +314,20 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
     )
   }
 
+  function handleStatusChange(s: PipelineStatus) {
+    setCurrentStatus(s)
+    if (s === "application-submitted" && !submittedAt) {
+      setSubmittedAt(todayStr())
+    }
+  }
+
   const artifacts   = getArtifactsForPipeline(pip.id)
   const attachments = getAttachmentsForPipeline(pip.id)
   const tasks       = getTasksForPipeline(pip.id)
-  const badge       = STATUS_BADGE[pip.status]
   const openTasks   = tasks.filter(t => !t.completed)
   const doneTasks   = tasks.filter(t => t.completed)
+  const currentPhase = phaseFromStatus(currentStatus)
+  const phaseCfg     = PHASE_COLOR[currentPhase]
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--canvas)" }}>
@@ -215,9 +377,10 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
               </p>
               <span style={{
                 padding: "2px 9px", borderRadius: 20,
-                fontSize: 11, fontWeight: 600, backgroundColor: badge.bg, color: badge.color,
+                fontSize: 11, fontWeight: 600,
+                backgroundColor: phaseCfg.bg, color: phaseCfg.text,
               }}>
-                {pip.status.charAt(0).toUpperCase() + pip.status.slice(1)}
+                {PHASE_LABEL[currentPhase]}
               </span>
             </div>
             <h1 style={{ margin: "0 0 4px", fontSize: 20, fontWeight: 700, color: "var(--ink)", lineHeight: "25px", letterSpacing: "-0.01em" }}>
@@ -225,11 +388,11 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
             </h1>
             <div style={{ display: "flex", gap: 12 }}>
               {opp.amount && <span style={{ fontSize: 14, fontWeight: 600, color: "var(--slate-primary)" }}>{opp.amount}</span>}
-              {opp.deadline && (
-                <span style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>
-                  {pip.status === "submitted" ? `Submitted ${pip.submittedAt}` : `Due ${opp.deadline}`}
-                </span>
-              )}
+              {submittedAt ? (
+                <span style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>Submitted {submittedAt}</span>
+              ) : opp.deadline ? (
+                <span style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>Due {opp.deadline}</span>
+              ) : null}
             </div>
           </div>
           <Link href={`/opportunity/${params.id}`} style={{ textDecoration: "none" }}>
@@ -250,7 +413,11 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
           </Link>
         </div>
 
-        <StatusStepper current={pip.status} />
+        {/* Phase indicator + status picker */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: 14 }}>
+          <PhaseIndicator current={currentPhase} />
+          <StatusPicker status={currentStatus} onStatusChange={handleStatusChange} />
+        </div>
 
         <TabBar
           active={activeTab}
