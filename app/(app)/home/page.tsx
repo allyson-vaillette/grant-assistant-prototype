@@ -316,7 +316,7 @@ function DeadlineRow({ pip, opp, funder }: {
 type StatusPursuit = { pip: PipelineOpportunity; opp: Opportunity | undefined; funder: Funder | undefined }
 
 function StatusCard({
-  status,
+  status: _status,
   label,
   activeColor,
   pursuits,
