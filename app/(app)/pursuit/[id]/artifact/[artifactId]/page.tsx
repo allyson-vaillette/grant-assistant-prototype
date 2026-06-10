@@ -66,6 +66,10 @@ function countWords(text: string): number {
   return text.trim() === "" ? 0 : text.trim().split(/\s+/).length
 }
 
+function countChars(text: string): number {
+  return text.length
+}
+
 function autosize(el: HTMLTextAreaElement | null) {
   if (!el) return
   el.style.height = "auto"
@@ -82,10 +86,8 @@ function sectionCompliance(
     return section.content.trim() ? "covered" : "uncovered"
   }
   if (!section.content.trim()) return "uncovered"
-  if (req.constraint?.type === "word_limit") {
-    const limit = req.constraint.value as number
-    if (countWords(section.content) > limit * 1.05) return "partial"
-  }
+  if (req.wordLimit && countWords(section.content) > req.wordLimit) return "partial"
+  if (req.charLimit && countChars(section.content) > req.charLimit) return "partial"
   return "covered"
 }
 
@@ -93,10 +95,10 @@ function sectionCompliance(
 
 function mockExtractRequirements(): Requirement[] {
   return [
-    { id: "req-ex-1", text: "Organization overview and mission alignment",     constraint: { type: "word_limit", value: 500 } },
-    { id: "req-ex-2", text: "Program description and activities to be funded", constraint: { type: "word_limit", value: 750 } },
-    { id: "req-ex-3", text: "Expected outcomes and impact metrics",            constraint: { type: "word_limit", value: 500 } },
-    { id: "req-ex-4", text: "Evaluation methodology and reporting plan",       constraint: { type: "word_limit", value: 250 } },
+    { id: "req-ex-1", text: "Organization overview and mission alignment",     wordLimit: 500, charLimit: 3000 },
+    { id: "req-ex-2", text: "Program description and activities to be funded", wordLimit: 750 },
+    { id: "req-ex-3", text: "Expected outcomes and impact metrics",            wordLimit: 500, charLimit: 3200 },
+    { id: "req-ex-4", text: "Evaluation methodology and reporting plan",       wordLimit: 250 },
     { id: "req-ex-5", text: "Budget narrative",                                constraint: { type: "required_attachment", value: "Budget spreadsheet (xlsx or pdf)" } },
   ]
 }
@@ -159,16 +161,20 @@ export default function ArtifactEditorPage({
   const [onrampStep,         setOnrampStep]         = useState<OnrampStep>("source")
   const [selectedSource,     setSelectedSource]     = useState<"existing" | "upload" | "none" | null>(null)
   const [draftReqs,          setDraftReqs]          = useState<Requirement[]>([])
-  const [editingReqId,       setEditingReqId]       = useState<string | null>(null)
-  const [editingReqText,     setEditingReqText]     = useState("")
-  const [editingConstraint,  setEditingConstraint]  = useState<{ type: "word_limit" | "required_attachment"; value: string } | null>(null)
-  const [selectedContextIds, setSelectedContextIds] = useState<Set<string>>(new Set(["att-2"]))
+  const [editingReqId,         setEditingReqId]         = useState<string | null>(null)
+  const [editingReqText,       setEditingReqText]       = useState("")
+  const [editingWordLimit,     setEditingWordLimit]     = useState("")
+  const [editingCharLimit,     setEditingCharLimit]     = useState("")
+  const [editingAttachmentNote, setEditingAttachmentNote] = useState("")
+  const [selectedContextIds,   setSelectedContextIds]   = useState<Set<string>>(new Set(["att-2"]))
 
   // ── Working state: document ──────────────────────────────────────────
-  const [requirements, setRequirements] = useState<Requirement[]>(existingSession?.requirements ?? [])
-  const [sections,     setSections]     = useState<DraftSection[]>(existingSession?.sections ?? [])
-  const [saveStatus,   setSaveStatus]   = useState<"saved" | "saving">("saved")
-  const [updatedAt,    setUpdatedAt]    = useState(artifact?.updatedAt ?? "")
+  const [requirements,  setRequirements]  = useState<Requirement[]>(existingSession?.requirements ?? [])
+  const [sections,      setSections]      = useState<DraftSection[]>(existingSession?.sections ?? [])
+  const [saveStatus,    setSaveStatus]    = useState<"saved" | "saving">("saved")
+  const [updatedAt,     setUpdatedAt]     = useState(artifact?.updatedAt ?? "")
+  const [docWordLimit,  setDocWordLimit]  = useState<number | undefined>(existingSession?.wordLimit)
+  const [docCharLimit,  setDocCharLimit]  = useState<number | undefined>(existingSession?.charLimit)
 
   // ── Working state: layout ────────────────────────────────────────────
   const [leftTab,        setLeftTab]        = useState<LeftTab>("requirements")
@@ -260,41 +266,46 @@ export default function ArtifactEditorPage({
     setDraftReqs(prev => [...prev, { id, text: "" }])
     setEditingReqId(id)
     setEditingReqText("")
-    setEditingConstraint(null)
+    setEditingWordLimit("")
+    setEditingCharLimit("")
+    setEditingAttachmentNote("")
   }
 
   function handleEditReq(req: Requirement) {
     setEditingReqId(req.id)
     setEditingReqText(req.text)
-    setEditingConstraint(
-      req.constraint
-        ? { type: req.constraint.type, value: String(req.constraint.value) }
-        : null,
-    )
+    setEditingWordLimit(req.wordLimit ? String(req.wordLimit) : "")
+    setEditingCharLimit(req.charLimit ? String(req.charLimit) : "")
+    setEditingAttachmentNote(req.constraint?.type === "required_attachment" ? req.constraint.value : "")
   }
 
   function handleSaveReqEdit() {
     if (!editingReqId) return
     setDraftReqs(prev => prev.map(r => {
       if (r.id !== editingReqId) return r
-      const constraint = editingConstraint && editingConstraint.value.trim()
-        ? {
-            type: editingConstraint.type,
-            value: editingConstraint.type === "word_limit"
-              ? Number(editingConstraint.value) || 500
-              : editingConstraint.value,
-          }
+      const wordLimit = editingWordLimit.trim() ? (Number(editingWordLimit) || undefined) : undefined
+      const charLimit = editingCharLimit.trim() ? (Number(editingCharLimit) || undefined) : undefined
+      const constraint = editingAttachmentNote.trim()
+        ? { type: "required_attachment" as const, value: editingAttachmentNote.trim() }
         : undefined
-      return { ...r, text: editingReqText, constraint }
+      return { ...r, text: editingReqText, wordLimit, charLimit, constraint }
     }))
     setEditingReqId(null)
     setEditingReqText("")
-    setEditingConstraint(null)
+    setEditingWordLimit("")
+    setEditingCharLimit("")
+    setEditingAttachmentNote("")
   }
 
   function handleDeleteReq(id: string) {
     setDraftReqs(prev => prev.filter(r => r.id !== id))
-    if (editingReqId === id) { setEditingReqId(null); setEditingReqText("") }
+    if (editingReqId === id) {
+      setEditingReqId(null)
+      setEditingReqText("")
+      setEditingWordLimit("")
+      setEditingCharLimit("")
+      setEditingAttachmentNote("")
+    }
   }
 
   function handleContextToggle(attachmentId: string) {
@@ -801,58 +812,53 @@ export default function ArtifactEditorPage({
                             marginBottom: 10,
                           }}
                         />
-                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                          <select
-                            value={editingConstraint?.type ?? "none"}
-                            onChange={e => {
-                              const val = e.target.value
-                              if (val === "none") setEditingConstraint(null)
-                              else setEditingConstraint({ type: val as "word_limit" | "required_attachment", value: "" })
-                            }}
-                            style={{
-                              padding: "5px 8px", borderRadius: "var(--radius-input)",
-                              border: "1px solid var(--hair-2)", backgroundColor: "var(--canvas)",
-                              fontSize: 12, color: "var(--ink-secondary)", cursor: "pointer",
-                            }}
-                          >
-                            <option value="none">No constraint</option>
-                            <option value="word_limit">Word limit</option>
-                            <option value="required_attachment">Required attachment</option>
-                          </select>
-
-                          {editingConstraint?.type === "word_limit" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <label style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>Word limit</label>
                             <input
                               type="number"
-                              value={editingConstraint.value}
-                              onChange={e => setEditingConstraint(c => c ? { ...c, value: e.target.value } : null)}
-                              placeholder="500"
+                              value={editingWordLimit}
+                              onChange={e => setEditingWordLimit(e.target.value)}
+                              placeholder="e.g. 500"
                               style={{
                                 width: 80, padding: "5px 8px", borderRadius: "var(--radius-input)",
                                 border: "1px solid var(--hair-2)", backgroundColor: "var(--canvas)",
                                 fontSize: 12, color: "var(--ink)", outline: "none",
                               }}
                             />
-                          )}
-                          {editingConstraint?.type === "required_attachment" && (
+                            <label style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap", marginLeft: 8 }}>Char limit</label>
                             <input
-                              value={editingConstraint.value}
-                              onChange={e => setEditingConstraint(c => c ? { ...c, value: e.target.value } : null)}
-                              placeholder="e.g. Budget spreadsheet"
+                              type="number"
+                              value={editingCharLimit}
+                              onChange={e => setEditingCharLimit(e.target.value)}
+                              placeholder="e.g. 3000"
+                              style={{
+                                width: 90, padding: "5px 8px", borderRadius: "var(--radius-input)",
+                                border: "1px solid var(--hair-2)", backgroundColor: "var(--canvas)",
+                                fontSize: 12, color: "var(--ink)", outline: "none",
+                              }}
+                            />
+                            <div style={{ flex: 1 }} />
+                            <button type="button" onClick={handleSaveReqEdit} style={{ padding: "5px 14px", borderRadius: "var(--radius-button)", border: "none", backgroundColor: "var(--slate-primary)", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                              Save
+                            </button>
+                            <button type="button" onClick={() => { setEditingReqId(null); setEditingReqText(""); if (!req.text.trim()) handleDeleteReq(req.id) }} style={{ padding: "5px 10px", borderRadius: "var(--radius-button)", border: "1px solid var(--hair-2)", backgroundColor: "transparent", color: "var(--ink-secondary)", fontSize: 12, cursor: "pointer" }}>
+                              Cancel
+                            </button>
+                          </div>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <label style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>Attachment note</label>
+                            <input
+                              value={editingAttachmentNote}
+                              onChange={e => setEditingAttachmentNote(e.target.value)}
+                              placeholder="e.g. Budget spreadsheet (xlsx or pdf)"
                               style={{
                                 flex: 1, padding: "5px 8px", borderRadius: "var(--radius-input)",
                                 border: "1px solid var(--hair-2)", backgroundColor: "var(--canvas)",
                                 fontSize: 12, color: "var(--ink)", outline: "none",
                               }}
                             />
-                          )}
-
-                          <div style={{ flex: 1 }} />
-                          <button type="button" onClick={handleSaveReqEdit} style={{ padding: "5px 14px", borderRadius: "var(--radius-button)", border: "none", backgroundColor: "var(--slate-primary)", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                            Save
-                          </button>
-                          <button type="button" onClick={() => { setEditingReqId(null); setEditingReqText(""); if (!req.text.trim()) handleDeleteReq(req.id) }} style={{ padding: "5px 10px", borderRadius: "var(--radius-button)", border: "1px solid var(--hair-2)", backgroundColor: "transparent", color: "var(--ink-secondary)", fontSize: 12, cursor: "pointer" }}>
-                            Cancel
-                          </button>
+                          </div>
                         </div>
                       </div>
                     ) : (
@@ -872,17 +878,38 @@ export default function ArtifactEditorPage({
                           <p style={{ margin: "0 0 4px", fontSize: 13, color: "var(--ink)", lineHeight: "18px" }}>
                             {req.text || <em style={{ color: "var(--ink-tertiary)" }}>Untitled requirement</em>}
                           </p>
-                          {req.constraint && (
-                            <span style={{
-                              display: "inline-flex", alignItems: "center", gap: 4,
-                              padding: "2px 7px", borderRadius: "var(--radius-pill)",
-                              fontSize: 10, fontWeight: 600,
-                              backgroundColor: req.constraint.type === "word_limit" ? "var(--slate-tint)" : "var(--terracotta-tint)",
-                              color:           req.constraint.type === "word_limit" ? "var(--slate-secondary)" : "var(--terracotta)",
-                            }}>
-                              {req.constraint.type === "word_limit" ? `${req.constraint.value} words` : `Attachment: ${req.constraint.value}`}
-                            </span>
-                          )}
+                          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                            {req.wordLimit && (
+                              <span style={{
+                                display: "inline-flex", alignItems: "center",
+                                padding: "2px 7px", borderRadius: "var(--radius-pill)",
+                                fontSize: 10, fontWeight: 600,
+                                backgroundColor: "var(--slate-tint)", color: "var(--slate-secondary)",
+                              }}>
+                                ≤{req.wordLimit} words
+                              </span>
+                            )}
+                            {req.charLimit && (
+                              <span style={{
+                                display: "inline-flex", alignItems: "center",
+                                padding: "2px 7px", borderRadius: "var(--radius-pill)",
+                                fontSize: 10, fontWeight: 600,
+                                backgroundColor: "var(--slate-tint)", color: "var(--slate-secondary)",
+                              }}>
+                                ≤{req.charLimit} chars
+                              </span>
+                            )}
+                            {req.constraint?.type === "required_attachment" && (
+                              <span style={{
+                                display: "inline-flex", alignItems: "center",
+                                padding: "2px 7px", borderRadius: "var(--radius-pill)",
+                                fontSize: 10, fontWeight: 600,
+                                backgroundColor: "var(--terracotta-tint)", color: "var(--terracotta)",
+                              }}>
+                                Attachment: {req.constraint.value}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                           <button type="button" onClick={() => handleEditReq(req)} style={{ padding: 4, background: "none", border: "none", cursor: "pointer", color: "var(--ink-tertiary)", borderRadius: 4 }} title="Edit">
@@ -1202,14 +1229,23 @@ export default function ArtifactEditorPage({
                                 <p style={{ margin: "0 0 4px", fontSize: 12, color: "var(--ink)", lineHeight: "16px", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
                                   {req.text}
                                 </p>
-                                {req.constraint && (
-                                  <span style={{
-                                    fontSize: 10, fontWeight: 600,
-                                    color: req.constraint.type === "word_limit" ? "var(--ink-tertiary)" : "var(--terracotta)",
-                                  }}>
-                                    {req.constraint.type === "word_limit" ? `≤${req.constraint.value} words` : "Attachment req."}
-                                  </span>
-                                )}
+                                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                                  {req.wordLimit && (
+                                    <span style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-tertiary)" }}>
+                                      ≤{req.wordLimit} w
+                                    </span>
+                                  )}
+                                  {req.charLimit && (
+                                    <span style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-tertiary)" }}>
+                                      ≤{req.charLimit} ch
+                                    </span>
+                                  )}
+                                  {req.constraint?.type === "required_attachment" && (
+                                    <span style={{ fontSize: 10, fontWeight: 600, color: "var(--terracotta)" }}>
+                                      Attachment req.
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                               <div style={{ flexShrink: 0 }}>
                                 {status === "covered"   && <CheckCircle  size={13} style={{ color: "var(--evergreen)" }} />}
@@ -1239,50 +1275,89 @@ export default function ArtifactEditorPage({
                     </div>
                   )}
 
-                  {leftTab === "compliance" && (
-                    <div style={{ padding: "12px 8px" }}>
-                      <p style={{ margin: "0 0 10px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)", padding: "0 4px" }}>
-                        Compliance matrix
-                      </p>
-                      {requirements.map(req => {
-                        const section = sections.find(s => s.requirementId === req.id)
-                        const status  = section ? sectionCompliance(section, req) : "uncovered"
-                        const words   = section ? countWords(section.content) : 0
-                        const limit   = req.constraint?.type === "word_limit" ? req.constraint.value as number : null
-                        return (
-                          <div
-                            key={req.id}
-                            onClick={() => section && scrollToSection(section.id)}
-                            style={{
-                              padding: "9px 10px", borderRadius: "var(--radius-button)",
-                              marginBottom: 2, cursor: section ? "pointer" : "default",
-                              borderLeft: `2px solid ${status === "covered" ? "var(--evergreen)" : status === "partial" ? "var(--amber)" : "var(--hair-2)"}`,
-                              transition: "background-color 120ms",
-                            }}
-                            onMouseEnter={e => { if (section) (e.currentTarget.style.backgroundColor = "var(--canvas)") }}
-                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-                          >
-                            <p style={{ margin: "0 0 3px", fontSize: 11, color: "var(--ink)", lineHeight: "15px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {req.text}
+                  {leftTab === "compliance" && (() => {
+                    const totalWords = sections.reduce((s, sec) => s + countWords(sec.content), 0)
+                    const totalChars = sections.reduce((s, sec) => s + countChars(sec.content), 0)
+                    const docOverWord = docWordLimit != null && totalWords > docWordLimit
+                    const docOverChar = docCharLimit != null && totalChars > docCharLimit
+                    return (
+                      <div style={{ padding: "12px 8px" }}>
+                        <p style={{ margin: "0 0 10px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)", padding: "0 4px" }}>
+                          Compliance matrix
+                        </p>
+                        {requirements.map(req => {
+                          const section = sections.find(s => s.requirementId === req.id)
+                          const status  = section ? sectionCompliance(section, req) : "uncovered"
+                          const words   = section ? countWords(section.content) : 0
+                          const chars   = section ? countChars(section.content) : 0
+                          return (
+                            <div
+                              key={req.id}
+                              onClick={() => section && scrollToSection(section.id)}
+                              style={{
+                                padding: "9px 10px", borderRadius: "var(--radius-button)",
+                                marginBottom: 2, cursor: section ? "pointer" : "default",
+                                borderLeft: `2px solid ${status === "covered" ? "var(--evergreen)" : status === "partial" ? "var(--amber)" : "var(--hair-2)"}`,
+                                transition: "background-color 120ms",
+                              }}
+                              onMouseEnter={e => { if (section) (e.currentTarget.style.backgroundColor = "var(--canvas)") }}
+                              onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                            >
+                              <p style={{ margin: "0 0 3px", fontSize: 11, color: "var(--ink)", lineHeight: "15px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {req.text}
+                              </p>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                <span style={{ fontSize: 10, color: status === "covered" ? "var(--evergreen)" : status === "partial" ? "var(--amber)" : "var(--ink-tertiary)", fontWeight: 600 }}>
+                                  {status === "covered" ? "Covered" : status === "partial" ? "Over limit" : "Empty"}
+                                </span>
+                                {req.wordLimit != null && (
+                                  <span style={{ fontSize: 10, color: words > req.wordLimit ? "var(--amber)" : "var(--ink-tertiary)" }}>
+                                    {words} / {req.wordLimit} w
+                                  </span>
+                                )}
+                                {req.charLimit != null && (
+                                  <span style={{ fontSize: 10, color: chars > req.charLimit ? "var(--amber)" : "var(--ink-tertiary)" }}>
+                                    {chars} / {req.charLimit} ch
+                                  </span>
+                                )}
+                                {req.constraint?.type === "required_attachment" && (
+                                  <span style={{ fontSize: 10, color: "var(--terracotta)" }}>Attachment req.</span>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+
+                        {(docWordLimit != null || docCharLimit != null) && (
+                          <div style={{
+                            marginTop: 10, padding: "9px 10px",
+                            borderRadius: "var(--radius-button)",
+                            borderLeft: `2px solid ${docOverWord || docOverChar ? "var(--amber)" : "var(--evergreen)"}`,
+                            borderTop: "1px solid var(--hair)",
+                          }}>
+                            <p style={{ margin: "0 0 3px", fontSize: 11, color: "var(--ink)", fontWeight: 600, lineHeight: "15px" }}>
+                              Total document
                             </p>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span style={{ fontSize: 10, color: status === "covered" ? "var(--evergreen)" : status === "partial" ? "var(--amber)" : "var(--ink-tertiary)", fontWeight: 600 }}>
-                                {status === "covered" ? "Covered" : status === "partial" ? "Over limit" : "Empty"}
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 10, fontWeight: 600, color: docOverWord || docOverChar ? "var(--amber)" : "var(--evergreen)" }}>
+                                {docOverWord || docOverChar ? "Over limit" : "Within limit"}
                               </span>
-                              {limit !== null && (
-                                <span style={{ fontSize: 10, color: (words > limit * 1.05) ? "var(--amber)" : "var(--ink-tertiary)" }}>
-                                  {words} / {limit}
+                              {docWordLimit != null && (
+                                <span style={{ fontSize: 10, color: docOverWord ? "var(--amber)" : "var(--ink-tertiary)" }}>
+                                  {totalWords} / {docWordLimit} w
                                 </span>
                               )}
-                              {req.constraint?.type === "required_attachment" && (
-                                <span style={{ fontSize: 10, color: "var(--terracotta)" }}>Attachment req.</span>
+                              {docCharLimit != null && (
+                                <span style={{ fontSize: 10, color: docOverChar ? "var(--amber)" : "var(--ink-tertiary)" }}>
+                                  {totalChars} / {docCharLimit} ch
+                                </span>
                               )}
                             </div>
                           </div>
-                        )
-                      })}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    )
+                  })()}
 
                 </div>
               </>
@@ -1345,8 +1420,9 @@ export default function ArtifactEditorPage({
                   const isActive   = activeSectionId === section.id
                   const isProposed = aiProposal?.sectionId === section.id
                   const wordCount  = countWords(section.content)
-                  const limit      = req?.constraint?.type === "word_limit" ? req.constraint.value as number : null
-                  const overLimit  = limit !== null && wordCount > limit * 1.05
+                  const charCount  = countChars(section.content)
+                  const overWord   = req?.wordLimit != null && wordCount > req.wordLimit
+                  const overChar   = req?.charLimit != null && charCount > req.charLimit
 
                   return (
                     <div
@@ -1441,18 +1517,23 @@ export default function ArtifactEditorPage({
                         />
                       </div>
 
-                      {/* Word count */}
-                      {(limit !== null || section.content.trim()) && (
-                        <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 8 }}>
-                          {limit !== null && (
-                            <span style={{ fontSize: 11, color: overLimit ? "var(--amber)" : "var(--ink-tertiary)" }}>
-                              {wordCount} / {limit} words
-                              {overLimit && <span style={{ marginLeft: 4 }}> — over limit</span>}
+                      {/* Word + character count */}
+                      {(req?.wordLimit != null || req?.charLimit != null || section.content.trim()) && (
+                        <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                          {req?.wordLimit != null ? (
+                            <span style={{ fontSize: 11, color: overWord ? "var(--amber)" : "var(--ink-tertiary)" }}>
+                              {wordCount} / {req.wordLimit} words{overWord && <span style={{ marginLeft: 4 }}>— over limit</span>}
                             </span>
-                          )}
-                          {!limit && section.content.trim() && (
+                          ) : section.content.trim() ? (
                             <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>{wordCount} words</span>
-                          )}
+                          ) : null}
+                          {req?.charLimit != null ? (
+                            <span style={{ fontSize: 11, color: overChar ? "var(--amber)" : "var(--ink-tertiary)" }}>
+                              {charCount} / {req.charLimit} characters{overChar && <span style={{ marginLeft: 4 }}>— over limit</span>}
+                            </span>
+                          ) : section.content.trim() ? (
+                            <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>{charCount} characters</span>
+                          ) : null}
                           {req?.constraint?.type === "required_attachment" && (
                             <span style={{ fontSize: 11, color: "var(--terracotta)", display: "flex", alignItems: "center", gap: 3 }}>
                               <Paperclip size={10} /> Attachment required: {req.constraint.value}
@@ -1465,6 +1546,37 @@ export default function ArtifactEditorPage({
                 })}
               </div>
             </div>
+
+            {/* ── DOCUMENT FOOTER ─────────────────────────────────────── */}
+            {(docWordLimit != null || docCharLimit != null) && (() => {
+              const totalWords = sections.reduce((s, sec) => s + countWords(sec.content), 0)
+              const totalChars = sections.reduce((s, sec) => s + countChars(sec.content), 0)
+              const overWord   = docWordLimit != null && totalWords > docWordLimit
+              const overChar   = docCharLimit != null && totalChars > docCharLimit
+              return (
+                <div style={{
+                  flexShrink: 0,
+                  borderTop: "1px solid var(--hair)",
+                  padding: "8px 48px",
+                  display: "flex", alignItems: "center", gap: 20,
+                  backgroundColor: "var(--surface)",
+                }}>
+                  <span style={{ fontSize: 11, color: "var(--ink-tertiary)", fontWeight: 600 }}>Document total</span>
+                  {docWordLimit != null && (
+                    <span style={{ fontSize: 11, color: overWord ? "var(--amber)" : "var(--ink-tertiary)" }}>
+                      {totalWords.toLocaleString()} / {docWordLimit.toLocaleString()} words
+                      {overWord && <span style={{ marginLeft: 4, fontWeight: 600 }}>— over limit</span>}
+                    </span>
+                  )}
+                  {docCharLimit != null && (
+                    <span style={{ fontSize: 11, color: overChar ? "var(--amber)" : "var(--ink-tertiary)" }}>
+                      {totalChars.toLocaleString()} / {docCharLimit.toLocaleString()} characters
+                      {overChar && <span style={{ marginLeft: 4, fontWeight: 600 }}>— over limit</span>}
+                    </span>
+                  )}
+                </div>
+              )
+            })()}
           </div>
 
           {/* ── RIGHT RAIL ────────────────────────────────────────────── */}

@@ -154,13 +154,15 @@ export interface Task {
 // ── Writing surface ───────────────────────────────────────────────────────
 
 export interface RequirementConstraint {
-  type: "word_limit" | "required_attachment"
-  value: number | string
+  type: "required_attachment"
+  value: string
 }
 
 export interface Requirement {
   id: string
   text: string
+  wordLimit?: number
+  charLimit?: number
   constraint?: RequirementConstraint
 }
 
@@ -177,6 +179,8 @@ export interface WritingSession {
   sections: DraftSection[]
   sourceAttachmentId?: string
   contextAttachmentIds: string[]
+  wordLimit?: number
+  charLimit?: number
 }
 
 export interface Snippet {

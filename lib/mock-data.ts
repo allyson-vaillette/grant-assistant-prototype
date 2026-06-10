@@ -571,26 +571,30 @@ export function createPipelineOpportunity(
 export const WRITING_SESSIONS: WritingSession[] = [
   {
     artifactId: "art-1",
+    wordLimit: 2250,
+    charLimit: 14000,
     requirements: [
       {
         id: "req-1",
         text: "Organization overview and mission alignment",
-        constraint: { type: "word_limit", value: 500 },
+        wordLimit: 500,
+        charLimit: 3000,
       },
       {
         id: "req-2",
         text: "Program description and activities to be funded",
-        constraint: { type: "word_limit", value: 750 },
+        wordLimit: 750,
       },
       {
         id: "req-3",
         text: "Expected outcomes and impact metrics",
-        constraint: { type: "word_limit", value: 500 },
+        wordLimit: 500,
+        charLimit: 3200,
       },
       {
         id: "req-4",
         text: "Evaluation methodology and reporting plan",
-        constraint: { type: "word_limit", value: 250 },
+        wordLimit: 250,
       },
       {
         id: "req-5",
