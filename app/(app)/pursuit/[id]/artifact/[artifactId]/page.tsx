@@ -349,8 +349,9 @@ export default function ArtifactEditorPage({
 
   // ── Working state: AI handlers ────────────────────────────────────────
 
-  async function handleAIGenerate() {
-    if (!aiPrompt.trim()) return
+  async function handleAIGenerate(promptOverride?: string) {
+    const prompt = promptOverride ?? aiPrompt
+    if (!prompt.trim()) return
     const ctrl = new AbortController()
     abortRef.current = ctrl
     const targetSection = sections.find(s => s.id === activeSectionId) ?? sections.find(s => s.content.trim())
@@ -366,7 +367,7 @@ export default function ArtifactEditorPage({
       if (targetSection) {
         setAiProposal({
           sectionId:    targetSection.id,
-          proposed:     mockAIReviseSection(targetSection.content, aiPrompt),
+          proposed:     mockAIReviseSection(targetSection.content, prompt),
           originalText: targetSection.content,
         })
       }
@@ -401,18 +402,25 @@ export default function ArtifactEditorPage({
 
   // ── Chat handlers ─────────────────────────────────────────────────────
 
+  const REVISION_INTENT = /\b(revis|rewrit|rephras|trim|shorten|shorter|longer|expand|strengthen|compel|improve|make it|change|cut|add|remov)/i
+
   async function handleChatSend() {
     const msg = chatInput.trim()
-    if (!msg || isChatBusy) return
+    if (!msg || isChatBusy || aiPhase === "generating") return
     const activeSection = sections.find(s => s.id === activeSectionId)
     const userMsg: ChatMessage = { id: `msg-${Date.now()}`, role: "user", content: msg, sectionId: activeSectionId ?? undefined }
     setChatMessages(prev => [...prev, userMsg])
     setChatInput("")
-    setIsChatBusy(true)
-    await new Promise(r => setTimeout(r, 1100))
-    const reply = mockAIChatReply(msg, activeSection?.title)
-    setChatMessages(prev => [...prev, { id: `msg-${Date.now()}-a`, role: "assistant", content: reply }])
-    setIsChatBusy(false)
+
+    if (REVISION_INTENT.test(msg) && (activeSection || sections.some(s => s.content.trim()))) {
+      await handleAIGenerate(msg)
+    } else {
+      setIsChatBusy(true)
+      await new Promise(r => setTimeout(r, 1100))
+      const reply = mockAIChatReply(msg, activeSection?.title)
+      setChatMessages(prev => [...prev, { id: `msg-${Date.now()}-a`, role: "assistant", content: reply }])
+      setIsChatBusy(false)
+    }
   }
 
   // ── Snippets handler ──────────────────────────────────────────────────
@@ -1700,7 +1708,7 @@ export default function ArtifactEditorPage({
                         <AlertCircle size={13} style={{ color: "var(--error)", flexShrink: 0, marginTop: 1 }} />
                         <div>
                           <p style={{ margin: "0 0 5px", fontSize: 12, color: "var(--error)", lineHeight: "16px" }}>{aiError}</p>
-                          <button type="button" onClick={handleAIGenerate} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 600, color: "var(--error)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                          <button type="button" onClick={() => handleAIGenerate()} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 600, color: "var(--error)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                             <RefreshCw size={10} /> Retry
                           </button>
                         </div>
@@ -1740,51 +1748,6 @@ export default function ArtifactEditorPage({
                       <div ref={chatEndRef} />
                     </div>
 
-                    {/* AI revision controls (when idle or preview) */}
-                    {(aiPhase === "idle" || aiPhase === "error") && (
-                      <div style={{ flexShrink: 0, padding: "10px 14px", borderTop: "1px solid var(--hair)", display: "flex", flexDirection: "column", gap: 8 }}>
-                        <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
-                          Revise with AI
-                        </p>
-                        <textarea
-                          value={aiPrompt}
-                          onChange={e => setAiPrompt(e.target.value)}
-                          onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && aiPrompt.trim()) { e.preventDefault(); handleAIGenerate() } }}
-                          placeholder={activeSection ? `How should "${activeSection.title.split(" ").slice(0, 3).join(" ")}…" be improved?` : "What should be changed or strengthened?"}
-                          rows={2}
-                          style={{
-                            width: "100%", padding: "7px 10px", borderRadius: "var(--radius-input)",
-                            border: "1px solid var(--hair-2)", backgroundColor: "var(--canvas)",
-                            fontSize: 12, color: "var(--ink)", lineHeight: "18px",
-                            fontFamily: "inherit", outline: "none", resize: "none", boxSizing: "border-box",
-                            transition: "border-color 120ms",
-                          }}
-                          onFocus={e  => (e.currentTarget.style.borderColor = "var(--slate-soft)")}
-                          onBlur={e   => (e.currentTarget.style.borderColor = "var(--hair-2)")}
-                        />
-                        <button
-                          type="button"
-                          disabled={!aiPrompt.trim()}
-                          onClick={handleAIGenerate}
-                          style={{
-                            width: "100%", padding: "8px 0", borderRadius: "var(--radius-button)", border: "none",
-                            background: aiPrompt.trim() ? "var(--gradient-ai-cta)" : "var(--hair-2)",
-                            color: aiPrompt.trim() ? "#fff" : "var(--ink-tertiary)",
-                            fontSize: 12, fontWeight: 600, cursor: aiPrompt.trim() ? "pointer" : "default",
-                            display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-                            transition: "opacity 150ms",
-                          }}
-                          onMouseEnter={e => { if (aiPrompt.trim()) (e.currentTarget.style.opacity = "0.9") }}
-                          onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
-                        >
-                          <Sparkles size={12} /> Generate revision
-                        </button>
-                        <p style={{ margin: 0, fontSize: 10, color: "var(--ink-tertiary)", lineHeight: "14px" }}>
-                          Preview before apply — nothing changes until you accept.
-                        </p>
-                      </div>
-                    )}
-
                     {/* Generating state */}
                     {aiPhase === "generating" && (
                       <div style={{ flexShrink: 0, padding: "16px 14px", borderTop: "1px solid var(--hair)", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
@@ -1822,13 +1785,19 @@ export default function ArtifactEditorPage({
                     )}
 
                     {/* Chat input */}
-                    <div style={{ flexShrink: 0, padding: "10px 14px", borderTop: "1px solid var(--hair)", display: "flex", gap: 8, alignItems: "flex-end" }}>
+                    <div style={{ flexShrink: 0, borderTop: "1px solid var(--hair)" }}>
+                      {activeSection && aiPhase === "idle" && (
+                        <p style={{ margin: 0, padding: "6px 14px 0", fontSize: 10, color: "var(--ink-tertiary)", lineHeight: "14px" }}>
+                          Ask a question or say &ldquo;make it shorter&rdquo; — revisions preview before applying.
+                        </p>
+                      )}
+                    <div style={{ padding: "8px 14px 10px", display: "flex", gap: 8, alignItems: "flex-end" }}>
                       <textarea
                         ref={chatInputRef}
                         value={chatInput}
                         onChange={e => setChatInput(e.target.value)}
                         onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChatSend() } }}
-                        placeholder="Ask anything…"
+                        placeholder={activeSection ? `Ask about or revise "${activeSection.title.split(" ").slice(0, 3).join(" ")}…"` : "Ask anything…"}
                         rows={1}
                         style={{
                           flex: 1, padding: "7px 10px", borderRadius: "var(--radius-input)",
@@ -1855,6 +1824,7 @@ export default function ArtifactEditorPage({
                       >
                         <Send size={13} />
                       </button>
+                    </div>
                     </div>
                   </div>
                 )}
