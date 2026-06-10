@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, FileText, FileSpreadsheet, Paperclip, CheckSquare, Square, ExternalLink, ChevronDown, Plus, Download, Sparkles, CheckCircle, AlertTriangle, Circle, Check, Lock } from "lucide-react"
+import { ArrowLeft, FileText, FileSpreadsheet, Paperclip, ChevronDown, Plus, Download, CheckCircle, AlertTriangle, Circle, Check, Lock } from "lucide-react"
 import { ArtifactEditorContent } from "./artifact/[artifactId]/page"
 import {
   FUNDERS, OPPORTUNITIES, USER, TEAMMATES,
@@ -247,10 +247,9 @@ function StatusPicker({
 
 type Tab = "requirements" | "documents" | "tasks"
 
-function TabBar({ active, onChange, counts }: {
+function TabBar({ active, onChange }: {
   active: Tab
   onChange: (t: Tab) => void
-  counts: Record<Tab, number>
 }) {
   return (
     <div style={{ display: "flex", gap: 0, borderBottom: "1px solid var(--hair)" }}>
@@ -260,21 +259,15 @@ function TabBar({ active, onChange, counts }: {
           type="button"
           onClick={() => onChange(t)}
           style={{
-            padding: "10px 18px", border: "none", background: "none", cursor: "pointer",
+            padding: "10px 8px", border: "none", background: "none", cursor: "pointer",
             fontSize: 13, fontWeight: active === t ? 600 : 400,
             color: active === t ? "var(--ink)" : "var(--ink-tertiary)",
             borderBottom: active === t ? "2px solid var(--slate-primary)" : "2px solid transparent",
             marginBottom: -1, transition: "color 120ms",
+            whiteSpace: "nowrap",
           }}
         >
           {t.charAt(0).toUpperCase() + t.slice(1)}
-          <span style={{
-            marginLeft: 6, padding: "1px 6px", borderRadius: 10, fontSize: 11,
-            backgroundColor: active === t ? "var(--slate-tint)" : "var(--canvas)",
-            color: active === t ? "var(--slate-primary)" : "var(--ink-tertiary)",
-          }}>
-            {counts[t]}
-          </span>
         </button>
       ))}
     </div>
@@ -828,11 +821,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
           backgroundColor: "var(--surface)",
           borderRight: "1px solid var(--hair)",
         }}>
-          <TabBar
-            active={activeTab}
-            onChange={setActiveTab}
-            counts={{ requirements: writingSession?.requirements.length ?? 0, documents: attachments.length, tasks: tasks.length }}
-          />
+          <TabBar active={activeTab} onChange={setActiveTab} />
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
             {/* ── Requirements tab ─────────────────────────────────────── */}
@@ -1120,35 +1109,19 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
         {/* Center: draft editor */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", borderRight: "1px solid var(--hair)" }}>
           {selectedArtifactId && (
-            <ArtifactEditorContent params={{ id: params.id, artifactId: selectedArtifactId }} />
+            <ArtifactEditorContent params={{ id: params.id, artifactId: selectedArtifactId }} mode="center" />
           )}
         </div>
 
-        {/* Right rail: AI gradient */}
-        <div style={{
-          width: 280, flexShrink: 0,
-          display: "flex", flexDirection: "column",
-          background: "var(--gradient-ai-rail)",
-        }}>
-          <div style={{ flex: 1, padding: "20px 16px", overflowY: "auto" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 12 }}>
-              <Sparkles size={14} style={{ color: "#01B8FC", flexShrink: 0 }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.90)" }}>
-                AI Assistant
-              </span>
+        {/* Right rail: AI assistant */}
+        <div style={{ width: 280, flexShrink: 0, display: "flex", flexDirection: "column", overflow: "hidden", borderLeft: "1px solid var(--hair)" }}>
+          {selectedArtifactId ? (
+            <ArtifactEditorContent params={{ id: params.id, artifactId: selectedArtifactId }} mode="right-rail" />
+          ) : (
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+              <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", textAlign: "center" }}>Select a draft to enable AI assistant.</p>
             </div>
-            <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: "18px" }}>
-              Chat and AI suggestions will appear here.
-            </p>
-          </div>
-          <div style={{ padding: "14px 16px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", color: "rgba(255,255,255,0.55)" }}>
-              SNIPPETS
-            </span>
-            <p style={{ margin: "6px 0 0", fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: "16px" }}>
-              Org snippets will appear here.
-            </p>
-          </div>
+          )}
         </div>
 
       </div>

@@ -153,8 +153,10 @@ function mockAIChatReply(userMessage: string, sectionTitle?: string): string {
 
 export function ArtifactEditorContent({
   params,
+  mode = "standalone",
 }: {
   params: { id: string; artifactId: string }
+  mode?: "standalone" | "center" | "right-rail"
 }) {
   const pip             = getPipelineForOpportunity(params.id)
   const artifact        = getArtifact(params.artifactId)
@@ -669,7 +671,7 @@ export function ArtifactEditorContent({
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--canvas)" }}>
 
       {/* ══ TOP BAR ══════════════════════════════════════════════════════════ */}
-      <div
+      {mode === "standalone" && <div
         role="banner"
         style={{
           flexShrink: 0, height: 52,
@@ -744,11 +746,17 @@ export function ArtifactEditorContent({
             Done
           </button>
         </Link>
-      </div>
+      </div>}
 
       {/* ══ CONTENT ══════════════════════════════════════════════════════════ */}
 
-      {view === "onramp" ? (
+      {view === "onramp" && mode === "right-rail" ? (
+        <div style={{ flex: 1, backgroundColor: "var(--surface)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+            <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", textAlign: "center", lineHeight: "18px" }}>AI assistant will be ready after draft setup.</p>
+          </div>
+        </div>
+      ) : view === "onramp" ? (
 
         // ── ON-RAMP WIZARD ──────────────────────────────────────────────────
         <div
@@ -1271,7 +1279,7 @@ export function ArtifactEditorContent({
         >
 
           {/* ── LEFT RAIL ─────────────────────────────────────────────── */}
-          <div
+          {mode === "standalone" && <div
             role="region"
             aria-label="Requirements and compliance"
             style={{
@@ -1536,10 +1544,10 @@ export function ArtifactEditorContent({
                 </div>
               </>
             )}
-          </div>
+          </div>}
 
           {/* ── CENTER EDITOR ─────────────────────────────────────────── */}
-          <div
+          {mode !== "right-rail" && <div
             role="main"
             aria-label="Document editor"
             style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, backgroundColor: "#fff" }}
@@ -1813,23 +1821,25 @@ export function ArtifactEditorContent({
                 </div>
               )
             })()}
-          </div>
+          </div>}
 
           {/* ── RIGHT RAIL ────────────────────────────────────────────── */}
-          <div
+          {mode !== "center" && <div
             role="complementary"
             aria-label="AI assistant and snippets"
             style={{
-              width: rightCollapsed ? 40 : 280,
-              flexShrink: 0, transition: "width 200ms ease",
-              borderLeft: "1px solid var(--hair)",
+              width: mode === "right-rail" ? undefined : (rightCollapsed ? 40 : 280),
+              flex: mode === "right-rail" ? 1 : undefined,
+              flexShrink: mode === "right-rail" ? undefined : 0,
+              transition: "width 200ms ease",
+              borderLeft: mode === "right-rail" ? "none" : "1px solid var(--hair)",
               backgroundColor: "var(--surface)",
               display: "flex", flexDirection: "column",
               overflow: "hidden",
-              boxShadow: "var(--shadow-panel)",
+              boxShadow: mode === "right-rail" ? "none" : "var(--shadow-panel)",
             }}
           >
-            {rightCollapsed ? (
+            {rightCollapsed && mode !== "right-rail" ? (
               // Collapsed strip
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, gap: 6 }}>
                 <button type="button" title="AI Chat" onClick={() => { setRightCollapsed(false); setRightTab("chat") }} style={{ width: 32, height: 32, borderRadius: "var(--radius-button)", border: "none", backgroundColor: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--ink-tertiary)" }}
@@ -2517,7 +2527,7 @@ export function ArtifactEditorContent({
 
               </>
             )}
-          </div>
+          </div>}
 
         </div>
       )}
