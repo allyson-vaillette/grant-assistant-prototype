@@ -1441,9 +1441,8 @@ export default function ArtifactEditorPage({
                         outline: isActive ? "none" : "none",
                       }}
                     >
-                      {/* Section divider + heading */}
+                      {/* Section heading */}
                       <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 12 }}>
-                        <div style={{ width: 20, height: 1, backgroundColor: "var(--hair-2)", flexShrink: 0, marginBottom: 3 }} />
                         <h2
                           style={{
                             margin: 0,
