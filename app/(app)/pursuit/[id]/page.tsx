@@ -3,14 +3,14 @@
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, FileText, Paperclip, CheckSquare, Square, ExternalLink, ChevronDown, Plus, Download, Sparkles, CheckCircle, AlertTriangle, Circle, Check } from "lucide-react"
+import { ArrowLeft, FileText, FileSpreadsheet, Paperclip, CheckSquare, Square, ExternalLink, ChevronDown, Plus, Download, Sparkles, CheckCircle, AlertTriangle, Circle, Check, Lock } from "lucide-react"
 import { ArtifactEditorContent } from "./artifact/[artifactId]/page"
 import {
   FUNDERS, OPPORTUNITIES, USER, TEAMMATES,
   getArtifactsForPipeline, getAttachmentsForPipeline, getTasksForPipeline,
   getPipelineForOpportunity, createArtifact, getWritingSession,
 } from "@/lib/mock-data"
-import type { PipelineStatus, PipelinePhase, ArtifactStage, AttachmentCategory, Task, Requirement, DraftSection } from "@/lib/types"
+import type { PipelineStatus, PipelinePhase, ArtifactStage, AttachmentCategory, Attachment, Task, Requirement, DraftSection } from "@/lib/types"
 import { phaseFromStatus } from "@/lib/types"
 
 // ── Phase + status config ──────────────────────────────────────────────────
@@ -88,6 +88,7 @@ const CATEGORY_LABEL: Record<AttachmentCategory, string> = {
   report:         "Report",
   contact_notes:  "Contact notes",
   other:          "File",
+  application:    "Application",
 }
 
 // ── Phase indicator ────────────────────────────────────────────────────────
@@ -306,6 +307,256 @@ function sectionCompliance(section: DraftSection, req: Requirement): ComplianceS
   if (req.wordLimit && countWords(section.content) > req.wordLimit) return "partial"
   if (req.charLimit && countChars(section.content) > req.charLimit) return "partial"
   return "covered"
+}
+
+// ── Documents tab ─────────────────────────────────────────────────────────
+
+const SOURCE_CATS: AttachmentCategory[] = ["rfp", "prior_proposal", "report", "contact_notes", "other"]
+
+const ORG_LIBRARY_DOCS: { id: string; filename: string; fileType: "pdf" | "docx" | "sheet" }[] = [
+  { id: "lib-1", filename: "501(c)(3) determination letter.pdf", fileType: "pdf"   },
+  { id: "lib-2", filename: "Org budget 2026.xlsx",               fileType: "sheet" },
+  { id: "lib-3", filename: "Last year's proposal.docx",          fileType: "docx"  },
+]
+
+function inferFileType(name: string): "pdf" | "docx" | "image" | "sheet" | "other" {
+  const ext = name.split(".").pop()?.toLowerCase() ?? ""
+  if (ext === "pdf") return "pdf"
+  if (ext === "docx" || ext === "doc") return "docx"
+  if (ext === "xlsx" || ext === "xls" || ext === "csv") return "sheet"
+  if (["png","jpg","jpeg","gif","webp"].includes(ext)) return "image"
+  return "other"
+}
+
+function AttachmentFileIcon({ fileType }: { fileType: string }) {
+  return fileType === "sheet"
+    ? <FileSpreadsheet size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
+    : <FileText        size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
+}
+
+type UploadStatus = "idle" | "uploading" | "error"
+
+function DocumentsTab({ initialAttachments, pipId }: { initialAttachments: Attachment[]; pipId: string }) {
+  const [atts,       setAtts]       = useState<Attachment[]>(initialAttachments)
+  const [srcStatus,  setSrcStatus]  = useState<UploadStatus>("idle")
+  const [appStatus,  setAppStatus]  = useState<UploadStatus>("idle")
+  const [srcLibOpen, setSrcLibOpen] = useState(false)
+  const [appLibOpen, setAppLibOpen] = useState(false)
+  const srcInputRef = useRef<HTMLInputElement>(null)
+  const appInputRef = useRef<HTMLInputElement>(null)
+  const srcLibRef   = useRef<HTMLDivElement>(null)
+  const appLibRef   = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!srcLibOpen && !appLibOpen) return
+    function onDown(e: MouseEvent) {
+      if (srcLibOpen && srcLibRef.current && !srcLibRef.current.contains(e.target as Node)) setSrcLibOpen(false)
+      if (appLibOpen && appLibRef.current && !appLibRef.current.contains(e.target as Node)) setAppLibOpen(false)
+    }
+    document.addEventListener("mousedown", onDown)
+    return () => document.removeEventListener("mousedown", onDown)
+  }, [srcLibOpen, appLibOpen])
+
+  const srcAtts = atts.filter(a => SOURCE_CATS.includes(a.category))
+  const appAtts = atts.filter(a => a.category === "application")
+
+  function doUpload(zone: "src" | "app", file: File) {
+    const set = zone === "src" ? setSrcStatus : setAppStatus
+    set("uploading")
+    setTimeout(() => {
+      setAtts(prev => [...prev, {
+        id: `att-local-${Math.random().toString(36).slice(2)}`,
+        pipelineOpportunityId: pipId,
+        filename: file.name,
+        fileType: inferFileType(file.name),
+        stage: "apply" as const,
+        category: (zone === "src" ? "other" : "application") as AttachmentCategory,
+        uploadDate: todayStr(),
+        uploaderId: USER.id,
+      }])
+      set("idle")
+    }, 1200)
+  }
+
+  function addLib(zone: "src" | "app", doc: typeof ORG_LIBRARY_DOCS[number]) {
+    setAtts(prev => [...prev, {
+      id: `att-lib-${doc.id}-${Math.random().toString(36).slice(2)}`,
+      pipelineOpportunityId: pipId,
+      filename: doc.filename,
+      fileType: doc.fileType,
+      stage: "apply" as const,
+      category: (zone === "src" ? "other" : "application") as AttachmentCategory,
+      uploadDate: todayStr(),
+      uploaderId: USER.id,
+    }])
+    if (zone === "src") setSrcLibOpen(false)
+    else setAppLibOpen(false)
+  }
+
+  const sectionLabel = (text: string) => (
+    <p style={{ margin: 0, padding: "10px 14px 2px", fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)" }}>
+      {text}
+    </p>
+  )
+
+  const libDropdown = (zone: "src" | "app") => (
+    <div style={{
+      position: "absolute", bottom: "calc(100% + 4px)", left: 0, zIndex: 300, minWidth: 210,
+      backgroundColor: "var(--surface)", border: "1px solid var(--hair-2)", borderRadius: 8,
+      boxShadow: "0 8px 24px rgba(28,24,64,0.12)", overflow: "hidden",
+    }}>
+      <p style={{ margin: 0, padding: "8px 10px 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)" }}>
+        Org library
+      </p>
+      {ORG_LIBRARY_DOCS.map(doc => (
+        <button key={doc.id} type="button" onClick={() => addLib(zone, doc)}
+          style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 10px", border: "none", backgroundColor: "transparent", cursor: "pointer", fontSize: 12, color: "var(--ink-secondary)", textAlign: "left", transition: "background-color 100ms" }}
+          onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface-sunk)"}
+          onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"}>
+          <AttachmentFileIcon fileType={doc.fileType} />
+          <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.filename}</span>
+        </button>
+      ))}
+    </div>
+  )
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto" }}>
+
+      {/* ── Sources ── */}
+      <div style={{ borderBottom: "1px solid var(--hair)", paddingBottom: 10 }}>
+        {sectionLabel("Sources")}
+        <p style={{ margin: 0, padding: "2px 14px 8px", fontSize: 10, color: "var(--ink-tertiary)", lineHeight: "14px" }}>
+          Feeds the AI for grounding. Not submitted.
+        </p>
+        {srcAtts.length > 0 && (
+          <div style={{ padding: "0 8px 4px" }}>
+            {srcAtts.map(att => (
+              <div key={att.id}
+                style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 6px", borderRadius: 6, transition: "background-color 120ms" }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}>
+                <AttachmentFileIcon fileType={att.fileType} />
+                <span style={{ flex: 1, fontSize: 11, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {att.filename}
+                </span>
+                <span style={{ fontSize: 10, color: "var(--ink-tertiary)", flexShrink: 0 }}>
+                  {CATEGORY_LABEL[att.category]}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        <input ref={srcInputRef} type="file" style={{ display: "none" }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) doUpload("src", f); e.target.value = "" }} />
+        <div style={{ padding: "2px 8px 0", display: "flex", gap: 6, alignItems: "center" }}>
+          {srcStatus === "error" ? (
+            <>
+              <span style={{ fontSize: 11, color: "var(--terracotta)" }}>Upload failed.</span>
+              <button type="button" onClick={() => srcInputRef.current?.click()}
+                style={{ fontSize: 11, color: "var(--slate-secondary)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                Retry
+              </button>
+              <button type="button" onClick={() => setSrcStatus("idle")}
+                style={{ fontSize: 11, color: "var(--ink-tertiary)", background: "none", border: "none", cursor: "pointer", padding: "0 0 0 2px" }}>
+                Clear
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" disabled={srcStatus === "uploading"} onClick={() => srcInputRef.current?.click()}
+                style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, border: "1px solid var(--hair-2)", backgroundColor: "transparent", fontSize: 11, color: srcStatus === "uploading" ? "var(--ink-tertiary)" : "var(--ink-secondary)", cursor: srcStatus === "uploading" ? "default" : "pointer", transition: "background-color 120ms" }}
+                onMouseEnter={e => { if (srcStatus === "idle") (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}>
+                <Plus size={10} />{srcStatus === "uploading" ? "Uploading…" : "Upload"}
+              </button>
+              <div ref={srcLibRef} style={{ position: "relative" }}>
+                <button type="button" disabled={srcStatus === "uploading"} onClick={() => setSrcLibOpen(v => !v)}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, border: "1px solid var(--hair-2)", backgroundColor: "transparent", fontSize: 11, color: "var(--ink-secondary)", cursor: srcStatus === "uploading" ? "default" : "pointer", transition: "background-color 120ms" }}
+                  onMouseEnter={e => { if (srcStatus === "idle") (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}>
+                  Add from library
+                </button>
+                {srcLibOpen && libDropdown("src")}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── Application attachments ── */}
+      <div style={{ borderBottom: "1px solid var(--hair)", paddingBottom: 10 }}>
+        {sectionLabel("Application attachments")}
+        <p style={{ margin: 0, padding: "2px 14px 8px", fontSize: 10, color: "var(--ink-tertiary)", lineHeight: "14px" }}>
+          Submitted with your application.
+        </p>
+        {appAtts.length > 0 && (
+          <div style={{ padding: "0 8px 4px" }}>
+            {appAtts.map(att => (
+              <div key={att.id}
+                style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 6px", borderRadius: 6, transition: "background-color 120ms" }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}>
+                <AttachmentFileIcon fileType={att.fileType} />
+                <span style={{ flex: 1, fontSize: 11, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {att.filename}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        <input ref={appInputRef} type="file" style={{ display: "none" }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) doUpload("app", f); e.target.value = "" }} />
+        <div style={{ padding: "2px 8px 0", display: "flex", gap: 6, alignItems: "center" }}>
+          {appStatus === "error" ? (
+            <>
+              <span style={{ fontSize: 11, color: "var(--terracotta)" }}>Upload failed.</span>
+              <button type="button" onClick={() => appInputRef.current?.click()}
+                style={{ fontSize: 11, color: "var(--slate-secondary)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                Retry
+              </button>
+              <button type="button" onClick={() => setAppStatus("idle")}
+                style={{ fontSize: 11, color: "var(--ink-tertiary)", background: "none", border: "none", cursor: "pointer", padding: "0 0 0 2px" }}>
+                Clear
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" disabled={appStatus === "uploading"} onClick={() => appInputRef.current?.click()}
+                style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, border: "1px solid var(--hair-2)", backgroundColor: "transparent", fontSize: 11, color: appStatus === "uploading" ? "var(--ink-tertiary)" : "var(--ink-secondary)", cursor: appStatus === "uploading" ? "default" : "pointer", transition: "background-color 120ms" }}
+                onMouseEnter={e => { if (appStatus === "idle") (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}>
+                <Plus size={10} />{appStatus === "uploading" ? "Uploading…" : "Upload"}
+              </button>
+              <div ref={appLibRef} style={{ position: "relative" }}>
+                <button type="button" disabled={appStatus === "uploading"} onClick={() => setAppLibOpen(v => !v)}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, border: "1px solid var(--hair-2)", backgroundColor: "transparent", fontSize: 11, color: "var(--ink-secondary)", cursor: appStatus === "uploading" ? "default" : "pointer", transition: "background-color 120ms" }}
+                  onMouseEnter={e => { if (appStatus === "idle") (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}>
+                  Add from library
+                </button>
+                {appLibOpen && libDropdown("app")}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── Submitted (locked) ── */}
+      <div>
+        <div style={{ padding: "10px 14px 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)" }}>
+            Submitted
+          </p>
+          <Lock size={10} style={{ color: "var(--ink-tertiary)" }} />
+        </div>
+        <p style={{ margin: 0, padding: "0 14px 12px", fontSize: 11, color: "var(--ink-tertiary)", fontStyle: "italic" }}>
+          Frozen when you submit.
+        </p>
+      </div>
+
+    </div>
+  )
 }
 
 // params.id is the opportunity ID
@@ -580,7 +831,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
           <TabBar
             active={activeTab}
             onChange={setActiveTab}
-            counts={{ requirements: writingSession?.requirements.length ?? 0, documents: artifacts.length, tasks: tasks.length }}
+            counts={{ requirements: writingSession?.requirements.length ?? 0, documents: attachments.length, tasks: tasks.length }}
           />
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
@@ -716,13 +967,9 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
               </div>
             )}
 
-            {/* ── Documents tab (stubbed) ───────────────────────────────── */}
+            {/* ── Documents tab ────────────────────────────────────────── */}
             {activeTab === "documents" && (
-              <div style={{ flex: 1, overflowY: "auto", padding: "16px 14px" }}>
-                <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "18px" }}>
-                  Drafts and attachments for this pursuit will appear here.
-                </p>
-              </div>
+              <DocumentsTab initialAttachments={attachments} pipId={pip.id} />
             )}
 
             {/* ── Tasks tab ─────────────────────────────────────────────── */}
