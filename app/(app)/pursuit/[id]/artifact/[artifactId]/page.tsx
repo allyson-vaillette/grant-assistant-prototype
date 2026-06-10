@@ -7,7 +7,7 @@ import {
   Check, X, AlertCircle, RefreshCw,
   ChevronLeft, ChevronRight,
   Plus, Trash2, Edit3,
-  MessageSquare, BookOpen, Sliders, MessageCircle, Bot, Users,
+  BookOpen, Sliders, MessageCircle, Bot, Users,
   List, BarChart2,
   CheckCircle, AlertTriangle, Circle,
   Search, Upload, FileText, Paperclip,
