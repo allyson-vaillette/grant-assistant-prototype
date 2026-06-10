@@ -3,14 +3,14 @@
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, FileText, Paperclip, CheckSquare, Square, ExternalLink, ChevronDown, Plus, Download, Sparkles } from "lucide-react"
+import { ArrowLeft, FileText, Paperclip, CheckSquare, Square, ExternalLink, ChevronDown, Plus, Download, Sparkles, CheckCircle, AlertTriangle, Circle } from "lucide-react"
 import ArtifactEditorPage from "./artifact/[artifactId]/page"
 import {
-  FUNDERS, OPPORTUNITIES,
+  FUNDERS, OPPORTUNITIES, USER, TEAMMATES,
   getArtifactsForPipeline, getAttachmentsForPipeline, getTasksForPipeline,
-  getPipelineForOpportunity, createArtifact,
+  getPipelineForOpportunity, createArtifact, getWritingSession,
 } from "@/lib/mock-data"
-import type { PipelineStatus, PipelinePhase, ArtifactStage, AttachmentCategory } from "@/lib/types"
+import type { PipelineStatus, PipelinePhase, ArtifactStage, AttachmentCategory, Task, Requirement, DraftSection } from "@/lib/types"
 import { phaseFromStatus } from "@/lib/types"
 
 // ── Phase + status config ──────────────────────────────────────────────────
@@ -288,6 +288,26 @@ function todayStr() {
   return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`
 }
 
+// ── Requirement helpers (mirrored from artifact editor) ───────────────────
+
+type ComplianceStatus = "covered" | "partial" | "uncovered"
+
+function countWords(text: string): number {
+  return text.trim() === "" ? 0 : text.trim().split(/\s+/).length
+}
+function countChars(text: string): number {
+  return text.length
+}
+function sectionCompliance(section: DraftSection, req: Requirement): ComplianceStatus {
+  if (req.constraint?.type === "required_attachment") {
+    return section.content.trim() ? "covered" : "uncovered"
+  }
+  if (!section.content.trim()) return "uncovered"
+  if (req.wordLimit && countWords(section.content) > req.wordLimit) return "partial"
+  if (req.charLimit && countChars(section.content) > req.charLimit) return "partial"
+  return "covered"
+}
+
 // params.id is the opportunity ID
 export default function PursuitPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -298,6 +318,14 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
     initialPip?.status ?? "researching"
   )
   const [submittedAt, setSubmittedAt] = useState<string | undefined>(initialPip?.submittedAt)
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    const p = getPipelineForOpportunity(params.id)
+    return p ? getTasksForPipeline(p.id) : []
+  })
+  const [reqSubTab,       setReqSubTab]       = useState<"list" | "compliance">("list")
+  const [addingTask,      setAddingTask]      = useState(false)
+  const [newTaskTitle,    setNewTaskTitle]    = useState("")
+  const [newTaskAssignee, setNewTaskAssignee] = useState(USER.id)
 
   const pip    = initialPip
   const opp    = OPPORTUNITIES.find(o => o.id === params.id)
@@ -321,13 +349,14 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
     }
   }
 
-  const artifacts   = getArtifactsForPipeline(pip.id)
-  const attachments = getAttachmentsForPipeline(pip.id)
-  const tasks       = getTasksForPipeline(pip.id)
-  const openTasks   = tasks.filter(t => !t.completed)
-  const doneTasks   = tasks.filter(t => t.completed)
-  const currentPhase = phaseFromStatus(currentStatus)
-  const phaseCfg     = PHASE_COLOR[currentPhase]
+  const artifacts      = getArtifactsForPipeline(pip.id)
+  const attachments    = getAttachmentsForPipeline(pip.id)
+  const openTasks      = tasks.filter(t => !t.completed)
+  const doneTasks      = tasks.filter(t => t.completed)
+  const writingSession = artifacts[0] ? getWritingSession(artifacts[0].id) : null
+  const ALL_USERS      = [USER, ...TEAMMATES]
+  const currentPhase   = phaseFromStatus(currentStatus)
+  const phaseCfg       = PHASE_COLOR[currentPhase]
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--canvas)" }}>
@@ -460,28 +489,291 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
             onChange={setActiveTab}
             counts={{ requirements: 0, documents: artifacts.length, tasks: tasks.length }}
           />
-          <div style={{ flex: 1, overflowY: "auto" }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+            {/* ── Requirements tab ─────────────────────────────────────── */}
             {activeTab === "requirements" && (
-              <div style={{ padding: "16px 14px" }}>
-                <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "18px" }}>
-                  Grant requirements will appear here once extracted from the RFP.
-                </p>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+                {/* Sub-tab bar: Requirements list | Compliance matrix */}
+                <div style={{ flexShrink: 0, borderBottom: "1px solid var(--hair)", display: "flex" }}>
+                  {(["list", "compliance"] as const).map(st => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setReqSubTab(st)}
+                      style={{
+                        padding: "9px 10px", background: "none", border: "none", cursor: "pointer",
+                        fontSize: 11, fontWeight: reqSubTab === st ? 600 : 400,
+                        color: reqSubTab === st ? "var(--ink)" : "var(--ink-tertiary)",
+                        borderBottom: `2px solid ${reqSubTab === st ? "var(--slate-primary)" : "transparent"}`,
+                        transition: "all 120ms",
+                      }}
+                    >
+                      {st === "list" ? "Requirements" : "Compliance"}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Requirements list */}
+                {reqSubTab === "list" && (
+                  <div style={{ flex: 1, overflowY: "auto", padding: "12px 8px" }}>
+                    {!writingSession || writingSession.requirements.length === 0 ? (
+                      <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "18px", padding: "4px" }}>
+                        Requirements will appear here once extracted from the RFP.
+                      </p>
+                    ) : writingSession.requirements.map((req, idx) => {
+                      const section = writingSession.sections.find(s => s.requirementId === req.id)
+                      const status  = section ? sectionCompliance(section, req) : "uncovered"
+                      return (
+                        <div
+                          key={req.id}
+                          style={{
+                            padding: "9px 10px", borderRadius: "var(--radius-button)",
+                            marginBottom: 2, transition: "background-color 120ms",
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                          onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                        >
+                          <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                            <span style={{ fontSize: 10, color: "var(--ink-tertiary)", fontWeight: 600, paddingTop: 2, flexShrink: 0 }}>
+                              {idx + 1}
+                            </span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ margin: "0 0 4px", fontSize: 12, color: "var(--ink)", lineHeight: "16px", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                                {req.text}
+                              </p>
+                              <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                                {req.wordLimit && (
+                                  <span style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-tertiary)" }}>≤{req.wordLimit} w</span>
+                                )}
+                                {req.charLimit && (
+                                  <span style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-tertiary)" }}>≤{req.charLimit} ch</span>
+                                )}
+                                {req.constraint?.type === "required_attachment" && (
+                                  <span style={{ fontSize: 10, fontWeight: 600, color: "var(--terracotta)" }}>Attachment req.</span>
+                                )}
+                              </div>
+                            </div>
+                            <div style={{ flexShrink: 0 }}>
+                              {status === "covered"   && <CheckCircle   size={13} style={{ color: "var(--evergreen)" }} />}
+                              {status === "partial"   && <AlertTriangle size={13} style={{ color: "var(--amber)"    }} />}
+                              {status === "uncovered" && <Circle        size={13} style={{ color: "var(--hair-2)"   }} />}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Compliance matrix */}
+                {reqSubTab === "compliance" && (
+                  <div style={{ flex: 1, overflowY: "auto", padding: "12px 8px" }}>
+                    <p style={{ margin: "0 0 10px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)", padding: "0 4px" }}>
+                      Compliance matrix
+                    </p>
+                    {!writingSession || writingSession.requirements.length === 0 ? (
+                      <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "18px", padding: "0 4px" }}>
+                        No requirements to audit yet.
+                      </p>
+                    ) : writingSession.requirements.map(req => {
+                      const section = writingSession.sections.find(s => s.requirementId === req.id)
+                      const status  = section ? sectionCompliance(section, req) : "uncovered"
+                      const words   = section ? countWords(section.content) : 0
+                      const chars   = section ? countChars(section.content) : 0
+                      return (
+                        <div
+                          key={req.id}
+                          style={{
+                            padding: "9px 10px", borderRadius: "var(--radius-button)",
+                            marginBottom: 2,
+                            borderLeft: `2px solid ${status === "covered" ? "var(--evergreen)" : status === "partial" ? "var(--amber)" : "var(--hair-2)"}`,
+                            transition: "background-color 120ms",
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                          onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                        >
+                          <p style={{ margin: "0 0 3px", fontSize: 11, color: "var(--ink)", lineHeight: "15px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {req.text}
+                          </p>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                            <span style={{ fontSize: 10, fontWeight: 600, color: status === "covered" ? "var(--evergreen)" : status === "partial" ? "var(--amber)" : "var(--ink-tertiary)" }}>
+                              {status === "covered" ? "Covered" : status === "partial" ? "Over limit" : "Empty"}
+                            </span>
+                            {req.wordLimit != null && (
+                              <span style={{ fontSize: 10, color: words > req.wordLimit ? "var(--amber)" : "var(--ink-tertiary)" }}>
+                                {words} / {req.wordLimit} w
+                              </span>
+                            )}
+                            {req.charLimit != null && (
+                              <span style={{ fontSize: 10, color: chars > req.charLimit ? "var(--amber)" : "var(--ink-tertiary)" }}>
+                                {chars} / {req.charLimit} ch
+                              </span>
+                            )}
+                            {req.constraint?.type === "required_attachment" && (
+                              <span style={{ fontSize: 10, color: "var(--terracotta)" }}>Attachment req.</span>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )}
+
+            {/* ── Documents tab (stubbed) ───────────────────────────────── */}
             {activeTab === "documents" && (
-              <div style={{ padding: "16px 14px" }}>
+              <div style={{ flex: 1, overflowY: "auto", padding: "16px 14px" }}>
                 <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "18px" }}>
                   Drafts and attachments for this pursuit will appear here.
                 </p>
               </div>
             )}
+
+            {/* ── Tasks tab ─────────────────────────────────────────────── */}
             {activeTab === "tasks" && (
-              <div style={{ padding: "16px 14px" }}>
-                <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "18px" }}>
-                  Tasks for this pursuit will appear here.
-                </p>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+                {/* Task list */}
+                <div style={{ flex: 1, overflowY: "auto", padding: "12px 8px" }}>
+                  {openTasks.length === 0 && doneTasks.length === 0 ? (
+                    <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "18px", padding: "4px" }}>
+                      No tasks yet.
+                    </p>
+                  ) : (
+                    <>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                        {openTasks.map(task => {
+                          const assignee = ALL_USERS.find(u => u.id === task.assigneeId)
+                          return (
+                            <div
+                              key={task.id}
+                              style={{ padding: "8px 8px", borderRadius: "var(--radius-button)", display: "flex", alignItems: "flex-start", gap: 8, transition: "background-color 120ms" }}
+                              onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                              onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                            >
+                              <button
+                                type="button"
+                                style={{ flexShrink: 0, marginTop: 1, background: "none", border: "none", cursor: "pointer", color: "var(--hair-2)", padding: 0, lineHeight: 0 }}
+                                onClick={() => setTasks(prev => prev.map(t => t.id === task.id ? { ...t, completed: true } : t))}
+                              >
+                                <Circle size={14} />
+                              </button>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ margin: "0 0 3px", fontSize: 12, fontWeight: 500, color: "var(--ink)", lineHeight: "16px" }}>
+                                  {task.title}
+                                </p>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                  {task.dueDate && (
+                                    <span style={{ fontSize: 10, color: "var(--ink-tertiary)" }}>Due {task.dueDate}</span>
+                                  )}
+                                  {assignee && (
+                                    <span style={{
+                                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                      width: 16, height: 16, borderRadius: "50%",
+                                      background: "var(--gradient-avatar)",
+                                      fontSize: 9, fontWeight: 700, color: "#fff", flexShrink: 0,
+                                    }}>
+                                      {assignee.initials.slice(0, 2)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      {doneTasks.length > 0 && (
+                        <div style={{ marginTop: 8 }}>
+                          <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 600, color: "var(--ink-tertiary)", padding: "0 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                            Done
+                          </p>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                            {doneTasks.map(task => (
+                              <div key={task.id} style={{ padding: "7px 8px", borderRadius: "var(--radius-button)", display: "flex", alignItems: "center", gap: 8, opacity: 0.55 }}>
+                                <CheckCircle size={14} style={{ color: "var(--evergreen)", flexShrink: 0 }} />
+                                <p style={{ margin: 0, fontSize: 12, color: "var(--ink-secondary)", textDecoration: "line-through", lineHeight: "16px" }}>
+                                  {task.title}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Add task */}
+                <div style={{ flexShrink: 0, borderTop: "1px solid var(--hair)" }}>
+                  {addingTask ? (
+                    <div style={{ padding: "8px 8px" }}>
+                      <input
+                        type="text"
+                        autoFocus
+                        placeholder="Task title…"
+                        value={newTaskTitle}
+                        onChange={e => setNewTaskTitle(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter" && newTaskTitle.trim()) {
+                            setTasks(prev => [...prev, {
+                              id: `task-local-${Math.random().toString(36).slice(2)}`,
+                              pipelineOpportunityId: pip.id,
+                              title: newTaskTitle.trim(),
+                              assigneeId: newTaskAssignee || undefined,
+                              completed: false,
+                            }])
+                            setNewTaskTitle("")
+                            setAddingTask(false)
+                          } else if (e.key === "Escape") {
+                            setNewTaskTitle("")
+                            setAddingTask(false)
+                          }
+                        }}
+                        style={{
+                          width: "100%", padding: "5px 8px", borderRadius: "var(--radius-button)",
+                          border: "1px solid var(--slate-soft)", fontSize: 12, outline: "none",
+                          backgroundColor: "var(--canvas)", marginBottom: 6, boxSizing: "border-box",
+                        }}
+                      />
+                      <select
+                        value={newTaskAssignee}
+                        onChange={e => setNewTaskAssignee(e.target.value)}
+                        style={{
+                          width: "100%", padding: "4px 6px", borderRadius: "var(--radius-button)",
+                          border: "1px solid var(--hair-2)", fontSize: 11, outline: "none",
+                          backgroundColor: "var(--canvas)", color: "var(--ink)", boxSizing: "border-box",
+                        }}
+                      >
+                        <option value="">No assignee</option>
+                        {ALL_USERS.map(u => (
+                          <option key={u.id} value={u.id}>{u.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setAddingTask(true)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 5,
+                        width: "100%", padding: "8px 16px", borderRadius: 0,
+                        border: "none", backgroundColor: "transparent",
+                        fontSize: 11, color: "var(--ink-tertiary)", cursor: "pointer",
+                        transition: "background-color 120ms",
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                    >
+                      <Plus size={11} /> Add task
+                    </button>
+                  )}
+                </div>
               </div>
             )}
+
           </div>
         </div>
 
