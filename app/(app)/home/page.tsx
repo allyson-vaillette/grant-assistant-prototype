@@ -146,7 +146,7 @@ function buildDeadlines(scopedPipelineIds: Set<string>): DeadlineItem[] {
   PIPELINE_OPPORTUNITIES
     .filter(p =>
       scopedPipelineIds.has(p.id) &&
-      !["application-submitted", "declined", "abandoned", "awarded-active", "awarded-closed"].includes(p.status)
+      !["declined", "abandoned", "awarded-active", "awarded-closed"].includes(p.status)
     )
     .forEach(pip => {
       const opp = getOpportunity(pip.opportunityId)

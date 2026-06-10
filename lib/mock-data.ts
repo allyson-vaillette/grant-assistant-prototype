@@ -151,7 +151,7 @@ export const OPPORTUNITIES: Opportunity[] = [
     funderId: "funder-petco",
     name: "Petco Love Lost & Found Grant 2026",
     amount: "$25,000",
-    deadline: "Aug 15, 2026",
+    deadline: "Jun 25, 2026",
     description:
       "Supports organizations with proven track records in animal rescue, adoption, and community outreach. Eligible organizations must be 501(c)(3) nonprofits operating active rescue or shelter programs.",
     eligibility: "501(c)(3) required · Active rescue/shelter program · Annual budget under $2M",
