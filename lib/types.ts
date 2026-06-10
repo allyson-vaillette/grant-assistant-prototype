@@ -191,6 +191,29 @@ export interface Snippet {
   category: "mission" | "programs" | "outcomes" | "budget" | "other"
 }
 
+export interface Comment {
+  id: string
+  threadId: string
+  authorId: string
+  content: string
+  createdAt: string
+  mentions: string[]
+}
+
+export interface CommentThread {
+  id: string
+  artifactId: string
+  sectionId: string
+  requirementId: string
+  anchorText: string
+  anchorStart: number
+  anchorEnd: number
+  anchorStatus: "intact" | "text_changed"
+  status: "open" | "resolved"
+  createdAt: string
+  comments: Comment[]
+}
+
 // ── Matching ───────────────────────────────────────────────────────────────
 
 export type MatchStrength = "strong" | "good" | "partial"

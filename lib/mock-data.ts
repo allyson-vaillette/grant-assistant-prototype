@@ -2,7 +2,7 @@ import type {
   Account, Organization, User, Membership, Project,
   Funder, Opportunity, PipelineOpportunity,
   Artifact, Attachment, Task, Match,
-  WritingSession, Snippet,
+  WritingSession, Snippet, CommentThread,
 } from "./types"
 
 // ── Account & Org ─────────────────────────────────────────────────────────
@@ -712,4 +712,95 @@ export function getWritingSession(artifactId: string): WritingSession | undefine
 
 export function getSnippetsForOrg(orgId: string): Snippet[] {
   return SNIPPETS.filter((s) => s.organizationId === orgId)
+}
+
+// ── Comment Threads ────────────────────────────────────────────────────────
+
+export const COMMENT_THREADS: CommentThread[] = [
+  {
+    id: "thread-1",
+    artifactId: "art-1",
+    sectionId: "sec-1",
+    requirementId: "req-1",
+    anchorText: "97% live release rate",
+    anchorStart: 321,
+    anchorEnd: 342,
+    anchorStatus: "intact",
+    status: "open",
+    createdAt: "2026-06-07T14:23:00Z",
+    comments: [
+      {
+        id: "cmt-1",
+        threadId: "thread-1",
+        authorId: "user-2",
+        content: "Should we cite the source for this stat? The funder might want a link to our shelter management report.",
+        createdAt: "2026-06-07T14:23:00Z",
+        mentions: [],
+      },
+      {
+        id: "cmt-2",
+        threadId: "thread-1",
+        authorId: "user-1",
+        content: "@Jordan M. Good catch — I'll add a footnote referencing the annual report. The data is from our Rescue Track dashboard.",
+        createdAt: "2026-06-07T15:04:00Z",
+        mentions: ["user-2"],
+      },
+    ],
+  },
+  {
+    id: "thread-2",
+    artifactId: "art-1",
+    sectionId: "sec-2",
+    requirementId: "req-2",
+    anchorText: "0.5 FTE rescue coordinator",
+    anchorStart: 238,
+    anchorEnd: 264,
+    anchorStatus: "intact",
+    status: "open",
+    createdAt: "2026-06-08T09:10:00Z",
+    comments: [
+      {
+        id: "cmt-3",
+        threadId: "thread-2",
+        authorId: "user-3",
+        content: "Do we want to say \"0.5 FTE\" here or just \"part-time\"? I think the funder guidelines preferred plain language.",
+        createdAt: "2026-06-08T09:10:00Z",
+        mentions: [],
+      },
+    ],
+  },
+  {
+    id: "thread-3",
+    artifactId: "art-1",
+    sectionId: "sec-3",
+    requirementId: "req-3",
+    anchorText: "240 additional rescues",
+    anchorStart: 131,
+    anchorEnd: 153,
+    anchorStatus: "intact",
+    status: "resolved",
+    createdAt: "2026-06-06T16:45:00Z",
+    comments: [
+      {
+        id: "cmt-4",
+        threadId: "thread-3",
+        authorId: "user-2",
+        content: "This number needs to reconcile with the budget narrative — 240 rescues at what per-animal cost?",
+        createdAt: "2026-06-06T16:45:00Z",
+        mentions: [],
+      },
+      {
+        id: "cmt-5",
+        threadId: "thread-3",
+        authorId: "user-1",
+        content: "Reconciled in the budget spreadsheet — $208 per animal intake. We're good.",
+        createdAt: "2026-06-06T17:22:00Z",
+        mentions: [],
+      },
+    ],
+  },
+]
+
+export function getCommentThreadsForArtifact(artifactId: string): CommentThread[] {
+  return COMMENT_THREADS.filter((t) => t.artifactId === artifactId)
 }

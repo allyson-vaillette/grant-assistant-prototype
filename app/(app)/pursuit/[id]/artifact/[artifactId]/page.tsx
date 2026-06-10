@@ -7,19 +7,20 @@ import {
   Check, X, AlertCircle, RefreshCw,
   ChevronLeft, ChevronRight,
   Plus, Trash2, Edit3,
-  MessageSquare, BookOpen, Sliders,
+  MessageSquare, BookOpen, Sliders, MessageCircle,
   List, BarChart2,
   CheckCircle, AlertTriangle, Circle,
   Search, Upload, FileText, Paperclip,
   Send, Copy,
 } from "lucide-react"
 import {
-  FUNDERS, OPPORTUNITIES, ORG,
+  FUNDERS, OPPORTUNITIES, ORG, USER, TEAMMATES,
   getArtifact, getPipelineForOpportunity,
   getAttachmentsForPipeline, getWritingSession, getSnippetsForOrg,
+  getCommentThreadsForArtifact,
 } from "@/lib/mock-data"
 import type {
-  ArtifactStage, Requirement, DraftSection, Snippet,
+  ArtifactStage, Requirement, DraftSection, Snippet, CommentThread, Comment,
 } from "@/lib/types"
 
 // ── Local types ────────────────────────────────────────────────────────────
@@ -27,7 +28,7 @@ import type {
 type OnrampStep = "source" | "extracting" | "requirements" | "context" | "generating"
 type AIPhase    = "idle" | "generating" | "preview" | "error"
 type LeftTab    = "requirements" | "compliance"
-type RightTab   = "chat" | "snippets" | "voice"
+type RightTab   = "chat" | "snippets" | "voice" | "comments"
 type VoiceTone  = "as-written" | "formal" | "conversational" | "compelling"
 
 interface AIProposal {
@@ -61,6 +62,15 @@ const VOICE_TONES: Array<{ value: VoiceTone; label: string; hint: string }> = [
 ]
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+
+function formatCommentTime(iso: string): string {
+  try {
+    const d = new Date(iso)
+    return d.toLocaleDateString([], { month: "short", day: "numeric" })
+  } catch { return "" }
+}
+
+const ALL_USERS = [USER, ...TEAMMATES]
 
 function countWords(text: string): number {
   return text.trim() === "" ? 0 : text.trim().split(/\s+/).length
@@ -200,13 +210,32 @@ export default function ArtifactEditorPage({
   const [voiceTone,      setVoiceTone]      = useState<VoiceTone>("as-written")
   const [isHumanizing,   setIsHumanizing]   = useState(false)
 
+  // ── Working state: comments ───────────────────────────────────────────
+  const [commentThreads,  setCommentThreads]  = useState<CommentThread[]>(
+    artifact ? getCommentThreadsForArtifact(artifact.id) : []
+  )
+  const [activeThreadId,  setActiveThreadId]  = useState<string | null>(null)
+  const [showResolved,    setShowResolved]    = useState(false)
+  const [pendingAnchor,   setPendingAnchor]   = useState<{
+    sectionId: string; anchorText: string; anchorStart: number; anchorEnd: number
+  } | null>(null)
+  const [newCommentText,  setNewCommentText]  = useState("")
+  const [replyTexts,      setReplyTexts]      = useState<Record<string, string>>({})
+  const [selectionBySec,  setSelectionBySec]  = useState<Record<string, { text: string; start: number; end: number } | null>>({})
+  const [mentionToast,    setMentionToast]    = useState<string | null>(null)
+  const [mentionQuery,    setMentionQuery]    = useState<string | null>(null)
+  const [mentionTarget,   setMentionTarget]   = useState<"new" | string | null>(null)
+
   // ── Refs ─────────────────────────────────────────────────────────────
-  const saveTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const abortRef       = useRef<AbortController | null>(null)
-  const chatEndRef     = useRef<HTMLDivElement | null>(null)
-  const chatInputRef   = useRef<HTMLTextAreaElement | null>(null)
-  const editReqInputRef = useRef<HTMLInputElement | null>(null)
-  const sectionRefs    = useRef<Record<string, HTMLTextAreaElement | null>>({})
+  const saveTimerRef        = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const abortRef            = useRef<AbortController | null>(null)
+  const chatEndRef          = useRef<HTMLDivElement | null>(null)
+  const chatInputRef        = useRef<HTMLTextAreaElement | null>(null)
+  const editReqInputRef     = useRef<HTMLInputElement | null>(null)
+  const sectionRefs         = useRef<Record<string, HTMLTextAreaElement | null>>({})
+  const newCommentInputRef  = useRef<HTMLTextAreaElement | null>(null)
+  const activeThreadRef     = useRef<HTMLDivElement | null>(null)
+  const mentionToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // ── Effects ───────────────────────────────────────────────────────────
 
@@ -224,16 +253,28 @@ export default function ArtifactEditorPage({
     if (editingReqId) editReqInputRef.current?.focus()
   }, [editingReqId])
 
+  // Focus new comment input when anchor is set
+  useEffect(() => {
+    if (pendingAnchor) setTimeout(() => newCommentInputRef.current?.focus(), 60)
+  }, [pendingAnchor])
+
+  // Scroll active thread into view
+  useEffect(() => {
+    if (activeThreadId) setTimeout(() => activeThreadRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60)
+  }, [activeThreadId])
+
   // Escape closes overlays
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key !== "Escape") return
       if (aiPhase === "preview") { setAiProposal(null); setAiPhase("idle") }
       if (editingReqId) { setEditingReqId(null); setEditingReqText("") }
+      if (pendingAnchor) { setPendingAnchor(null); setNewCommentText(""); setMentionQuery(null); setMentionTarget(null) }
+      if (activeThreadId) setActiveThreadId(null)
     }
     document.addEventListener("keydown", onKey)
     return () => document.removeEventListener("keydown", onKey)
-  }, [aiPhase, editingReqId])
+  }, [aiPhase, editingReqId, pendingAnchor, activeThreadId])
 
   // ── Autosave ─────────────────────────────────────────────────────────
 
@@ -335,9 +376,17 @@ export default function ArtifactEditorPage({
 
   // ── Working state: document handlers ─────────────────────────────────
 
+  function checkAnchors(sectionId: string, newContent: string) {
+    setCommentThreads(prev => prev.map(t => {
+      if (t.sectionId !== sectionId) return t
+      return { ...t, anchorStatus: newContent.includes(t.anchorText) ? "intact" : "text_changed" }
+    }))
+  }
+
   function handleSectionChange(sectionId: string, value: string) {
     setSections(prev => prev.map(s => s.id === sectionId ? { ...s, content: value } : s))
     autosize(sectionRefs.current[sectionId])
+    checkAnchors(sectionId, value)
     triggerAutosave()
   }
 
@@ -389,6 +438,7 @@ export default function ArtifactEditorPage({
     if (!aiProposal) return
     setSections(prev => prev.map(s => s.id === aiProposal.sectionId ? { ...s, content: aiProposal.proposed } : s))
     setTimeout(() => autosize(sectionRefs.current[aiProposal.sectionId]), 0)
+    checkAnchors(aiProposal.sectionId, aiProposal.proposed)
     triggerAutosave()
     setAiProposal(null)
     setAiPhase("idle")
@@ -469,12 +519,128 @@ export default function ArtifactEditorPage({
     setIsHumanizing(false)
   }
 
+  // ── Comment handlers ──────────────────────────────────────────────────
+
+  function handleTextSelectionEnd(sectionId: string) {
+    const ta = sectionRefs.current[sectionId]
+    if (!ta) return
+    const start = ta.selectionStart
+    const end   = ta.selectionEnd
+    if (end > start) {
+      setSelectionBySec(prev => ({ ...prev, [sectionId]: { text: ta.value.slice(start, end).trim(), start, end } }))
+    } else {
+      setSelectionBySec(prev => ({ ...prev, [sectionId]: null }))
+    }
+  }
+
+  function handleSectionCommentClick(sectionId: string) {
+    const sel = selectionBySec[sectionId]
+    if (!sel || !sel.text) return
+    setPendingAnchor({ sectionId, anchorText: sel.text, anchorStart: sel.start, anchorEnd: sel.end })
+    setSelectionBySec(prev => ({ ...prev, [sectionId]: null }))
+    setRightCollapsed(false)
+    setRightTab("comments")
+    setActiveThreadId(null)
+  }
+
+  function parseMentions(text: string): string[] {
+    return ALL_USERS.filter(u => text.includes(`@${u.name}`)).map(u => u.id)
+  }
+
+  function fireMentionToasts(mentions: string[]) {
+    if (!mentions.length) return
+    const names = mentions.map(id => ALL_USERS.find(u => u.id === id)?.name ?? "").filter(Boolean)
+    if (!names.length) return
+    if (mentionToastTimerRef.current) clearTimeout(mentionToastTimerRef.current)
+    setMentionToast(`Notification sent to ${names.join(", ")}`)
+    mentionToastTimerRef.current = setTimeout(() => setMentionToast(null), 3000)
+  }
+
+  function handleSubmitComment() {
+    if (!pendingAnchor || !newCommentText.trim() || !artifact) return
+    const now = Date.now()
+    const threadId = `thread-${now}`
+    const mentions = parseMentions(newCommentText)
+    const thread: CommentThread = {
+      id: threadId,
+      artifactId: artifact.id,
+      sectionId: pendingAnchor.sectionId,
+      requirementId: sections.find(s => s.id === pendingAnchor.sectionId)?.requirementId ?? "",
+      anchorText: pendingAnchor.anchorText,
+      anchorStart: pendingAnchor.anchorStart,
+      anchorEnd: pendingAnchor.anchorEnd,
+      anchorStatus: "intact",
+      status: "open",
+      createdAt: new Date(now).toISOString(),
+      comments: [{
+        id: `cmt-${now}`,
+        threadId,
+        authorId: USER.id,
+        content: newCommentText.trim(),
+        createdAt: new Date(now).toISOString(),
+        mentions,
+      }],
+    }
+    setCommentThreads(prev => [...prev, thread])
+    setPendingAnchor(null)
+    setNewCommentText("")
+    setMentionQuery(null)
+    setMentionTarget(null)
+    setActiveThreadId(threadId)
+    fireMentionToasts(mentions)
+  }
+
+  function handleSubmitReply(threadId: string) {
+    const text = (replyTexts[threadId] ?? "").trim()
+    if (!text) return
+    const mentions = parseMentions(text)
+    const now = Date.now()
+    const reply: Comment = {
+      id: `cmt-${now}`,
+      threadId,
+      authorId: USER.id,
+      content: text,
+      createdAt: new Date(now).toISOString(),
+      mentions,
+    }
+    setCommentThreads(prev => prev.map(t => t.id !== threadId ? t : { ...t, comments: [...t.comments, reply] }))
+    setReplyTexts(prev => ({ ...prev, [threadId]: "" }))
+    setMentionQuery(null)
+    setMentionTarget(null)
+    fireMentionToasts(mentions)
+  }
+
+  function handleResolve(threadId: string) {
+    setCommentThreads(prev => prev.map(t => t.id === threadId ? { ...t, status: "resolved" } : t))
+    if (activeThreadId === threadId) setActiveThreadId(null)
+  }
+
+  function handleReopen(threadId: string) {
+    setCommentThreads(prev => prev.map(t => t.id === threadId ? { ...t, status: "open" } : t))
+  }
+
+  function openThread(threadId: string, sectionId: string) {
+    setRightCollapsed(false)
+    setRightTab("comments")
+    setActiveThreadId(threadId)
+    scrollToSection(sectionId)
+  }
+
   // ── Computed ──────────────────────────────────────────────────────────
 
   const activeSection     = sections.find(s => s.id === activeSectionId) ?? null
   const filteredSnippets  = orgSnippets.filter(s =>
     !snippetSearch || s.title.toLowerCase().includes(snippetSearch.toLowerCase()) || s.body.toLowerCase().includes(snippetSearch.toLowerCase())
   )
+  const openThreads       = commentThreads.filter(t => t.status === "open")
+  const visibleThreads    = showResolved ? commentThreads : openThreads
+  const sectionThreadMap  = new Map<string, CommentThread[]>()
+  commentThreads.forEach(t => {
+    const arr = sectionThreadMap.get(t.sectionId) ?? []
+    arr.push(t)
+    sectionThreadMap.set(t.sectionId, arr)
+  })
+
   const rfpAttachment     = pipelineAttachments.find(a => a.category === "rfp")
   const contextCandidates = pipelineAttachments.filter(a => a.category === "prior_proposal" || a.category === "report")
 
@@ -1432,17 +1598,20 @@ export default function ArtifactEditorPage({
                   const overWord   = req?.wordLimit != null && wordCount > req.wordLimit
                   const overChar   = req?.charLimit != null && charCount > req.charLimit
 
+                  const secOpenThreads = (sectionThreadMap.get(section.id) ?? []).filter(t => t.status === "open")
+                  const secSel = selectionBySec[section.id]
+                  const secActiveThread = secOpenThreads.some(t => t.id === activeThreadId)
+
                   return (
                     <div
                       key={section.id}
                       style={{
                         marginBottom: 40,
-                        borderRadius: 0,
-                        outline: isActive ? "none" : "none",
+                        position: "relative",
                       }}
                     >
                       {/* Section heading */}
-                      <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                         <h2
                           style={{
                             margin: 0,
@@ -1455,6 +1624,47 @@ export default function ArtifactEditorPage({
                         >
                           {section.title}
                         </h2>
+
+                        {/* Comment trigger — appears when text is selected */}
+                        {secSel && secSel.text && (
+                          <button
+                            type="button"
+                            onMouseDown={e => e.preventDefault()}
+                            onClick={() => handleSectionCommentClick(section.id)}
+                            style={{
+                              flexShrink: 0, display: "flex", alignItems: "center", gap: 4,
+                              padding: "3px 8px", borderRadius: "var(--radius-pill)",
+                              border: "none", backgroundColor: "var(--slate-primary)",
+                              fontSize: 10, fontWeight: 600, color: "#fff", cursor: "pointer",
+                              transition: "all 120ms",
+                            }}
+                          >
+                            <MessageCircle size={9} /> Comment
+                          </button>
+                        )}
+
+                        {/* Margin marker — open thread count */}
+                        {secOpenThreads.length > 0 && (
+                          <button
+                            type="button"
+                            aria-label={`${secOpenThreads.length} open comment${secOpenThreads.length !== 1 ? "s" : ""} on ${section.title}`}
+                            onClick={() => openThread(secOpenThreads[0].id, section.id)}
+                            style={{
+                              flexShrink: 0, display: "flex", alignItems: "center", gap: 3,
+                              padding: "3px 6px", borderRadius: "var(--radius-pill)",
+                              border: `1px solid ${secActiveThread ? "var(--slate-primary)" : "var(--amber)"}`,
+                              backgroundColor: secActiveThread ? "var(--slate-tint)" : "rgba(251,191,36,0.15)",
+                              color: secActiveThread ? "var(--slate-primary)" : "var(--amber)",
+                              fontSize: 10, fontWeight: 700, cursor: "pointer",
+                              transition: "all 120ms",
+                            }}
+                            onMouseEnter={e => { (e.currentTarget.style.opacity = "0.8") }}
+                            onMouseLeave={e => { (e.currentTarget.style.opacity = "1") }}
+                          >
+                            <MessageCircle size={9} /> {secOpenThreads.length}
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => { setActiveSectionId(section.id); setRightCollapsed(false); setRightTab("chat"); setAiPrompt("") }}
@@ -1496,6 +1706,23 @@ export default function ArtifactEditorPage({
                                 Discard
                               </button>
                             </div>
+                            {/* Open comments notice in AI preview */}
+                            {(() => {
+                              const threads = (sectionThreadMap.get(section.id) ?? []).filter(t => t.status === "open")
+                              if (!threads.length) return null
+                              return (
+                                <div style={{ flexShrink: 0, padding: "6px 12px", borderBottom: "1px solid rgba(60,94,76,0.12)", backgroundColor: "rgba(251,191,36,0.12)" }}>
+                                  <p style={{ margin: "0 0 3px", fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--amber)" }}>
+                                    {threads.length} open comment{threads.length !== 1 ? "s" : ""}
+                                  </p>
+                                  {threads.map(t => (
+                                    <p key={t.id} style={{ margin: "0 0 2px", fontSize: 11, color: "var(--ink-secondary)", lineHeight: "15px" }}>
+                                      <em>&ldquo;{t.anchorText.length > 40 ? t.anchorText.slice(0, 40) + "…" : t.anchorText}&rdquo;</em>{" — "}{t.comments[0]?.content.slice(0, 55)}{(t.comments[0]?.content.length ?? 0) > 55 ? "…" : ""}
+                                    </p>
+                                  ))}
+                                </div>
+                              )
+                            })()}
                             <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px", fontSize: 14, color: "var(--ink)", lineHeight: "22px", whiteSpace: "pre-wrap" }}>
                               {aiProposal.proposed}
                             </div>
@@ -1508,6 +1735,8 @@ export default function ArtifactEditorPage({
                           onChange={e => handleSectionChange(section.id, e.target.value)}
                           onFocus={() => setActiveSectionId(section.id)}
                           onBlur={() => {}}
+                          onMouseUp={() => handleTextSelectionEnd(section.id)}
+                          onKeyUp={() => handleTextSelectionEnd(section.id)}
                           placeholder={section.content === "" ? "Write here, or click Ask AI above to generate content for this section…" : undefined}
                           readOnly={isProposed}
                           style={{
@@ -1621,6 +1850,15 @@ export default function ArtifactEditorPage({
                 >
                   <Sliders size={15} />
                 </button>
+                <button type="button" title={`Comments${openThreads.length ? ` (${openThreads.length})` : ""}`} onClick={() => { setRightCollapsed(false); setRightTab("comments") }} style={{ width: 32, height: 32, borderRadius: "var(--radius-button)", border: "none", backgroundColor: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: openThreads.length ? "var(--amber)" : "var(--ink-tertiary)", position: "relative" }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
+                  <MessageCircle size={15} />
+                  {openThreads.length > 0 && (
+                    <span style={{ position: "absolute", top: 4, right: 4, width: 10, height: 10, borderRadius: "50%", backgroundColor: "var(--amber)", border: "2px solid var(--surface)", fontSize: 0 }} />
+                  )}
+                </button>
                 <div style={{ flex: 1 }} />
                 <button type="button" title="Expand" onClick={() => setRightCollapsed(false)} style={{ width: 32, height: 32, borderRadius: "var(--radius-button)", border: "none", backgroundColor: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--ink-tertiary)", marginBottom: 12 }}>
                   <ChevronLeft size={14} />
@@ -1647,26 +1885,28 @@ export default function ArtifactEditorPage({
                     >
                       <ChevronRight size={14} />
                     </button>
-                    <div style={{ display: "flex", flex: 1 }}>
-                      {(["chat", "snippets", "voice"] as const).map(tab => {
+                    <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+                      {(["chat", "snippets", "voice", "comments"] as const).map(tab => {
                         const active = rightTab === tab
-                        const icon   = tab === "chat" ? <MessageSquare size={12} /> : tab === "snippets" ? <BookOpen size={12} /> : <Sliders size={12} />
-                        const label  = tab === "chat" ? "Chat" : tab === "snippets" ? "Snippets" : "Voice"
+                        const icon   = tab === "chat" ? <MessageSquare size={11} /> : tab === "snippets" ? <BookOpen size={11} /> : tab === "voice" ? <Sliders size={11} /> : <MessageCircle size={11} />
+                        const label  = tab === "chat" ? "Chat" : tab === "snippets" ? "Snippets" : tab === "voice" ? "Voice" : "Comments"
+                        const badge  = tab === "comments" && openThreads.length > 0
                         return (
                           <button
                             key={tab}
                             type="button"
                             onClick={() => setRightTab(tab)}
                             style={{
-                              display: "flex", alignItems: "center", gap: 4,
-                              padding: "10px 8px", background: "none", border: "none", cursor: "pointer",
+                              display: "flex", alignItems: "center", gap: 3,
+                              padding: "10px 6px", background: "none", border: "none", cursor: "pointer",
                               fontSize: 11, fontWeight: active ? 600 : 400,
-                              color: active ? "var(--ink)" : "var(--ink-tertiary)",
+                              color: active ? "var(--ink)" : badge ? "var(--amber)" : "var(--ink-tertiary)",
                               borderBottom: `2px solid ${active ? "var(--slate-primary)" : "transparent"}`,
                               transition: "all 120ms",
+                              whiteSpace: "nowrap",
                             }}
                           >
-                            {icon}{label}
+                            {icon}{label}{badge && <span style={{ fontSize: 9, fontWeight: 700, backgroundColor: "var(--amber)", color: "#fff", borderRadius: 9, padding: "1px 4px", lineHeight: 1 }}>{openThreads.length}</span>}
                           </button>
                         )
                       })}
@@ -2008,10 +2248,291 @@ export default function ArtifactEditorPage({
                     </div>
                   </div>
                 )}
+                {/* ── COMMENTS TAB ── */}
+                {rightTab === "comments" && (
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+                    {/* Header */}
+                    <div style={{ flexShrink: 0, padding: "8px 14px", borderBottom: "1px solid var(--hair)", display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)", flex: 1 }}>
+                        {openThreads.length} open
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowResolved(v => !v)}
+                        style={{ fontSize: 11, background: "none", border: "none", cursor: "pointer", color: showResolved ? "var(--slate-primary)" : "var(--ink-tertiary)", fontWeight: showResolved ? 600 : 400, padding: 0 }}
+                      >
+                        {showResolved ? "Hide resolved" : "Show resolved"}
+                      </button>
+                    </div>
+
+                    {/* New comment form */}
+                    {pendingAnchor && (
+                      <div style={{ flexShrink: 0, padding: "10px 12px", borderBottom: "1px solid var(--hair)", backgroundColor: "var(--canvas)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                          <div style={{ width: 22, height: 22, borderRadius: "50%", backgroundColor: "var(--slate-primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
+                            {USER.initials}
+                          </div>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--ink)", flex: 1 }}>{USER.name}</span>
+                          <button type="button" onClick={() => { setPendingAnchor(null); setNewCommentText(""); setMentionQuery(null); setMentionTarget(null) }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-tertiary)", padding: 2 }}>
+                            <X size={12} />
+                          </button>
+                        </div>
+                        <div style={{ marginBottom: 8, padding: "4px 8px", borderRadius: 4, borderLeft: "2px solid var(--amber)", backgroundColor: "rgba(251,191,36,0.12)", fontSize: 11, color: "var(--ink-secondary)", fontStyle: "italic", lineHeight: "16px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          &ldquo;{pendingAnchor.anchorText.length > 55 ? pendingAnchor.anchorText.slice(0, 55) + "…" : pendingAnchor.anchorText}&rdquo;
+                        </div>
+                        <div style={{ position: "relative" }}>
+                          <textarea
+                            ref={newCommentInputRef}
+                            value={newCommentText}
+                            onChange={e => {
+                              setNewCommentText(e.target.value)
+                              const atIdx = e.target.value.lastIndexOf("@")
+                              if (atIdx !== -1) {
+                                const q = e.target.value.slice(atIdx + 1)
+                                if (!q.includes(" ") || q.length === 0) { setMentionQuery(q); setMentionTarget("new") }
+                                else { setMentionQuery(null); setMentionTarget(null) }
+                              } else { setMentionQuery(null); setMentionTarget(null) }
+                            }}
+                            placeholder="Add a comment… type @ to mention"
+                            rows={2}
+                            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmitComment() } }}
+                            style={{
+                              width: "100%", padding: "7px 10px", borderRadius: "var(--radius-input)",
+                              border: "1px solid var(--hair-2)", backgroundColor: "#fff",
+                              fontSize: 12, color: "var(--ink)", lineHeight: "18px",
+                              fontFamily: "inherit", outline: "none", resize: "none", boxSizing: "border-box",
+                              transition: "border-color 120ms",
+                            }}
+                            onFocus={e => (e.currentTarget.style.borderColor = "var(--slate-soft)")}
+                            onBlur={e => (e.currentTarget.style.borderColor = "var(--hair-2)")}
+                          />
+                          {mentionQuery !== null && mentionTarget === "new" && (() => {
+                            const filtered = TEAMMATES.filter(u => u.name.toLowerCase().includes(mentionQuery.toLowerCase()))
+                            if (!filtered.length) return null
+                            return (
+                              <div style={{ position: "absolute", bottom: "100%", left: 0, right: 0, marginBottom: 4, backgroundColor: "#fff", border: "1px solid var(--hair-2)", borderRadius: "var(--radius-button)", boxShadow: "0 4px 12px rgba(28,24,64,0.15)", zIndex: 10, overflow: "hidden" }}>
+                                {filtered.map(u => (
+                                  <button key={u.id} type="button"
+                                    onMouseDown={e => e.preventDefault()}
+                                    onClick={() => {
+                                      const atIdx = newCommentText.lastIndexOf("@")
+                                      setNewCommentText(newCommentText.slice(0, atIdx) + `@${u.name} `)
+                                      setMentionQuery(null); setMentionTarget(null)
+                                      newCommentInputRef.current?.focus()
+                                    }}
+                                    style={{ width: "100%", padding: "6px 10px", textAlign: "left", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--ink)", display: "flex", alignItems: "center", gap: 8 }}
+                                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                                  >
+                                    <div style={{ width: 20, height: 20, borderRadius: "50%", backgroundColor: "var(--slate-tint)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 700, color: "var(--slate-primary)", flexShrink: 0 }}>{u.initials}</div>
+                                    {u.name}
+                                  </button>
+                                ))}
+                              </div>
+                            )
+                          })()}
+                        </div>
+                        <div style={{ marginTop: 8, display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                          <button type="button" onClick={() => { setPendingAnchor(null); setNewCommentText("") }} style={{ padding: "5px 10px", borderRadius: "var(--radius-button)", border: "1px solid var(--hair-2)", background: "transparent", fontSize: 11, color: "var(--ink-secondary)", cursor: "pointer" }}>Cancel</button>
+                          <button type="button" onClick={handleSubmitComment} disabled={!newCommentText.trim()} style={{ padding: "5px 10px", borderRadius: "var(--radius-button)", border: "none", backgroundColor: newCommentText.trim() ? "var(--slate-primary)" : "var(--hair-2)", color: newCommentText.trim() ? "#fff" : "var(--ink-tertiary)", fontSize: 11, fontWeight: 600, cursor: newCommentText.trim() ? "pointer" : "default" }}>Comment</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Thread list */}
+                    <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+                      {visibleThreads.length === 0 && !pendingAnchor && (
+                        <div style={{ padding: "32px 14px", textAlign: "center" }}>
+                          <MessageCircle size={24} style={{ color: "var(--hair-2)", display: "block", margin: "0 auto 8px" }} />
+                          <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "18px" }}>Select text in a section, then click Comment to start a thread.</p>
+                        </div>
+                      )}
+                      {visibleThreads.map(thread => {
+                        const isActive = activeThreadId === thread.id
+                        const sectionTitle = sections.find(s => s.id === thread.sectionId)?.title ?? ""
+                        return (
+                          <div
+                            key={thread.id}
+                            ref={isActive ? activeThreadRef : undefined}
+                            tabIndex={0}
+                            role="region"
+                            aria-label={`Comment thread on "${thread.anchorText}"`}
+                            onClick={() => setActiveThreadId(isActive ? null : thread.id)}
+                            onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setActiveThreadId(isActive ? null : thread.id) } }}
+                            style={{
+                              margin: "0 8px 6px", borderRadius: "var(--radius-card)",
+                              border: `1px solid ${isActive ? "var(--slate-soft)" : "var(--hair)"}`,
+                              backgroundColor: isActive ? "#fff" : "var(--surface)",
+                              cursor: "pointer", transition: "all 120ms",
+                              outline: isActive ? `2px solid var(--slate-tint)` : "none",
+                              outlineOffset: 1,
+                            }}
+                          >
+                            {/* Thread meta */}
+                            <div style={{ padding: "7px 10px 0", display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ fontSize: 10, color: "var(--ink-tertiary)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sectionTitle}</span>
+                              {thread.status === "resolved" && (
+                                <span style={{ fontSize: 9, fontWeight: 600, color: "var(--evergreen)", backgroundColor: "var(--evergreen-tint)", padding: "2px 6px", borderRadius: 9, flexShrink: 0 }}>Resolved</span>
+                              )}
+                            </div>
+
+                            {/* Anchor text */}
+                            <div style={{ padding: "4px 10px 6px" }}>
+                              <div style={{ padding: "3px 7px", borderRadius: 4, borderLeft: `2px solid ${thread.status === "resolved" ? "var(--hair-2)" : "var(--amber)"}`, backgroundColor: thread.status === "resolved" ? "transparent" : "rgba(251,191,36,0.1)", fontSize: 11, color: thread.status === "resolved" ? "var(--ink-tertiary)" : "var(--ink-secondary)", fontStyle: "italic", lineHeight: "15px" }}>
+                                {thread.anchorStatus === "text_changed" && (
+                                  <span style={{ display: "block", fontSize: 9, fontWeight: 600, color: "var(--amber)", marginBottom: 2, fontStyle: "normal" }}>Referenced text changed</span>
+                                )}
+                                &ldquo;{thread.anchorText.length > 65 ? thread.anchorText.slice(0, 65) + "…" : thread.anchorText}&rdquo;
+                              </div>
+                            </div>
+
+                            {/* Comments — first comment always visible, rest only when expanded */}
+                            <div style={{ padding: "0 10px" }}>
+                              {thread.comments.slice(0, isActive ? undefined : 1).map((comment, idx) => {
+                                const author = ALL_USERS.find(u => u.id === comment.authorId)
+                                return (
+                                  <div key={comment.id} style={{ display: "flex", gap: 6, marginBottom: 8, opacity: thread.status === "resolved" ? 0.7 : 1 }}>
+                                    <div style={{ width: 22, height: 22, borderRadius: "50%", backgroundColor: idx === 0 ? "var(--slate-primary)" : "var(--slate-tint)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color: idx === 0 ? "#fff" : "var(--slate-primary)", flexShrink: 0, marginTop: 1 }}>
+                                      {author?.initials ?? "?"}
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 2 }}>
+                                        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--ink)" }}>{author?.name ?? "Unknown"}</span>
+                                        <span style={{ fontSize: 10, color: "var(--ink-tertiary)" }}>{formatCommentTime(comment.createdAt)}</span>
+                                      </div>
+                                      <p style={{ margin: 0, fontSize: 12, color: "var(--ink)", lineHeight: "17px", wordBreak: "break-word" }}>{comment.content}</p>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                              {!isActive && thread.comments.length > 1 && (
+                                <p style={{ margin: "0 0 8px", fontSize: 11, color: "var(--ink-tertiary)", paddingLeft: 28 }}>
+                                  +{thread.comments.length - 1} {thread.comments.length > 2 ? "replies" : "reply"}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Expanded actions */}
+                            {isActive && (
+                              <div style={{ padding: "0 10px 10px" }} onClick={e => e.stopPropagation()}>
+                                {/* Reply input */}
+                                {thread.status === "open" && (() => {
+                                  const replyText = replyTexts[thread.id] ?? ""
+                                  const tid = thread.id
+                                  return (
+                                    <div style={{ position: "relative", marginBottom: 8 }}>
+                                      <div style={{ display: "flex", gap: 6, alignItems: "flex-end" }}>
+                                        <div style={{ width: 22, height: 22, borderRadius: "50%", backgroundColor: "var(--slate-primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
+                                          {USER.initials}
+                                        </div>
+                                        <textarea
+                                          value={replyText}
+                                          onChange={e => {
+                                            setReplyTexts(prev => ({ ...prev, [tid]: e.target.value }))
+                                            const atIdx = e.target.value.lastIndexOf("@")
+                                            if (atIdx !== -1) {
+                                              const q = e.target.value.slice(atIdx + 1)
+                                              if (!q.includes(" ")) { setMentionQuery(q); setMentionTarget(tid) }
+                                              else { setMentionQuery(null); setMentionTarget(null) }
+                                            } else { setMentionQuery(null); setMentionTarget(null) }
+                                          }}
+                                          placeholder="Reply… type @ to mention"
+                                          rows={1}
+                                          onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmitReply(tid) } }}
+                                          style={{
+                                            flex: 1, padding: "5px 8px", borderRadius: "var(--radius-input)",
+                                            border: "1px solid var(--hair-2)", backgroundColor: "var(--canvas)",
+                                            fontSize: 11, color: "var(--ink)", lineHeight: "16px",
+                                            fontFamily: "inherit", outline: "none", resize: "none",
+                                            transition: "border-color 120ms",
+                                          }}
+                                          onFocus={e => (e.currentTarget.style.borderColor = "var(--slate-soft)")}
+                                          onBlur={e => (e.currentTarget.style.borderColor = "var(--hair-2)")}
+                                        />
+                                        <button
+                                          type="button"
+                                          disabled={!replyText.trim()}
+                                          onClick={() => handleSubmitReply(tid)}
+                                          style={{ width: 26, height: 26, borderRadius: "var(--radius-button)", border: "none", flexShrink: 0, backgroundColor: replyText.trim() ? "var(--slate-primary)" : "var(--hair-2)", color: replyText.trim() ? "#fff" : "var(--ink-tertiary)", cursor: replyText.trim() ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                        >
+                                          <Send size={11} />
+                                        </button>
+                                      </div>
+                                      {mentionQuery !== null && mentionTarget === tid && (() => {
+                                        const filtered = TEAMMATES.filter(u => u.name.toLowerCase().includes(mentionQuery.toLowerCase()))
+                                        if (!filtered.length) return null
+                                        return (
+                                          <div style={{ position: "absolute", bottom: "100%", left: 28, right: 32, marginBottom: 4, backgroundColor: "#fff", border: "1px solid var(--hair-2)", borderRadius: "var(--radius-button)", boxShadow: "0 4px 12px rgba(28,24,64,0.15)", zIndex: 10, overflow: "hidden" }}>
+                                            {filtered.map(u => (
+                                              <button key={u.id} type="button"
+                                                onMouseDown={e => e.preventDefault()}
+                                                onClick={() => {
+                                                  const text = replyTexts[tid] ?? ""
+                                                  const atIdx = text.lastIndexOf("@")
+                                                  setReplyTexts(prev => ({ ...prev, [tid]: text.slice(0, atIdx) + `@${u.name} ` }))
+                                                  setMentionQuery(null); setMentionTarget(null)
+                                                }}
+                                                style={{ width: "100%", padding: "5px 8px", textAlign: "left", background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "var(--ink)", display: "flex", alignItems: "center", gap: 6 }}
+                                                onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                                                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                                              >
+                                                <div style={{ width: 18, height: 18, borderRadius: "50%", backgroundColor: "var(--slate-tint)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 700, color: "var(--slate-primary)", flexShrink: 0 }}>{u.initials}</div>
+                                                {u.name}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        )
+                                      })()}
+                                    </div>
+                                  )
+                                })()}
+                                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                                  {thread.status === "open" ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleResolve(thread.id)}
+                                      style={{ padding: "4px 10px", borderRadius: "var(--radius-button)", border: "1px solid var(--evergreen)", background: "transparent", fontSize: 11, fontWeight: 600, color: "var(--evergreen)", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                    >
+                                      <CheckCircle size={11} /> Resolve
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleReopen(thread.id)}
+                                      style={{ padding: "4px 10px", borderRadius: "var(--radius-button)", border: "1px solid var(--hair-2)", background: "transparent", fontSize: 11, color: "var(--ink-tertiary)", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                    >
+                                      <RefreshCw size={10} /> Reopen
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
               </>
             )}
           </div>
 
+        </div>
+      )}
+
+      {/* Mention notification toast */}
+      {mentionToast && (
+        <div style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 200,
+          backgroundColor: "var(--ink)", color: "#fff",
+          padding: "10px 16px", borderRadius: 10,
+          fontSize: 13, fontWeight: 500, lineHeight: "18px",
+          boxShadow: "0 4px 16px rgba(28,24,64,0.25)",
+          pointerEvents: "none",
+        }}>
+          {mentionToast}
         </div>
       )}
 
