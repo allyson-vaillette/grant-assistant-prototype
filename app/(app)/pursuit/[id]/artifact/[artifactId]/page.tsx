@@ -7,7 +7,7 @@ import {
   Check, X, AlertCircle, RefreshCw,
   ChevronLeft, ChevronRight,
   Plus, Trash2, Edit3,
-  BookOpen, Sliders, MessageCircle, Bot, Users,
+  BookOpen, Sliders, MessageCircle, Users,
   List, BarChart2,
   CheckCircle, AlertTriangle, Circle,
   Search, Upload, FileText, Paperclip,
@@ -1836,7 +1836,7 @@ export default function ArtifactEditorPage({
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
                 >
-                  <Bot size={15} />
+                  <Sparkles size={15} />
                 </button>
                 <button type="button" title="Snippets" onClick={() => { setRightCollapsed(false); setRightTab("snippets") }} style={{ width: 32, height: 32, borderRadius: "var(--radius-button)", border: "none", backgroundColor: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--ink-tertiary)" }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
@@ -1888,7 +1888,7 @@ export default function ArtifactEditorPage({
                     <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
                       {(["chat", "snippets", "voice", "comments"] as const).map(tab => {
                         const active = rightTab === tab
-                        const icon   = tab === "chat" ? <Bot size={11} /> : tab === "snippets" ? <BookOpen size={11} /> : tab === "voice" ? <Sliders size={11} /> : <Users size={11} />
+                        const icon   = tab === "chat" ? <Sparkles size={11} /> : tab === "snippets" ? <BookOpen size={11} /> : tab === "voice" ? <Sliders size={11} /> : <Users size={11} />
                         const label  = tab === "chat" ? "Chat" : tab === "snippets" ? "Snippets" : tab === "voice" ? "Voice" : "Comments"
                         const badge  = tab === "comments" && openThreads.length > 0
                         return (
