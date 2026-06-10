@@ -17,10 +17,10 @@ import type { PipelineOpportunity, Opportunity, Funder, PipelinePhase } from "@/
 
 // ── Status strip config ────────────────────────────────────────────────────────
 
-const PIPELINE_STRIP: { phase: PipelinePhase; label: string; activeColor: string }[] = [
-  { phase: "researching",  label: "Researching",  activeColor: "var(--ink-tertiary)" },
-  { phase: "applications", label: "Applications", activeColor: "var(--plum-soft)"    },
-  { phase: "awards",       label: "Awards",       activeColor: "var(--evergreen)"    },
+const PIPELINE_STRIP: { phase: PipelinePhase; label: string; activeColor: string; descriptor: string }[] = [
+  { phase: "researching",  label: "Researching",  activeColor: "var(--ink-tertiary)", descriptor: "Tracking stage"     },
+  { phase: "applications", label: "Applications", activeColor: "var(--plum-soft)",    descriptor: "Active stage"        },
+  { phase: "awards",       label: "Awards",       activeColor: "var(--evergreen)",    descriptor: "Rolling 12 months"   },
 ]
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -178,14 +178,18 @@ function StatusCard({
   phase: _phase,
   label,
   activeColor,
+  descriptor,
   pursuits,
+  dueSoonCount,
   isFirst,
   isLast,
 }: {
   phase: PipelinePhase
   label: string
   activeColor: string
+  descriptor: string
   pursuits: StatusPursuit[]
+  dueSoonCount: number
   isFirst: boolean
   isLast: boolean
 }) {
@@ -194,12 +198,14 @@ function StatusCard({
 
   const count = pursuits.length
 
-  const borderRadius = [
+  const faceBorderRadius = [
     isFirst ? "11px" : "0",
     isLast  ? "11px" : "0",
     isLast  ? "11px" : "0",
     isFirst ? "11px" : "0",
   ].join(" ")
+
+  const accentBorderRadius = `${isFirst ? "11px" : "0"} ${isLast ? "11px" : "0"} 0 0`
 
   return (
     <div
@@ -214,29 +220,51 @@ function StatusCard({
     >
       <div
         style={{
-          padding: "20px",
           borderRight: !isLast ? "1px solid var(--hair)" : "none",
-          borderRadius,
+          borderRadius: faceBorderRadius,
           backgroundColor: open ? "var(--surface-sunk)" : "transparent",
           transition: "background-color 150ms",
         }}
       >
-        <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "var(--ink-tertiary)" }}>
-          {label}
-        </p>
-        <Link
-          href="/tracker"
-          style={{ textDecoration: "none", display: "block", outline: "none" }}
-          aria-label={`${count} ${label} — view in Tracker`}
-        >
-          <p style={{
-            margin: 0, fontSize: 28, fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1,
-            color: count > 0 ? activeColor : "var(--hair)",
-            fontFamily: "var(--font-lora), Georgia, serif",
-          }}>
-            {count}
+        {/* Top accent bar */}
+        <div style={{ height: 3, backgroundColor: activeColor, borderRadius: accentBorderRadius }} />
+
+        {/* Card content */}
+        <div style={{ padding: "12px 20px 16px" }}>
+          <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 600, color: "var(--ink-tertiary)" }}>
+            {label}
           </p>
-        </Link>
+          <Link
+            href="/tracker"
+            style={{ textDecoration: "none", display: "block", outline: "none" }}
+            aria-label={`${count} ${label} — view in Tracker`}
+          >
+            <p style={{
+              margin: "0 0 6px", fontSize: 28, fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1,
+              color: count > 0 ? activeColor : "var(--hair)",
+              fontFamily: "var(--font-lora), Georgia, serif",
+            }}>
+              {count}
+            </p>
+          </Link>
+
+          {/* Descriptor + due-soon pill */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "16px" }}>
+              {descriptor}
+            </span>
+            {dueSoonCount > 0 && (
+              <span style={{
+                display: "inline-flex", alignItems: "center",
+                padding: "1px 6px", borderRadius: 20,
+                backgroundColor: "var(--amber-light)", color: "var(--amber)",
+                fontSize: 10, fontWeight: 600, lineHeight: "16px", whiteSpace: "nowrap",
+              }}>
+                {dueSoonCount} due soon
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
       {open && (
@@ -847,6 +875,20 @@ export default function HomePage() {
     ])
   ) as Record<PipelinePhase, StatusPursuit[]>
 
+  const nowMs = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() })()
+  const urgentCutoffMs = nowMs + URGENT_DAYS * 24 * 60 * 60 * 1000
+
+  function getDueSoonCount(pursuits: StatusPursuit[]): number {
+    return pursuits.filter(({ opp }) => {
+      if (!opp?.deadline) return false
+      const d = parseDate(opp.deadline)
+      if (!d) return false
+      d.setHours(0, 0, 0, 0)
+      const t = d.getTime()
+      return t >= nowMs && t <= urgentCutoffMs
+    }).length
+  }
+
   const deadlines = buildDeadlines(scopedPipelineIds)
   const feed = buildFeed(scopedPipelineIds)
 
@@ -886,17 +928,22 @@ export default function HomePage() {
           borderRadius: 12,
           marginBottom: 16,
         }}>
-          {PIPELINE_STRIP.map((s, i) => (
-            <StatusCard
-              key={s.phase}
-              phase={s.phase}
-              label={s.label}
-              activeColor={s.activeColor}
-              pursuits={phasePursuits[s.phase] ?? []}
-              isFirst={i === 0}
-              isLast={i === PIPELINE_STRIP.length - 1}
-            />
-          ))}
+          {PIPELINE_STRIP.map((s, i) => {
+            const pursuits = phasePursuits[s.phase] ?? []
+            return (
+              <StatusCard
+                key={s.phase}
+                phase={s.phase}
+                label={s.label}
+                activeColor={s.activeColor}
+                descriptor={s.descriptor}
+                pursuits={pursuits}
+                dueSoonCount={getDueSoonCount(pursuits)}
+                isFirst={i === 0}
+                isLast={i === PIPELINE_STRIP.length - 1}
+              />
+            )
+          })}
         </div>
 
         {/* Quick actions */}
