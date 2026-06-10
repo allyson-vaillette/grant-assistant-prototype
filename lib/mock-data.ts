@@ -518,6 +518,20 @@ export function getArtifactsForPipeline(pipelineId: string): Artifact[] {
   return ARTIFACTS.filter((a) => a.pipelineOpportunityId === pipelineId)
 }
 
+export function createArtifact(pipelineOpportunityId: string): Artifact {
+  const id = `art-${Date.now()}`
+  const artifact: Artifact = {
+    id,
+    pipelineOpportunityId,
+    name: "New Proposal",
+    type: "proposal",
+    stage: "apply",
+    updatedAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+  }
+  ARTIFACTS.push(artifact)
+  return artifact
+}
+
 export function getAttachmentsForPipeline(pipelineId: string): Attachment[] {
   return ATTACHMENTS.filter((a) => a.pipelineOpportunityId === pipelineId)
 }

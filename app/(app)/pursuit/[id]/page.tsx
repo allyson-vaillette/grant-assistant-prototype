@@ -3,11 +3,11 @@
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, FileText, Paperclip, CheckSquare, Square, ExternalLink, ChevronDown } from "lucide-react"
+import { ArrowLeft, FileText, Paperclip, CheckSquare, Square, ExternalLink, ChevronDown, Plus } from "lucide-react"
 import {
   FUNDERS, OPPORTUNITIES,
   getArtifactsForPipeline, getAttachmentsForPipeline, getTasksForPipeline,
-  getPipelineForOpportunity,
+  getPipelineForOpportunity, createArtifact,
 } from "@/lib/mock-data"
 import type { PipelineStatus, PipelinePhase, ArtifactStage, AttachmentCategory } from "@/lib/types"
 import { phaseFromStatus } from "@/lib/types"
@@ -432,8 +432,22 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
         {/* Artifacts */}
         {activeTab === "artifacts" && (
           <div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+              <button
+                type="button"
+                onClick={() => { const a = createArtifact(pip.id); router.push(`/pursuit/${params.id}/artifact/${a.id}`) }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "7px 14px", borderRadius: "var(--radius-button)",
+                  border: "none", backgroundColor: "var(--slate-primary)", color: "#fff",
+                  fontSize: 12, fontWeight: 600, cursor: "pointer",
+                }}
+              >
+                <Plus size={13} /> New document
+              </button>
+            </div>
             {artifacts.length === 0 ? (
-              <p style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>No artifacts yet. Create your first document to get started.</p>
+              <p style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>No documents yet — create one above to get started.</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {artifacts.map(art => {
