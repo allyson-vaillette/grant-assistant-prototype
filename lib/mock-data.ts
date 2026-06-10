@@ -2,6 +2,7 @@ import type {
   Account, Organization, User, Membership, Project,
   Funder, Opportunity, PipelineOpportunity,
   Artifact, Attachment, Task, Match,
+  WritingSession, Snippet,
 } from "./types"
 
 // ── Account & Org ─────────────────────────────────────────────────────────
@@ -563,4 +564,134 @@ export function createPipelineOpportunity(
 
   PIPELINE_OPPORTUNITIES.push(pip)
   return pip
+}
+
+// ── Writing Sessions ───────────────────────────────────────────────────────
+
+export const WRITING_SESSIONS: WritingSession[] = [
+  {
+    artifactId: "art-1",
+    requirements: [
+      {
+        id: "req-1",
+        text: "Organization overview and mission alignment",
+        constraint: { type: "word_limit", value: 500 },
+      },
+      {
+        id: "req-2",
+        text: "Program description and activities to be funded",
+        constraint: { type: "word_limit", value: 750 },
+      },
+      {
+        id: "req-3",
+        text: "Expected outcomes and impact metrics",
+        constraint: { type: "word_limit", value: 500 },
+      },
+      {
+        id: "req-4",
+        text: "Evaluation methodology and reporting plan",
+        constraint: { type: "word_limit", value: 250 },
+      },
+      {
+        id: "req-5",
+        text: "Budget narrative",
+        constraint: { type: "required_attachment", value: "Budget spreadsheet (xlsx or pdf)" },
+      },
+    ],
+    sections: [
+      {
+        id: "sec-1",
+        requirementId: "req-1",
+        title: "Organization Overview",
+        content: `Whisker Haven Cat Rescue is a 501(c)(3) nonprofit organization based in San Diego, California, dedicated to ending preventable cat euthanasia throughout San Diego County. Since our founding in 2018, we have built one of the region's most active cat rescue networks — rescuing over 4,200 animals and maintaining a 97% live release rate.
+
+Our programs span the full rescue continuum: direct intake from field operations and municipal shelter transfers, a foster network of 180 active volunteers, a community spay/neuter clinic serving over 600 cats annually, and a kitten nursery providing 24-hour care for neonates who would otherwise have no survival path. Our mission is not merely to rescue individual animals but to shift community-level outcomes through evidence-based, data-tracked programming.`,
+      },
+      {
+        id: "sec-2",
+        requirementId: "req-2",
+        title: "Program Description and Activities to Be Funded",
+        content: `The Petco Love Lost & Found Grant will directly fund three core program expansions over the 12-month grant period.
+
+First, we will increase rescue intake capacity by 20% — from approximately 1,000 to 1,200 animals per year — through the addition of a 0.5 FTE rescue coordinator. This role will manage field rescue operations, coordinate municipal shelter transfers, and oversee triage intake protocols.
+
+Second, we will add a second mobile outreach vehicle to extend community reach into underserved neighborhoods across southeastern and eastern San Diego. The vehicle will support TNR operations, community microchipping events, and direct transport of animals to foster care.
+
+Third, we will deepen partnerships with two local municipal animal control facilities to establish formal transfer protocols, reducing euthanasia risk for cats that exceed municipal holding periods.`,
+      },
+      {
+        id: "sec-3",
+        requirementId: "req-3",
+        title: "Expected Outcomes and Impact Metrics",
+        content: `With this investment, Whisker Haven projects the following measurable outcomes over the 12-month grant period:
+
+• 240 additional rescues above our current annual baseline (20% intake increase)
+• Sustained live release rate at or above 96%
+• 150 additional TNR procedures in underserved zip codes
+• Two formal municipal transfer partnerships established`,
+      },
+      {
+        id: "sec-4",
+        requirementId: "req-4",
+        title: "Evaluation Methodology and Reporting Plan",
+        content: "",
+      },
+      {
+        id: "sec-5",
+        requirementId: "req-5",
+        title: "Budget Narrative",
+        content: "",
+      },
+    ],
+    sourceAttachmentId: "att-1",
+    contextAttachmentIds: ["att-2"],
+  },
+]
+
+// ── Snippets ───────────────────────────────────────────────────────────────
+
+export const SNIPPETS: Snippet[] = [
+  {
+    id: "snip-1",
+    organizationId: "org-1",
+    title: "Mission statement",
+    body: "Whisker Haven Cat Rescue is a 501(c)(3) nonprofit organization dedicated to ending preventable cat euthanasia in San Diego County through direct rescue, foster care, and evidence-based community programs.",
+    category: "mission",
+  },
+  {
+    id: "snip-2",
+    organizationId: "org-1",
+    title: "Live release rate stat",
+    body: "Since our founding in 2018, we have maintained a live release rate of 97% across more than 4,200 rescues — a benchmark placing us among the top-performing cat rescues in California.",
+    category: "outcomes",
+  },
+  {
+    id: "snip-3",
+    organizationId: "org-1",
+    title: "Foster network description",
+    body: "Our foster network of 180 active volunteers provides temporary homes for cats and kittens awaiting adoption, including specialized care for neonates, seniors, and medically complex animals who require additional time before placement.",
+    category: "programs",
+  },
+  {
+    id: "snip-4",
+    organizationId: "org-1",
+    title: "Spay/neuter program stats",
+    body: "Our community spay/neuter clinic serves more than 600 cats annually, prioritizing owned pets in low-income households and community cats through our TNR program, which operates in 12 zip codes across San Diego County.",
+    category: "programs",
+  },
+  {
+    id: "snip-5",
+    organizationId: "org-1",
+    title: "IRS status boilerplate",
+    body: "Whisker Haven Cat Rescue holds 501(c)(3) public charity status as recognized by the Internal Revenue Service (EIN: 47-1234567). Contributions are tax-deductible to the extent permitted by law.",
+    category: "other",
+  },
+]
+
+export function getWritingSession(artifactId: string): WritingSession | undefined {
+  return WRITING_SESSIONS.find((s) => s.artifactId === artifactId)
+}
+
+export function getSnippetsForOrg(orgId: string): Snippet[] {
+  return SNIPPETS.filter((s) => s.organizationId === orgId)
 }

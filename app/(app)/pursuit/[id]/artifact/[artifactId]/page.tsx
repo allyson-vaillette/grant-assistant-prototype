@@ -1,16 +1,47 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import {
   ArrowLeft, Download, Sparkles, Loader2,
   Check, X, AlertCircle, RefreshCw,
+  ChevronLeft, ChevronRight,
+  Plus, Trash2, Edit3,
+  MessageSquare, BookOpen, Sliders,
+  List, BarChart2,
+  CheckCircle, AlertTriangle, Circle,
+  Search, Upload, FileText, Paperclip,
+  Send, Copy,
 } from "lucide-react"
 import {
-  FUNDERS, OPPORTUNITIES,
+  FUNDERS, OPPORTUNITIES, ORG,
   getArtifact, getPipelineForOpportunity,
+  getAttachmentsForPipeline, getWritingSession, getSnippetsForOrg,
 } from "@/lib/mock-data"
-import type { ArtifactStage } from "@/lib/types"
+import type {
+  ArtifactStage, Requirement, DraftSection, Snippet,
+} from "@/lib/types"
+
+// ── Local types ────────────────────────────────────────────────────────────
+
+type OnrampStep = "source" | "extracting" | "requirements" | "context" | "generating"
+type AIPhase    = "idle" | "generating" | "preview" | "error"
+type LeftTab    = "requirements" | "compliance"
+type RightTab   = "chat" | "snippets" | "voice"
+type VoiceTone  = "as-written" | "formal" | "conversational" | "compelling"
+
+interface AIProposal {
+  sectionId: string
+  proposed: string
+  originalText: string
+}
+
+interface ChatMessage {
+  id: string
+  role: "user" | "assistant"
+  content: string
+  sectionId?: string
+}
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -20,56 +51,90 @@ const STAGE_BADGE: Record<ArtifactStage, { label: string; bg: string; color: str
   "post-apply": { label: "Post-apply", bg: "var(--evergreen-tint)",  color: "var(--evergreen)"       },
 }
 
-const MAX_SNAPSHOTS  = 5
 const AUTOSAVE_DELAY = 1500
+
+const VOICE_TONES: Array<{ value: VoiceTone; label: string; hint: string }> = [
+  { value: "as-written",     label: "As written",        hint: "Keep the current voice" },
+  { value: "formal",         label: "More formal",        hint: "Professional, precise language" },
+  { value: "conversational", label: "Conversational",     hint: "Warm, direct, reader-first" },
+  { value: "compelling",     label: "More compelling",    hint: "Lead with impact and urgency" },
+]
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function countWords(text: string): number {
+  return text.trim() === "" ? 0 : text.trim().split(/\s+/).length
+}
+
+function autosize(el: HTMLTextAreaElement | null) {
+  if (!el) return
+  el.style.height = "auto"
+  el.style.height = el.scrollHeight + "px"
+}
+
+type ComplianceStatus = "covered" | "partial" | "uncovered"
+
+function sectionCompliance(
+  section: DraftSection,
+  req: Requirement,
+): ComplianceStatus {
+  if (req.constraint?.type === "required_attachment") {
+    return section.content.trim() ? "covered" : "uncovered"
+  }
+  if (!section.content.trim()) return "uncovered"
+  if (req.constraint?.type === "word_limit") {
+    const limit = req.constraint.value as number
+    if (countWords(section.content) > limit * 1.05) return "partial"
+  }
+  return "covered"
+}
 
 // ── Mock AI ────────────────────────────────────────────────────────────────
 
-function mockAIRevise(
-  content: string,
-  scope: "document" | "section",
-  selectedText: string | null,
-  prompt: string,
-): string {
-  const p = prompt.toLowerCase()
+function mockExtractRequirements(): Requirement[] {
+  return [
+    { id: "req-ex-1", text: "Organization overview and mission alignment",     constraint: { type: "word_limit", value: 500 } },
+    { id: "req-ex-2", text: "Program description and activities to be funded", constraint: { type: "word_limit", value: 750 } },
+    { id: "req-ex-3", text: "Expected outcomes and impact metrics",            constraint: { type: "word_limit", value: 500 } },
+    { id: "req-ex-4", text: "Evaluation methodology and reporting plan",       constraint: { type: "word_limit", value: 250 } },
+    { id: "req-ex-5", text: "Budget narrative",                                constraint: { type: "required_attachment", value: "Budget spreadsheet (xlsx or pdf)" } },
+  ]
+}
 
-  if (scope === "section" && selectedText) {
-    const trimmed = selectedText.trimEnd()
-    if (p.includes("concis") || p.includes("shorter") || p.includes("brief")) {
-      const sentences = trimmed.split(/(?<=[.!?])\s+/)
-      return sentences.slice(0, Math.max(1, Math.ceil(sentences.length * 0.65))).join(" ")
-    }
-    return `${trimmed} Our organization's demonstrated track record — a 97% live release rate across more than 4,200 rescues — underscores our capacity to deliver measurable, sustained impact with this investment, in direct alignment with the funder's stated priorities.`
+function mockGenerateSection(req: Requirement): string {
+  const map: Record<string, string> = {
+    "req-ex-1": `Whisker Haven Cat Rescue is a 501(c)(3) nonprofit based in San Diego, California, dedicated to ending preventable cat euthanasia across the region. Since 2018, we have rescued over 4,200 animals and maintained a live release rate of 97% — placing us among California's highest-performing cat rescues.\n\nOur programs span the full rescue continuum: direct intake, a 180-volunteer foster network, a community spay/neuter clinic serving 600+ cats annually, and a kitten nursery providing 24-hour care for neonates.`,
+    "req-ex-2": `The Petco Love Lost & Found Grant will fund three program expansions over 12 months: increasing rescue intake capacity by 20% through a part-time coordinator; adding a second mobile outreach vehicle to reach underserved neighborhoods; and formalizing transfer protocols with two municipal shelter partners.\n\nEach investment is designed to compound — more intake capacity enables more placements, and municipal partnerships reduce repeat rescue of the same animals.`,
+    "req-ex-3": `Projected outcomes over the 12-month grant period:\n\n• 240 additional rescues above baseline (20% intake increase)\n• Live release rate sustained at or above 96%\n• 150 additional TNR procedures in target zip codes\n• Two formal municipal transfer partnerships established\n\nWe track all outcomes in our shelter management system and report monthly to our board.`,
   }
-
-  const paras   = content.split(/\n\n+/).filter(s => s.trim())
-  const opening = (paras[0] ?? "").replace(
-    "dedicated to rescuing cats and kittens in need and placing them in loving homes",
-    "committed to ending preventable cat euthanasia in San Diego County through direct rescue, foster care, and evidence-based community programs",
-  )
-  const evaluationPara =
-    "We track outcomes rigorously: monthly intake-to-outcome reports, live release rate benchmarking against national no-kill standards, and community reach metrics reviewed by our board quarterly. This data-driven accountability ensures every grant dollar is traceable to a life saved."
-
-  return [opening, ...paras.slice(1), evaluationPara].join("\n\n")
+  return map[req.id] ?? ""
 }
 
-// ── Types ──────────────────────────────────────────────────────────────────
-
-type AIScope  = "document" | "section"
-type AIPhase  = "idle" | "generating" | "preview" | "error"
-
-interface TextSelection {
-  start: number
-  end: number
-  text: string
+function mockAIReviseSection(content: string, instruction: string): string {
+  const lower = instruction.toLowerCase()
+  if (lower.includes("concis") || lower.includes("shorter") || lower.includes("brief")) {
+    const sentences = content.split(/(?<=[.!?])\s+/).filter(Boolean)
+    return sentences.slice(0, Math.max(1, Math.ceil(sentences.length * 0.65))).join(" ")
+  }
+  if (lower.includes("compelling") || lower.includes("stronger") || lower.includes("urgent")) {
+    return content + "\n\nOur 97% live release rate across 4,200+ rescues demonstrates that this investment will translate directly to measurable lifesaving — not just program activity, but verified outcomes aligned with Petco Love's core mission."
+  }
+  return content + "\n\nThis work is grounded in demonstrated community need: San Diego County records over 40,000 cat intakes annually, and each capacity expansion we deliver converts directly into additional lives saved and families reunited."
 }
 
-interface Proposal {
-  scope: AIScope
-  proposed: string
-  selectionStart?: number
-  selectionEnd?: number
-  originalSelection?: string
+function mockAIChatReply(userMessage: string, sectionTitle?: string): string {
+  const lower = userMessage.toLowerCase()
+  const ctx   = sectionTitle ? ` for "${sectionTitle}"` : ""
+  if (lower.includes("compli") || lower.includes("requirem")) {
+    return `Based on the requirements, sections 4 (Evaluation Methodology) and 5 (Budget Narrative) are currently empty. Section 4 has a 250-word limit — a good starting point. Want me to draft it?`
+  }
+  if (lower.includes("shorter") || lower.includes("concis") || lower.includes("trim")) {
+    return `I can trim this${ctx}. The main opportunities: (1) cut throat-clearing phrases like "It is worth noting that…", and (2) collapse the program list into fewer, denser sentences. Want me to revise?`
+  }
+  if (lower.includes("compelling") || lower.includes("stronger") || lower.includes("impact")) {
+    return `To strengthen the narrative${ctx}: lead with the specific outcome rather than the activity. Instead of "we will add a vehicle," try "we will reach 150 more animals in underserved neighborhoods." Funders respond to impact-forward framing.`
+  }
+  return `The strongest move${ctx} is anchoring every claim to a specific number or data point — rescues completed, live release rate, zip codes served. Petco Love reviewers look for measurable impact over narrative description. Want me to scan for unanchored claims?`
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────
@@ -79,178 +144,329 @@ export default function ArtifactEditorPage({
 }: {
   params: { id: string; artifactId: string }
 }) {
-  // params.id is the opportunity ID
-  const pip      = getPipelineForOpportunity(params.id)
-  const artifact = getArtifact(params.artifactId)
-  const funder   = pip ? FUNDERS.find(f => f.id === pip.funderId)      : null
-  const opp      = pip ? OPPORTUNITIES.find(o => o.id === pip.opportunityId) : null
+  const pip             = getPipelineForOpportunity(params.id)
+  const artifact        = getArtifact(params.artifactId)
+  const funder          = pip ? FUNDERS.find(f => f.id === pip.funderId) : null
+  const opp             = pip ? OPPORTUNITIES.find(o => o.id === pip.opportunityId) : null
+  const pipelineAttachments = pip ? getAttachmentsForPipeline(pip.id) : []
+  const existingSession = artifact ? getWritingSession(artifact.id) : null
+  const orgSnippets     = getSnippetsForOrg(ORG.id)
 
-  // ── Document state ──────────────────────────────────────────────────────
-  const [content,    setContent]    = useState(artifact?.content ?? "")
-  const [updatedAt,  setUpdatedAt]  = useState(artifact?.updatedAt ?? "")
-  const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved")
-  const [_snapshots, setSnapshots]  = useState<string[]>([artifact?.content ?? ""])
+  // ── Initial view ─────────────────────────────────────────────────────
+  const [view, setView] = useState<"onramp" | "working">(existingSession ? "working" : "onramp")
 
-  // ── Selection state ─────────────────────────────────────────────────────
-  const [selection, setSelection] = useState<TextSelection | null>(null)
+  // ── On-ramp state ────────────────────────────────────────────────────
+  const [onrampStep,         setOnrampStep]         = useState<OnrampStep>("source")
+  const [selectedSource,     setSelectedSource]     = useState<"existing" | "upload" | "none" | null>(null)
+  const [draftReqs,          setDraftReqs]          = useState<Requirement[]>([])
+  const [editingReqId,       setEditingReqId]       = useState<string | null>(null)
+  const [editingReqText,     setEditingReqText]     = useState("")
+  const [editingConstraint,  setEditingConstraint]  = useState<{ type: "word_limit" | "required_attachment"; value: string } | null>(null)
+  const [selectedContextIds, setSelectedContextIds] = useState<Set<string>>(new Set(["att-2"]))
 
-  // ── AI state ────────────────────────────────────────────────────────────
-  const [aiScope,  setAiScope]  = useState<AIScope>("document")
-  const [prompt,   setPrompt]   = useState("")
-  const [aiPhase,  setAiPhase]  = useState<AIPhase>("idle")
-  const [aiError,  setAiError]  = useState("")
-  const [proposal, setProposal] = useState<Proposal | null>(null)
+  // ── Working state: document ──────────────────────────────────────────
+  const [requirements, setRequirements] = useState<Requirement[]>(existingSession?.requirements ?? [])
+  const [sections,     setSections]     = useState<DraftSection[]>(existingSession?.sections ?? [])
+  const [saveStatus,   setSaveStatus]   = useState<"saved" | "saving">("saved")
+  const [updatedAt,    setUpdatedAt]    = useState(artifact?.updatedAt ?? "")
 
-  const textareaRef  = useRef<HTMLTextAreaElement>(null)
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const abortRef     = useRef<AbortController | null>(null)
+  // ── Working state: layout ────────────────────────────────────────────
+  const [leftTab,        setLeftTab]        = useState<LeftTab>("requirements")
+  const [rightTab,       setRightTab]       = useState<RightTab>("chat")
+  const [leftCollapsed,  setLeftCollapsed]  = useState(false)
+  const [rightCollapsed, setRightCollapsed] = useState(false)
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
 
-  const isPreview  = aiPhase === "preview"
-  const canGenerate = !!prompt.trim() && !(aiScope === "section" && !selection)
+  // ── Working state: AI ────────────────────────────────────────────────
+  const [aiPhase,   setAiPhase]   = useState<AIPhase>("idle")
+  const [aiProposal, setAiProposal] = useState<AIProposal | null>(null)
+  const [aiPrompt,  setAiPrompt]  = useState("")
+  const [aiError,   setAiError]   = useState("")
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    { id: "init-1", role: "assistant", content: "I've reviewed the Petco Love RFP and your prior proposal. Ask me anything, or focus a section for targeted help." },
+  ])
+  const [chatInput,   setChatInput]   = useState("")
+  const [isChatBusy,  setIsChatBusy]  = useState(false)
 
-  // ── Helpers ─────────────────────────────────────────────────────────────
+  // ── Working state: snippets + voice ─────────────────────────────────
+  const [snippetSearch,  setSnippetSearch]  = useState("")
+  const [insertedSnip,   setInsertedSnip]   = useState<string | null>(null)
+  const [voiceTone,      setVoiceTone]      = useState<VoiceTone>("as-written")
+  const [isHumanizing,   setIsHumanizing]   = useState(false)
 
-  function pushSnapshot(c: string) {
-    setSnapshots(prev => [...prev, c].slice(-MAX_SNAPSHOTS))
-  }
+  // ── Refs ─────────────────────────────────────────────────────────────
+  const saveTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const abortRef       = useRef<AbortController | null>(null)
+  const chatEndRef     = useRef<HTMLDivElement | null>(null)
+  const chatInputRef   = useRef<HTMLTextAreaElement | null>(null)
+  const editReqInputRef = useRef<HTMLInputElement | null>(null)
+  const sectionRefs    = useRef<Record<string, HTMLTextAreaElement | null>>({})
 
-  function triggerAutosave(_newContent: string) {
+  // ── Effects ───────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [chatMessages])
+
+  // Autosize all section textareas on mount / section change
+  useEffect(() => {
+    Object.values(sectionRefs.current).forEach(el => autosize(el))
+  }, [sections.length])
+
+  // Focus editing input in onramp when editingReqId changes
+  useEffect(() => {
+    if (editingReqId) editReqInputRef.current?.focus()
+  }, [editingReqId])
+
+  // Escape closes overlays
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== "Escape") return
+      if (aiPhase === "preview") { setAiProposal(null); setAiPhase("idle") }
+      if (editingReqId) { setEditingReqId(null); setEditingReqText("") }
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [aiPhase, editingReqId])
+
+  // ── Autosave ─────────────────────────────────────────────────────────
+
+  function triggerAutosave() {
     setSaveStatus("saving")
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
-      const now = new Date()
-      setUpdatedAt(
-        now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-      )
+      setUpdatedAt(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))
       setSaveStatus("saved")
     }, AUTOSAVE_DELAY)
   }
 
-  // ── Editor handlers ─────────────────────────────────────────────────────
+  // ── On-ramp handlers ─────────────────────────────────────────────────
 
-  function handleContentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    setContent(e.target.value)
-    triggerAutosave(e.target.value)
-  }
-
-  function handleSelect() {
-    const ta = textareaRef.current
-    if (!ta) return
-    const start = ta.selectionStart
-    const end   = ta.selectionEnd
-    if (start !== end) {
-      setSelection({ start, end, text: content.slice(start, end) })
-      setAiScope("section")
+  async function handleSourceSelect(source: "existing" | "upload" | "none") {
+    setSelectedSource(source)
+    if (source === "none") {
+      setDraftReqs([])
+      setOnrampStep("requirements")
     } else {
-      setSelection(null)
-      setAiScope("document")
+      setOnrampStep("extracting")
+      await new Promise(r => setTimeout(r, 2600))
+      setDraftReqs(mockExtractRequirements())
+      setOnrampStep("requirements")
     }
   }
 
-  // ── AI handlers ─────────────────────────────────────────────────────────
+  function handleAddReq() {
+    const id = `req-new-${Date.now()}`
+    setDraftReqs(prev => [...prev, { id, text: "" }])
+    setEditingReqId(id)
+    setEditingReqText("")
+    setEditingConstraint(null)
+  }
 
-  async function handleGenerate() {
-    if (!prompt.trim()) return
-    if (aiScope === "section" && !selection) return
+  function handleEditReq(req: Requirement) {
+    setEditingReqId(req.id)
+    setEditingReqText(req.text)
+    setEditingConstraint(
+      req.constraint
+        ? { type: req.constraint.type, value: String(req.constraint.value) }
+        : null,
+    )
+  }
 
+  function handleSaveReqEdit() {
+    if (!editingReqId) return
+    setDraftReqs(prev => prev.map(r => {
+      if (r.id !== editingReqId) return r
+      const constraint = editingConstraint && editingConstraint.value.trim()
+        ? {
+            type: editingConstraint.type,
+            value: editingConstraint.type === "word_limit"
+              ? Number(editingConstraint.value) || 500
+              : editingConstraint.value,
+          }
+        : undefined
+      return { ...r, text: editingReqText, constraint }
+    }))
+    setEditingReqId(null)
+    setEditingReqText("")
+    setEditingConstraint(null)
+  }
+
+  function handleDeleteReq(id: string) {
+    setDraftReqs(prev => prev.filter(r => r.id !== id))
+    if (editingReqId === id) { setEditingReqId(null); setEditingReqText("") }
+  }
+
+  function handleContextToggle(attachmentId: string) {
+    setSelectedContextIds(prev => {
+      const next = new Set(prev)
+      if (next.has(attachmentId)) next.delete(attachmentId)
+      else next.add(attachmentId)
+      return next
+    })
+  }
+
+  async function handleGenerateDraft() {
+    if (editingReqId) handleSaveReqEdit()
+    setOnrampStep("generating")
+    await new Promise(r => setTimeout(r, 3000))
+    const finalReqs = draftReqs.filter(r => r.text.trim())
+    const newSections: DraftSection[] = finalReqs.map(req => ({
+      id:            `sec-${req.id}`,
+      requirementId: req.id,
+      title:         req.text.length > 52 ? req.text.slice(0, 52) + "…" : req.text,
+      content:       mockGenerateSection(req),
+    }))
+    setRequirements(finalReqs)
+    setSections(newSections)
+    setView("working")
+  }
+
+  // ── Working state: document handlers ─────────────────────────────────
+
+  function handleSectionChange(sectionId: string, value: string) {
+    setSections(prev => prev.map(s => s.id === sectionId ? { ...s, content: value } : s))
+    autosize(sectionRefs.current[sectionId])
+    triggerAutosave()
+  }
+
+  function scrollToSection(sectionId: string) {
+    const el = sectionRefs.current[sectionId]
+    if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.focus() }
+    setActiveSectionId(sectionId)
+  }
+
+  // ── Working state: AI handlers ────────────────────────────────────────
+
+  async function handleAIGenerate() {
+    if (!aiPrompt.trim()) return
     const ctrl = new AbortController()
     abortRef.current = ctrl
-
-    pushSnapshot(content)
-
-    const scopeAtGenerate     = aiScope
-    const selectionAtGenerate = aiScope === "section" ? selection : null
+    const targetSection = sections.find(s => s.id === activeSectionId) ?? sections.find(s => s.content.trim())
 
     setAiPhase("generating")
     setAiError("")
-
     try {
       await new Promise<void>((resolve, reject) => {
         const t = setTimeout(resolve, 1800)
         ctrl.signal.addEventListener("abort", () => { clearTimeout(t); reject(new Error("aborted")) })
       })
-
       if (ctrl.signal.aborted) return
-
-      const result = mockAIRevise(
-        content,
-        scopeAtGenerate,
-        selectionAtGenerate?.text ?? null,
-        prompt,
-      )
-
-      setProposal({
-        scope:             scopeAtGenerate,
-        proposed:          result,
-        selectionStart:    selectionAtGenerate?.start,
-        selectionEnd:      selectionAtGenerate?.end,
-        originalSelection: selectionAtGenerate?.text,
-      })
+      if (targetSection) {
+        setAiProposal({
+          sectionId:    targetSection.id,
+          proposed:     mockAIReviseSection(targetSection.content, aiPrompt),
+          originalText: targetSection.content,
+        })
+      }
       setAiPhase("preview")
     } catch (err) {
-      if ((err as Error).message === "aborted") {
-        setAiPhase("idle")
-        return
-      }
-      setAiError("Generation failed — your document is unchanged. Please try again.")
+      if ((err as Error).message === "aborted") { setAiPhase("idle"); return }
+      setAiError("Generation failed — your document is unchanged.")
       setAiPhase("error")
     }
   }
 
-  function handleCancel() {
+  function handleAICancel() {
     abortRef.current?.abort()
     abortRef.current = null
     setAiPhase("idle")
   }
 
-  function handleAccept() {
-    if (!proposal) return
+  function handleAIAccept() {
+    if (!aiProposal) return
+    setSections(prev => prev.map(s => s.id === aiProposal.sectionId ? { ...s, content: aiProposal.proposed } : s))
+    setTimeout(() => autosize(sectionRefs.current[aiProposal.sectionId]), 0)
+    triggerAutosave()
+    setAiProposal(null)
+    setAiPhase("idle")
+    setAiPrompt("")
+  }
 
-    let newContent: string
-    if (
-      proposal.scope === "section" &&
-      proposal.selectionStart !== undefined &&
-      proposal.selectionEnd   !== undefined
-    ) {
-      newContent =
-        content.slice(0, proposal.selectionStart) +
-        proposal.proposed +
-        content.slice(proposal.selectionEnd)
-    } else {
-      newContent = proposal.proposed
+  function handleAIDiscard() {
+    setAiProposal(null)
+    setAiPhase("idle")
+  }
+
+  // ── Chat handlers ─────────────────────────────────────────────────────
+
+  async function handleChatSend() {
+    const msg = chatInput.trim()
+    if (!msg || isChatBusy) return
+    const activeSection = sections.find(s => s.id === activeSectionId)
+    const userMsg: ChatMessage = { id: `msg-${Date.now()}`, role: "user", content: msg, sectionId: activeSectionId ?? undefined }
+    setChatMessages(prev => [...prev, userMsg])
+    setChatInput("")
+    setIsChatBusy(true)
+    await new Promise(r => setTimeout(r, 1100))
+    const reply = mockAIChatReply(msg, activeSection?.title)
+    setChatMessages(prev => [...prev, { id: `msg-${Date.now()}-a`, role: "assistant", content: reply }])
+    setIsChatBusy(false)
+  }
+
+  // ── Snippets handler ──────────────────────────────────────────────────
+
+  function handleInsertSnippet(snippet: Snippet) {
+    const targetId = activeSectionId ?? sections[0]?.id
+    if (!targetId) return
+    const ta = sectionRefs.current[targetId]
+    setSections(prev => prev.map(s => {
+      if (s.id !== targetId) return s
+      if (ta) {
+        const start = ta.selectionStart ?? s.content.length
+        const end   = ta.selectionEnd   ?? s.content.length
+        return { ...s, content: s.content.slice(0, start) + snippet.body + s.content.slice(end) }
+      }
+      return { ...s, content: s.content + (s.content ? "\n\n" : "") + snippet.body }
+    }))
+    triggerAutosave()
+    setTimeout(() => autosize(sectionRefs.current[targetId]), 0)
+    setInsertedSnip(snippet.id)
+    setTimeout(() => setInsertedSnip(null), 1400)
+  }
+
+  // ── Voice handler ─────────────────────────────────────────────────────
+
+  async function handleHumanize() {
+    setIsHumanizing(true)
+    await new Promise(r => setTimeout(r, 1400))
+    const targetId = activeSectionId ?? sections.find(s => s.content.trim())?.id
+    if (targetId) {
+      setSections(prev => prev.map(s => {
+        if (s.id !== targetId) return s
+        const humanized = s.content
+          .replace(/It is worth noting that /gi, "")
+          .replace(/It should be noted that /gi, "")
+          .replace(/We are committed to /gi, "We ")
+          .replace(/This grant will enable us to /gi, "With this grant, we'll ")
+          .replace(/It is important to /gi, "")
+          .replace(/We are pleased to /gi, "")
+          .replace(/In order to /gi, "To ")
+        return { ...s, content: humanized }
+      }))
+      triggerAutosave()
+      setTimeout(() => autosize(sectionRefs.current[targetId ?? ""]), 0)
     }
-
-    pushSnapshot(content)
-    setContent(newContent)
-    triggerAutosave(newContent)
-    setProposal(null)
-    setAiPhase("idle")
-    setPrompt("")
-    setSelection(null)
-    setAiScope("document")
+    setIsHumanizing(false)
   }
 
-  function handleDiscard() {
-    setProposal(null)
-    setAiPhase("idle")
-  }
+  // ── Computed ──────────────────────────────────────────────────────────
 
-  // ── Not found ───────────────────────────────────────────────────────────
+  const activeSection     = sections.find(s => s.id === activeSectionId) ?? null
+  const filteredSnippets  = orgSnippets.filter(s =>
+    !snippetSearch || s.title.toLowerCase().includes(snippetSearch.toLowerCase()) || s.body.toLowerCase().includes(snippetSearch.toLowerCase())
+  )
+  const rfpAttachment     = pipelineAttachments.find(a => a.category === "rfp")
+  const contextCandidates = pipelineAttachments.filter(a => a.category === "prior_proposal" || a.category === "report")
+
+  // ── Not found ─────────────────────────────────────────────────────────
 
   if (!artifact || !pip || !funder || !opp) {
     return (
-      <div style={{
-        flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-        backgroundColor: "var(--canvas)",
-      }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "var(--canvas)" }}>
         <div style={{ textAlign: "center" }}>
-          <p style={{ fontSize: 15, color: "var(--ink-tertiary)", marginBottom: 16 }}>
-            Artifact not found.
-          </p>
-          <Link
-            href={`/pursuit/${params.id}`}
-            style={{ fontSize: 13, color: "var(--slate-secondary)", textDecoration: "none" }}
-          >
+          <p style={{ fontSize: 15, color: "var(--ink-tertiary)", marginBottom: 16 }}>Artifact not found.</p>
+          <Link href={`/pursuit/${params.id}`} style={{ fontSize: 13, color: "var(--slate-secondary)", textDecoration: "none" }}>
             ← Back to workspace
           </Link>
         </div>
@@ -260,490 +476,1464 @@ export default function ArtifactEditorPage({
 
   const stageCfg = STAGE_BADGE[artifact.stage]
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────────────────────────
+
   return (
-    <div style={{
-      flex: 1, display: "flex", flexDirection: "column",
-      overflow: "hidden",
-      backgroundColor: "var(--canvas)",
-    }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--canvas)" }}>
 
-      {/* ── Top bar ────────────────────────────────────────────────────── */}
-      <div style={{
-        flexShrink: 0, height: 52,
-        backgroundColor: "var(--surface)", borderBottom: "1px solid var(--hair)",
-        padding: "0 20px",
-        display: "flex", alignItems: "center", gap: 10,
-      }}>
-
-        {/* Breadcrumb / back */}
+      {/* ══ TOP BAR ══════════════════════════════════════════════════════════ */}
+      <div
+        role="banner"
+        style={{
+          flexShrink: 0, height: 52,
+          backgroundColor: "var(--surface)", borderBottom: "1px solid var(--hair)",
+          padding: "0 20px", display: "flex", alignItems: "center", gap: 10,
+        }}
+      >
         <Link href={`/pursuit/${params.id}`} style={{ textDecoration: "none" }}>
           <button
             type="button"
             style={{
               display: "flex", alignItems: "center", gap: 5,
               background: "none", border: "none", cursor: "pointer",
-              fontSize: 13, color: "var(--ink-tertiary)", padding: 0,
-              transition: "color 120ms",
+              fontSize: 13, color: "var(--ink-tertiary)", padding: 0, transition: "color 120ms",
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink)" }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "var(--ink)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "var(--ink-tertiary)")}
           >
-            <ArrowLeft size={14} />
-            {funder.name}
+            <ArrowLeft size={14} />{funder.name}
           </button>
         </Link>
 
         <span style={{ color: "var(--hair-2)", fontSize: 16 }}>·</span>
 
-        <span style={{
-          fontSize: 13, color: "var(--ink-tertiary)",
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 280,
-        }}>
+        <span style={{ fontSize: 13, color: "var(--ink-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 220 }}>
           {artifact.name}
         </span>
 
         <span style={{
           padding: "2px 8px", borderRadius: "var(--radius-pill)",
-          fontSize: 10, fontWeight: 600,
+          fontSize: 10, fontWeight: 600, flexShrink: 0,
           backgroundColor: stageCfg.bg, color: stageCfg.color,
-          flexShrink: 0,
         }}>
           {stageCfg.label}
         </span>
 
         <div style={{ flex: 1 }} />
 
-        {/* Save status */}
-        <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>
-          {saveStatus === "saving" ? "Saving…" : `Updated ${updatedAt}`}
-        </span>
+        {view === "working" && (
+          <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>
+            {saveStatus === "saving" ? "Saving…" : `Updated ${updatedAt}`}
+          </span>
+        )}
 
-        {/* Export */}
         <button
           type="button"
           style={{
             display: "flex", alignItems: "center", gap: 5,
-            padding: "6px 12px", borderRadius: "var(--radius-button)",
+            padding: "5px 12px", borderRadius: "var(--radius-button)",
             border: "1px solid var(--hair-2)", backgroundColor: "transparent",
             fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)", cursor: "pointer",
             transition: "background-color 120ms",
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+          onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
         >
           <Download size={12} /> Export
         </button>
 
-        {/* Done */}
         <Link href={`/pursuit/${params.id}`} style={{ textDecoration: "none" }}>
           <button
             type="button"
             style={{
-              padding: "6px 16px", borderRadius: "var(--radius-button)",
+              padding: "5px 16px", borderRadius: "var(--radius-button)",
               border: "none", backgroundColor: "var(--slate-primary)",
-              fontSize: 12, fontWeight: 600, color: "#FFFFFF", cursor: "pointer",
+              fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer",
               transition: "background-color 150ms",
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = "#3A4F6A")}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "var(--slate-primary)")}
           >
             Done
           </button>
         </Link>
       </div>
 
-      {/* ── Main ───────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      {/* ══ CONTENT ══════════════════════════════════════════════════════════ */}
 
-        {/* ── Editor pane ──────────────────────────────────────────── */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      {view === "onramp" ? (
 
-          {/* Preview notice */}
-          {isPreview && (
-            <div style={{
-              flexShrink: 0,
-              display: "flex", alignItems: "center", gap: 9,
-              padding: "10px 48px",
-              backgroundColor: "rgba(74,96,128,0.05)",
-              borderBottom: "1px solid var(--slate-light)",
-            }}>
-              <Sparkles size={13} style={{ color: "var(--slate-primary)" }} />
-              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--slate-primary)" }}>
-                {proposal?.scope === "section"
-                  ? "Section revision ready to review"
-                  : "Document revision ready to review"}
-              </span>
-              <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>
-                — accept or discard in the panel →
-              </span>
+        // ── ON-RAMP WIZARD ──────────────────────────────────────────────────
+        <div
+          role="main"
+          aria-label="Draft setup"
+          style={{
+            flex: 1, overflowY: "auto",
+            display: "flex", flexDirection: "column", alignItems: "center",
+            padding: "48px 24px 80px",
+          }}
+        >
+          {/* Step progress */}
+          {onrampStep !== "extracting" && onrampStep !== "generating" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 40 }}>
+              {(["source", "requirements", "context"] as const).map((step, i) => {
+                const steps: OnrampStep[] = ["source", "requirements", "context"]
+                const currentIdx = steps.indexOf(onrampStep) === -1 ? 0 : steps.indexOf(onrampStep)
+                const isActive   = step === onrampStep
+                const isDone     = steps.indexOf(step) < currentIdx
+                const label      = step === "source" ? "Source" : step === "requirements" ? "Requirements" : "Context"
+                return (
+                  <div key={step} style={{ display: "flex", alignItems: "center" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                      <div style={{
+                        width: 24, height: 24, borderRadius: "50%",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        backgroundColor: isDone ? "var(--evergreen)" : isActive ? "var(--slate-primary)" : "var(--hair-2)",
+                        transition: "background-color 200ms",
+                      }}>
+                        {isDone
+                          ? <Check size={12} color="#fff" />
+                          : <span style={{ fontSize: 11, fontWeight: 700, color: isActive ? "#fff" : "var(--ink-tertiary)" }}>{i + 1}</span>
+                        }
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: isActive ? 600 : 400, color: isActive ? "var(--ink)" : "var(--ink-tertiary)" }}>
+                        {label}
+                      </span>
+                    </div>
+                    {i < 2 && (
+                      <div style={{ width: 64, height: 1, margin: "0 8px", marginBottom: 18, backgroundColor: "var(--hair-2)" }} />
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
 
-          {/* Scrollable editor */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "40px 64px" }}>
+          {/* ── SOURCE STEP ── */}
+          {onrampStep === "source" && (
+            <div style={{ width: "100%", maxWidth: 560 }}>
+              <h1 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-lora, serif)", letterSpacing: "-0.02em" }}>
+                Set up your draft
+              </h1>
+              <p style={{ margin: "0 0 28px", fontSize: 14, color: "var(--ink-tertiary)", lineHeight: "20px" }}>
+                Tell Grant Assistant where to look for requirements.
+              </p>
 
-            <h1
-              contentEditable={!isPreview}
-              suppressContentEditableWarning
-              style={{
-                margin: "0 0 32px",
-                fontSize: 26, fontWeight: 700, color: "var(--ink)",
-                lineHeight: "32px", letterSpacing: "-0.02em",
-                outline: "none", borderBottom: "1px solid transparent",
-                opacity: isPreview ? 0.55 : 1,
-                transition: "opacity 200ms",
-              }}
-              onFocus={e  => { (e.currentTarget as HTMLHeadingElement).style.borderBottomColor = "var(--slate-tint)" }}
-              onBlur={e   => { (e.currentTarget as HTMLHeadingElement).style.borderBottomColor = "transparent" }}
-            >
-              {artifact.name}
-            </h1>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {/* Option 1 — use existing RFP */}
+                {rfpAttachment && (
+                  <button
+                    type="button"
+                    onClick={() => handleSourceSelect("existing")}
+                    style={{
+                      width: "100%", padding: "16px 20px", borderRadius: "var(--radius-card)",
+                      border: "2px solid var(--slate-primary)",
+                      backgroundColor: "var(--slate-tint)",
+                      textAlign: "left", cursor: "pointer",
+                      display: "flex", alignItems: "flex-start", gap: 14,
+                      transition: "background-color 120ms",
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = "#dce7f0")}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = "var(--slate-tint)")}
+                  >
+                    <div style={{
+                      width: 36, height: 36, borderRadius: "var(--radius-button)",
+                      backgroundColor: "var(--slate-primary)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    }}>
+                      <FileText size={16} color="#fff" />
+                    </div>
+                    <div>
+                      <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
+                        Use RFP already attached
+                      </p>
+                      <p style={{ margin: 0, fontSize: 12, color: "var(--ink-secondary)" }}>
+                        {rfpAttachment.filename} · uploaded {rfpAttachment.uploadDate}
+                      </p>
+                      <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--slate-secondary)", fontWeight: 500 }}>
+                        Grant Assistant will extract requirements automatically
+                      </p>
+                    </div>
+                    <div style={{ marginLeft: "auto", flexShrink: 0, color: "var(--slate-primary)" }}>
+                      <ChevronRight size={16} />
+                    </div>
+                  </button>
+                )}
 
-            <textarea
-              ref={textareaRef}
-              value={content}
-              onChange={handleContentChange}
-              onSelect={handleSelect}
-              onMouseUp={handleSelect}
-              onKeyUp={handleSelect}
-              readOnly={isPreview}
-              placeholder={`Start writing your ${artifact.type === "proposal" ? "proposal" : artifact.type}…`}
-              style={{
-                width: "100%", minHeight: "60vh",
-                background: "none", border: "none", outline: "none", resize: "none",
-                fontSize: 15, color: "var(--ink)", lineHeight: "26px",
-                fontFamily: "inherit",
-                opacity: isPreview ? 0.55 : 1,
-                cursor: isPreview ? "default" : "text",
-                transition: "opacity 200ms",
-              }}
-            />
-          </div>
+                {/* Option 2 — upload different RFP */}
+                <button
+                  type="button"
+                  onClick={() => handleSourceSelect("upload")}
+                  style={{
+                    width: "100%", padding: "16px 20px", borderRadius: "var(--radius-card)",
+                    border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
+                    textAlign: "left", cursor: "pointer",
+                    display: "flex", alignItems: "flex-start", gap: 14,
+                    transition: "background-color 120ms",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "var(--surface)")}
+                >
+                  <div style={{
+                    width: 36, height: 36, borderRadius: "var(--radius-button)",
+                    backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)",
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    <Upload size={16} color="var(--ink-tertiary)" />
+                  </div>
+                  <div>
+                    <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
+                      Upload an RFP
+                    </p>
+                    <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)" }}>
+                      PDF, Word doc, or any grant guidelines
+                    </p>
+                  </div>
+                  <div style={{ marginLeft: "auto", flexShrink: 0, color: "var(--ink-tertiary)" }}>
+                    <ChevronRight size={16} />
+                  </div>
+                </button>
+
+                {/* Option 3 — no RFP */}
+                <button
+                  type="button"
+                  onClick={() => handleSourceSelect("none")}
+                  style={{
+                    width: "100%", padding: "16px 20px", borderRadius: "var(--radius-card)",
+                    border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
+                    textAlign: "left", cursor: "pointer",
+                    display: "flex", alignItems: "flex-start", gap: 14,
+                    transition: "background-color 120ms",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "var(--surface)")}
+                >
+                  <div style={{
+                    width: 36, height: 36, borderRadius: "var(--radius-button)",
+                    backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)",
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    <Edit3 size={16} color="var(--ink-tertiary)" />
+                  </div>
+                  <div>
+                    <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
+                      No RFP — enter requirements manually
+                    </p>
+                    <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)" }}>
+                      Build the requirements list yourself or describe what the funder wants
+                    </p>
+                  </div>
+                  <div style={{ marginLeft: "auto", flexShrink: 0, color: "var(--ink-tertiary)" }}>
+                    <ChevronRight size={16} />
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── EXTRACTING STEP ── */}
+          {onrampStep === "extracting" && (
+            <div style={{ width: "100%", maxWidth: 440, textAlign: "center", paddingTop: 40 }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: "50%",
+                background: "var(--gradient-ai-wash)",
+                border: "1px solid rgba(74,96,128,0.15)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                margin: "0 auto 20px",
+              }}>
+                <Loader2 size={24} className="animate-spin" style={{ color: "var(--slate-primary)" }} />
+              </div>
+              <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-lora, serif)" }}>
+                Reading the RFP
+              </h2>
+              <p style={{ margin: "0 0 24px", fontSize: 13, color: "var(--ink-tertiary)", lineHeight: "20px" }}>
+                Grant Assistant is extracting requirements, sections, and constraints from {rfpAttachment?.filename ?? "the RFP"}.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, textAlign: "left" }}>
+                {["Identifying required sections…", "Extracting word limits and constraints…", "Checking for attachment requirements…"].map((label, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 14px", borderRadius: "var(--radius-button)", backgroundColor: "var(--surface)", border: "1px solid var(--hair)" }}>
+                    <Loader2 size={13} className="animate-spin" style={{ color: "var(--slate-soft)", flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, color: "var(--ink-secondary)" }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── REQUIREMENTS STEP ── */}
+          {onrampStep === "requirements" && (
+            <div style={{ width: "100%", maxWidth: 600 }}>
+              <div style={{ marginBottom: 24 }}>
+                <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-lora, serif)", letterSpacing: "-0.02em" }}>
+                  Review requirements
+                </h1>
+                <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)", lineHeight: "19px" }}>
+                  {selectedSource === "none"
+                    ? "Add the sections and constraints the funder requires."
+                    : "Extracted from the RFP. Edit, add, or remove before generating."}
+                </p>
+              </div>
+
+              {/* Requirement list */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+                {draftReqs.length === 0 && (
+                  <div style={{ padding: "24px 20px", borderRadius: "var(--radius-card)", border: "1px dashed var(--hair-2)", textAlign: "center" }}>
+                    <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>No requirements yet — add one below.</p>
+                  </div>
+                )}
+
+                {draftReqs.map((req, idx) => (
+                  <div key={req.id}>
+                    {editingReqId === req.id ? (
+                      // Editing row
+                      <div style={{ padding: "14px 16px", borderRadius: "var(--radius-card)", border: "2px solid var(--slate-primary)", backgroundColor: "var(--surface)" }}>
+                        <input
+                          ref={editReqInputRef}
+                          value={editingReqText}
+                          onChange={e => setEditingReqText(e.target.value)}
+                          onKeyDown={e => { if (e.key === "Enter") handleSaveReqEdit() }}
+                          placeholder="Describe this requirement…"
+                          style={{
+                            width: "100%", padding: "7px 10px", borderRadius: "var(--radius-input)",
+                            border: "1px solid var(--hair-2)", backgroundColor: "var(--canvas)",
+                            fontSize: 13, color: "var(--ink)", outline: "none", boxSizing: "border-box",
+                            marginBottom: 10,
+                          }}
+                        />
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <select
+                            value={editingConstraint?.type ?? "none"}
+                            onChange={e => {
+                              const val = e.target.value
+                              if (val === "none") setEditingConstraint(null)
+                              else setEditingConstraint({ type: val as "word_limit" | "required_attachment", value: "" })
+                            }}
+                            style={{
+                              padding: "5px 8px", borderRadius: "var(--radius-input)",
+                              border: "1px solid var(--hair-2)", backgroundColor: "var(--canvas)",
+                              fontSize: 12, color: "var(--ink-secondary)", cursor: "pointer",
+                            }}
+                          >
+                            <option value="none">No constraint</option>
+                            <option value="word_limit">Word limit</option>
+                            <option value="required_attachment">Required attachment</option>
+                          </select>
+
+                          {editingConstraint?.type === "word_limit" && (
+                            <input
+                              type="number"
+                              value={editingConstraint.value}
+                              onChange={e => setEditingConstraint(c => c ? { ...c, value: e.target.value } : null)}
+                              placeholder="500"
+                              style={{
+                                width: 80, padding: "5px 8px", borderRadius: "var(--radius-input)",
+                                border: "1px solid var(--hair-2)", backgroundColor: "var(--canvas)",
+                                fontSize: 12, color: "var(--ink)", outline: "none",
+                              }}
+                            />
+                          )}
+                          {editingConstraint?.type === "required_attachment" && (
+                            <input
+                              value={editingConstraint.value}
+                              onChange={e => setEditingConstraint(c => c ? { ...c, value: e.target.value } : null)}
+                              placeholder="e.g. Budget spreadsheet"
+                              style={{
+                                flex: 1, padding: "5px 8px", borderRadius: "var(--radius-input)",
+                                border: "1px solid var(--hair-2)", backgroundColor: "var(--canvas)",
+                                fontSize: 12, color: "var(--ink)", outline: "none",
+                              }}
+                            />
+                          )}
+
+                          <div style={{ flex: 1 }} />
+                          <button type="button" onClick={handleSaveReqEdit} style={{ padding: "5px 14px", borderRadius: "var(--radius-button)", border: "none", backgroundColor: "var(--slate-primary)", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                            Save
+                          </button>
+                          <button type="button" onClick={() => { setEditingReqId(null); setEditingReqText(""); if (!req.text.trim()) handleDeleteReq(req.id) }} style={{ padding: "5px 10px", borderRadius: "var(--radius-button)", border: "1px solid var(--hair-2)", backgroundColor: "transparent", color: "var(--ink-secondary)", fontSize: 12, cursor: "pointer" }}>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // Display row
+                      <div
+                        style={{
+                          padding: "12px 16px", borderRadius: "var(--radius-card)",
+                          border: "1px solid var(--hair)", backgroundColor: "var(--surface)",
+                          display: "flex", alignItems: "flex-start", gap: 10,
+                          transition: "background-color 120ms",
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = "var(--surface)")}
+                      >
+                        <span style={{ fontSize: 11, color: "var(--ink-tertiary)", fontWeight: 600, paddingTop: 1, minWidth: 18, flexShrink: 0 }}>{idx + 1}.</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: "0 0 4px", fontSize: 13, color: "var(--ink)", lineHeight: "18px" }}>
+                            {req.text || <em style={{ color: "var(--ink-tertiary)" }}>Untitled requirement</em>}
+                          </p>
+                          {req.constraint && (
+                            <span style={{
+                              display: "inline-flex", alignItems: "center", gap: 4,
+                              padding: "2px 7px", borderRadius: "var(--radius-pill)",
+                              fontSize: 10, fontWeight: 600,
+                              backgroundColor: req.constraint.type === "word_limit" ? "var(--slate-tint)" : "var(--terracotta-tint)",
+                              color:           req.constraint.type === "word_limit" ? "var(--slate-secondary)" : "var(--terracotta)",
+                            }}>
+                              {req.constraint.type === "word_limit" ? `${req.constraint.value} words` : `Attachment: ${req.constraint.value}`}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                          <button type="button" onClick={() => handleEditReq(req)} style={{ padding: 4, background: "none", border: "none", cursor: "pointer", color: "var(--ink-tertiary)", borderRadius: 4 }} title="Edit">
+                            <Edit3 size={13} />
+                          </button>
+                          <button type="button" onClick={() => handleDeleteReq(req.id)} style={{ padding: 4, background: "none", border: "none", cursor: "pointer", color: "var(--ink-tertiary)", borderRadius: 4 }} title="Delete">
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddReq}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "8px 14px", borderRadius: "var(--radius-button)",
+                  border: "1px dashed var(--hair-2)", backgroundColor: "transparent",
+                  fontSize: 12, color: "var(--ink-secondary)", cursor: "pointer",
+                  marginBottom: 28, transition: "background-color 120ms",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+              >
+                <Plus size={13} /> Add requirement
+              </button>
+
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  disabled={draftReqs.filter(r => r.text.trim()).length === 0}
+                  onClick={() => { if (editingReqId) handleSaveReqEdit(); setOnrampStep("context") }}
+                  style={{
+                    padding: "9px 24px", borderRadius: "var(--radius-button)", border: "none",
+                    backgroundColor: draftReqs.filter(r => r.text.trim()).length > 0 ? "var(--slate-primary)" : "var(--hair-2)",
+                    color: draftReqs.filter(r => r.text.trim()).length > 0 ? "#fff" : "var(--ink-tertiary)",
+                    fontSize: 13, fontWeight: 600, cursor: draftReqs.filter(r => r.text.trim()).length > 0 ? "pointer" : "default",
+                    display: "flex", alignItems: "center", gap: 6, transition: "background-color 150ms",
+                  }}
+                  onMouseEnter={e => { if (draftReqs.filter(r => r.text.trim()).length > 0) (e.currentTarget.style.backgroundColor = "#3A4F6A") }}
+                  onMouseLeave={e => { if (draftReqs.filter(r => r.text.trim()).length > 0) (e.currentTarget.style.backgroundColor = "var(--slate-primary)") }}
+                >
+                  Continue <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── CONTEXT STEP ── */}
+          {onrampStep === "context" && (
+            <div style={{ width: "100%", maxWidth: 560 }}>
+              <div style={{ marginBottom: 24 }}>
+                <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-lora, serif)", letterSpacing: "-0.02em" }}>
+                  Add context
+                </h1>
+                <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)", lineHeight: "19px" }}>
+                  Prior proposals and org documents help Grant Assistant write in your voice and ground claims in your history.
+                </p>
+              </div>
+
+              {contextCandidates.length === 0 && (
+                <div style={{ padding: "20px", borderRadius: "var(--radius-card)", border: "1px dashed var(--hair-2)", textAlign: "center", marginBottom: 20 }}>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>No prior proposals attached yet.</p>
+                </div>
+              )}
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+                {contextCandidates.map(att => {
+                  const selected = selectedContextIds.has(att.id)
+                  return (
+                    <button
+                      key={att.id}
+                      type="button"
+                      onClick={() => handleContextToggle(att.id)}
+                      style={{
+                        padding: "12px 16px", borderRadius: "var(--radius-card)",
+                        border: `1px solid ${selected ? "var(--slate-primary)" : "var(--hair)"}`,
+                        backgroundColor: selected ? "var(--slate-tint)" : "var(--surface)",
+                        display: "flex", alignItems: "center", gap: 12, cursor: "pointer",
+                        textAlign: "left", transition: "all 120ms",
+                      }}
+                    >
+                      <div style={{
+                        width: 32, height: 32, borderRadius: "var(--radius-button)",
+                        backgroundColor: selected ? "var(--slate-primary)" : "var(--canvas)",
+                        border: selected ? "none" : "1px solid var(--hair-2)",
+                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      }}>
+                        {selected ? <Check size={14} color="#fff" /> : <Paperclip size={14} color="var(--ink-tertiary)" />}
+                      </div>
+                      <div>
+                        <p style={{ margin: "0 0 1px", fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{att.filename}</p>
+                        <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)" }}>{att.uploadDate}</p>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <button
+                type="button"
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "8px 14px", borderRadius: "var(--radius-button)",
+                  border: "1px dashed var(--hair-2)", backgroundColor: "transparent",
+                  fontSize: 12, color: "var(--ink-secondary)", cursor: "pointer",
+                  marginBottom: 32, transition: "background-color 120ms",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+              >
+                <Plus size={13} /> Add another document
+              </button>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <button
+                  type="button"
+                  onClick={() => setOnrampStep("requirements")}
+                  style={{
+                    padding: "8px 14px", borderRadius: "var(--radius-button)",
+                    border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+                    fontSize: 12, color: "var(--ink-secondary)", cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 5,
+                  }}
+                >
+                  <ChevronLeft size={13} /> Back
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGenerateDraft}
+                  style={{
+                    padding: "10px 24px", borderRadius: "var(--radius-button)", border: "none",
+                    background: "var(--gradient-ai-cta)",
+                    color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 7,
+                    transition: "opacity 150ms",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = "0.9")}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+                >
+                  <Sparkles size={14} /> Generate draft
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── GENERATING STEP ── */}
+          {onrampStep === "generating" && (
+            <div style={{ width: "100%", maxWidth: 440, textAlign: "center", paddingTop: 40 }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: "50%",
+                background: "var(--gradient-ai-cta)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                margin: "0 auto 20px",
+              }}>
+                <Sparkles size={22} color="#fff" />
+              </div>
+              <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-lora, serif)" }}>
+                Writing your draft
+              </h2>
+              <p style={{ margin: "0 0 28px", fontSize: 13, color: "var(--ink-tertiary)" }}>
+                Grant Assistant is composing one section per requirement, grounded in your prior proposals.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, textAlign: "left" }}>
+                {["Organizing sections from requirements…", "Grounding in your prior proposals…", "Applying your organization's voice…"].map((label, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 14px", borderRadius: "var(--radius-button)", backgroundColor: "var(--surface)", border: "1px solid var(--hair)" }}>
+                    <Loader2 size={13} className="animate-spin" style={{ color: "var(--slate-soft)", flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, color: "var(--ink-secondary)" }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* ── AI panel ─────────────────────────────────────────────── */}
-        <div style={{
-          width: 300, flexShrink: 0,
-          borderLeft: "1px solid var(--hair)",
-          backgroundColor: "var(--surface)",
-          display: "flex", flexDirection: "column",
-          height: "100%",
-          boxShadow: "var(--shadow-panel)",
-        }}>
+      ) : (
 
-          {/* Panel header */}
-          <div style={{
-            flexShrink: 0,
-            padding: "14px 16px", borderBottom: "1px solid var(--hair)",
-            display: "flex", alignItems: "center", gap: 7,
-          }}>
-            <Sparkles size={14} style={{ color: "var(--slate-secondary)" }} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>AI Assist</span>
-          </div>
+        // ══ WORKING STATE ════════════════════════════════════════════════════
+        <div
+          style={{ flex: 1, display: "flex", overflow: "hidden" }}
+        >
 
-          {/* Panel body */}
-          <div style={{ flex: 1, overflowY: "auto" }}>
+          {/* ── LEFT RAIL ─────────────────────────────────────────────── */}
+          <div
+            role="region"
+            aria-label="Requirements and compliance"
+            style={{
+              width: leftCollapsed ? 40 : 252,
+              flexShrink: 0, transition: "width 200ms ease",
+              borderRight: "1px solid var(--hair)",
+              backgroundColor: "var(--surface)",
+              display: "flex", flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            {leftCollapsed ? (
+              // Collapsed strip
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, gap: 6 }}>
+                <button
+                  type="button"
+                  title="Requirements"
+                  onClick={() => { setLeftCollapsed(false); setLeftTab("requirements") }}
+                  style={{
+                    width: 32, height: 32, borderRadius: "var(--radius-button)",
+                    border: "none", backgroundColor: "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", color: "var(--ink-tertiary)", transition: "background-color 120ms",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
+                  <List size={15} />
+                </button>
+                <button
+                  type="button"
+                  title="Compliance"
+                  onClick={() => { setLeftCollapsed(false); setLeftTab("compliance") }}
+                  style={{
+                    width: 32, height: 32, borderRadius: "var(--radius-button)",
+                    border: "none", backgroundColor: "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", color: "var(--ink-tertiary)", transition: "background-color 120ms",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
+                  <BarChart2 size={15} />
+                </button>
+                <div style={{ flex: 1 }} />
+                <button
+                  type="button"
+                  title="Expand"
+                  onClick={() => setLeftCollapsed(false)}
+                  style={{
+                    width: 32, height: 32, borderRadius: "var(--radius-button)",
+                    border: "none", backgroundColor: "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", color: "var(--ink-tertiary)", marginBottom: 12,
+                  }}
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            ) : (
+              // Expanded rail
+              <>
+                {/* Rail header + tabs */}
+                <div style={{ flexShrink: 0, borderBottom: "1px solid var(--hair)" }}>
+                  <div style={{ display: "flex", alignItems: "center", padding: "0 4px 0 12px" }}>
+                    <div style={{ display: "flex", flex: 1 }}>
+                      {(["requirements", "compliance"] as const).map(tab => {
+                        const active = leftTab === tab
+                        const label  = tab === "requirements" ? "Requirements" : "Compliance"
+                        return (
+                          <button
+                            key={tab}
+                            type="button"
+                            onClick={() => setLeftTab(tab)}
+                            style={{
+                              padding: "11px 8px", background: "none", border: "none", cursor: "pointer",
+                              fontSize: 11, fontWeight: active ? 600 : 400,
+                              color: active ? "var(--ink)" : "var(--ink-tertiary)",
+                              borderBottom: `2px solid ${active ? "var(--slate-primary)" : "transparent"}`,
+                              transition: "all 120ms",
+                            }}
+                          >
+                            {label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      title="Collapse"
+                      onClick={() => setLeftCollapsed(true)}
+                      style={{
+                        width: 28, height: 28, borderRadius: "var(--radius-button)",
+                        border: "none", backgroundColor: "transparent",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        cursor: "pointer", color: "var(--ink-tertiary)", flexShrink: 0,
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                  </div>
+                </div>
 
-            {/* ── IDLE / ERROR ── */}
-            {(aiPhase === "idle" || aiPhase === "error") && (
-              <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+                {/* Rail body */}
+                <div style={{ flex: 1, overflowY: "auto" }}>
 
-                {/* Error banner */}
-                {aiPhase === "error" && (
-                  <div style={{
-                    display: "flex", gap: 8, alignItems: "flex-start",
-                    padding: "10px 12px", borderRadius: "var(--radius-button)",
-                    backgroundColor: "var(--error-light)",
-                    border: "1px solid rgba(185,28,28,0.2)",
-                  }}>
-                    <AlertCircle size={13} style={{ color: "var(--error)", flexShrink: 0, marginTop: 1 }} />
-                    <div>
-                      <p style={{ margin: "0 0 7px", fontSize: 12, color: "var(--error)", lineHeight: "16px" }}>
-                        {aiError}
-                      </p>
+                  {leftTab === "requirements" && (
+                    <div style={{ padding: "12px 8px" }}>
+                      {requirements.map((req, idx) => {
+                        const section = sections.find(s => s.requirementId === req.id)
+                        const status  = section ? sectionCompliance(section, req) : "uncovered"
+                        return (
+                          <div
+                            key={req.id}
+                            onClick={() => section && scrollToSection(section.id)}
+                            style={{
+                              padding: "9px 10px", borderRadius: "var(--radius-button)",
+                              cursor: section ? "pointer" : "default",
+                              marginBottom: 2, transition: "background-color 120ms",
+                            }}
+                            onMouseEnter={e => { if (section) (e.currentTarget.style.backgroundColor = "var(--canvas)") }}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                          >
+                            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                              <span style={{ fontSize: 10, color: "var(--ink-tertiary)", fontWeight: 600, paddingTop: 2, flexShrink: 0 }}>{idx + 1}</span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ margin: "0 0 4px", fontSize: 12, color: "var(--ink)", lineHeight: "16px", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                                  {req.text}
+                                </p>
+                                {req.constraint && (
+                                  <span style={{
+                                    fontSize: 10, fontWeight: 600,
+                                    color: req.constraint.type === "word_limit" ? "var(--ink-tertiary)" : "var(--terracotta)",
+                                  }}>
+                                    {req.constraint.type === "word_limit" ? `≤${req.constraint.value} words` : "Attachment req."}
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ flexShrink: 0 }}>
+                                {status === "covered"   && <CheckCircle  size={13} style={{ color: "var(--evergreen)" }} />}
+                                {status === "partial"   && <AlertTriangle size={13} style={{ color: "var(--amber)" }} />}
+                                {status === "uncovered" && <Circle        size={13} style={{ color: "var(--hair-2)" }} />}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+
                       <button
                         type="button"
-                        onClick={handleGenerate}
+                        onClick={() => {}}
                         style={{
-                          display: "inline-flex", alignItems: "center", gap: 4,
-                          fontSize: 11, fontWeight: 600, color: "var(--error)",
-                          background: "none", border: "none", cursor: "pointer", padding: 0,
+                          display: "flex", alignItems: "center", gap: 5,
+                          width: "100%", padding: "7px 10px", borderRadius: "var(--radius-button)",
+                          border: "none", backgroundColor: "transparent",
+                          fontSize: 11, color: "var(--ink-tertiary)", cursor: "pointer",
+                          marginTop: 4, transition: "background-color 120ms",
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                      >
+                        <Plus size={11} /> Add requirement
+                      </button>
+                    </div>
+                  )}
+
+                  {leftTab === "compliance" && (
+                    <div style={{ padding: "12px 8px" }}>
+                      <p style={{ margin: "0 0 10px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)", padding: "0 4px" }}>
+                        Compliance matrix
+                      </p>
+                      {requirements.map(req => {
+                        const section = sections.find(s => s.requirementId === req.id)
+                        const status  = section ? sectionCompliance(section, req) : "uncovered"
+                        const words   = section ? countWords(section.content) : 0
+                        const limit   = req.constraint?.type === "word_limit" ? req.constraint.value as number : null
+                        return (
+                          <div
+                            key={req.id}
+                            onClick={() => section && scrollToSection(section.id)}
+                            style={{
+                              padding: "9px 10px", borderRadius: "var(--radius-button)",
+                              marginBottom: 2, cursor: section ? "pointer" : "default",
+                              borderLeft: `2px solid ${status === "covered" ? "var(--evergreen)" : status === "partial" ? "var(--amber)" : "var(--hair-2)"}`,
+                              transition: "background-color 120ms",
+                            }}
+                            onMouseEnter={e => { if (section) (e.currentTarget.style.backgroundColor = "var(--canvas)") }}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                          >
+                            <p style={{ margin: "0 0 3px", fontSize: 11, color: "var(--ink)", lineHeight: "15px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {req.text}
+                            </p>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ fontSize: 10, color: status === "covered" ? "var(--evergreen)" : status === "partial" ? "var(--amber)" : "var(--ink-tertiary)", fontWeight: 600 }}>
+                                {status === "covered" ? "Covered" : status === "partial" ? "Over limit" : "Empty"}
+                              </span>
+                              {limit !== null && (
+                                <span style={{ fontSize: 10, color: (words > limit * 1.05) ? "var(--amber)" : "var(--ink-tertiary)" }}>
+                                  {words} / {limit}
+                                </span>
+                              )}
+                              {req.constraint?.type === "required_attachment" && (
+                                <span style={{ fontSize: 10, color: "var(--terracotta)" }}>Attachment req.</span>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* ── CENTER EDITOR ─────────────────────────────────────────── */}
+          <div
+            role="main"
+            aria-label="Document editor"
+            style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}
+          >
+            {/* Preview notice banner */}
+            {aiPhase === "preview" && aiProposal && (
+              <div style={{
+                flexShrink: 0, display: "flex", alignItems: "center", gap: 9,
+                padding: "9px 32px",
+                backgroundColor: "rgba(74,96,128,0.05)",
+                borderBottom: "1px solid var(--slate-light)",
+              }}>
+                <Sparkles size={12} style={{ color: "var(--slate-primary)" }} />
+                <span style={{ fontSize: 12, fontWeight: 500, color: "var(--slate-primary)" }}>
+                  Revision ready — accept or discard in the panel
+                </span>
+                <div style={{ flex: 1 }} />
+                <button type="button" onClick={handleAIAccept} style={{ padding: "4px 12px", borderRadius: "var(--radius-button)", border: "none", backgroundColor: "var(--evergreen)", color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                  <Check size={11} /> Accept
+                </button>
+                <button type="button" onClick={handleAIDiscard} style={{ padding: "4px 10px", borderRadius: "var(--radius-button)", border: "1px solid var(--hair-2)", backgroundColor: "transparent", color: "var(--ink-secondary)", fontSize: 11, cursor: "pointer" }}>
+                  Discard
+                </button>
+              </div>
+            )}
+
+            {/* Scrollable document */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "40px 0" }}>
+              <div style={{ maxWidth: 740, margin: "0 auto", padding: "0 48px" }}>
+
+                {/* Document title */}
+                <h1
+                  contentEditable
+                  suppressContentEditableWarning
+                  style={{
+                    margin: "0 0 40px",
+                    fontSize: 28, fontWeight: 700, color: "var(--ink)",
+                    fontFamily: "var(--font-lora, serif)",
+                    lineHeight: "34px", letterSpacing: "-0.02em",
+                    outline: "none", borderBottom: "1px solid transparent",
+                    transition: "border-color 120ms",
+                  }}
+                  onFocus={e => (e.currentTarget.style.borderBottomColor = "var(--slate-tint)")}
+                  onBlur={e  => (e.currentTarget.style.borderBottomColor = "transparent")}
+                >
+                  {artifact.name}
+                </h1>
+
+                {/* Sections */}
+                {sections.map((section) => {
+                  const req        = requirements.find(r => r.id === section.requirementId)
+                  const isActive   = activeSectionId === section.id
+                  const isProposed = aiProposal?.sectionId === section.id
+                  const wordCount  = countWords(section.content)
+                  const limit      = req?.constraint?.type === "word_limit" ? req.constraint.value as number : null
+                  const overLimit  = limit !== null && wordCount > limit * 1.05
+
+                  return (
+                    <div
+                      key={section.id}
+                      style={{
+                        marginBottom: 40,
+                        borderRadius: 0,
+                        outline: isActive ? "none" : "none",
+                      }}
+                    >
+                      {/* Section divider + heading */}
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 12 }}>
+                        <div style={{ width: 20, height: 1, backgroundColor: "var(--hair-2)", flexShrink: 0, marginBottom: 3 }} />
+                        <h2
+                          style={{
+                            margin: 0,
+                            fontSize: 17, fontWeight: 600, color: isActive ? "var(--ink)" : "var(--ink-secondary)",
+                            fontFamily: "var(--font-lora, serif)",
+                            letterSpacing: "-0.01em", lineHeight: "22px",
+                            flex: 1,
+                            transition: "color 120ms",
+                          }}
+                        >
+                          {section.title}
+                        </h2>
+                        <button
+                          type="button"
+                          onClick={() => { setActiveSectionId(section.id); setRightCollapsed(false); setRightTab("chat"); setAiPrompt("") }}
+                          style={{
+                            flexShrink: 0, display: "flex", alignItems: "center", gap: 4,
+                            padding: "3px 8px", borderRadius: "var(--radius-pill)",
+                            border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+                            fontSize: 10, fontWeight: 600, color: "var(--ink-tertiary)", cursor: "pointer",
+                            transition: "all 120ms",
+                          }}
+                          onMouseEnter={e => { (e.currentTarget.style.backgroundColor = "var(--slate-tint)"); (e.currentTarget.style.color = "var(--slate-secondary)"); (e.currentTarget.style.borderColor = "var(--slate-soft)") }}
+                          onMouseLeave={e => { (e.currentTarget.style.backgroundColor = "transparent"); (e.currentTarget.style.color = "var(--ink-tertiary)"); (e.currentTarget.style.borderColor = "var(--hair-2)") }}
+                        >
+                          <Sparkles size={9} /> Ask AI
+                        </button>
+                      </div>
+
+                      {/* Section textarea */}
+                      <div style={{ position: "relative" }}>
+                        {/* Preview overlay */}
+                        {isProposed && aiProposal && (
+                          <div style={{
+                            position: "absolute", inset: 0, zIndex: 2,
+                            borderRadius: "var(--radius-button)",
+                            backgroundColor: "rgba(224,237,230,0.7)",
+                            border: "1px solid rgba(60,94,76,0.2)",
+                            backdropFilter: "blur(1px)",
+                            display: "flex", flexDirection: "column",
+                            overflow: "hidden",
+                          }}>
+                            <div style={{ padding: "8px 12px", borderBottom: "1px solid rgba(60,94,76,0.12)", display: "flex", alignItems: "center", gap: 6 }}>
+                              <Sparkles size={11} style={{ color: "var(--evergreen)" }} />
+                              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--evergreen)" }}>Proposed revision</span>
+                              <div style={{ flex: 1 }} />
+                              <button type="button" onClick={handleAIAccept} style={{ padding: "3px 10px", borderRadius: "var(--radius-button)", border: "none", backgroundColor: "var(--evergreen)", color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}>
+                                <Check size={10} /> Accept
+                              </button>
+                              <button type="button" onClick={handleAIDiscard} style={{ padding: "3px 8px", borderRadius: "var(--radius-button)", border: "1px solid rgba(60,94,76,0.2)", backgroundColor: "transparent", color: "var(--evergreen)", fontSize: 11, cursor: "pointer" }}>
+                                Discard
+                              </button>
+                            </div>
+                            <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px", fontSize: 14, color: "var(--ink)", lineHeight: "22px", whiteSpace: "pre-wrap" }}>
+                              {aiProposal.proposed}
+                            </div>
+                          </div>
+                        )}
+
+                        <textarea
+                          ref={el => { sectionRefs.current[section.id] = el }}
+                          value={section.content}
+                          onChange={e => handleSectionChange(section.id, e.target.value)}
+                          onFocus={() => setActiveSectionId(section.id)}
+                          onBlur={() => {}}
+                          placeholder={section.content === "" ? "Write here, or click Ask AI above to generate content for this section…" : undefined}
+                          readOnly={isProposed}
+                          style={{
+                            width: "100%", minHeight: 80,
+                            background: "none", border: "none", outline: "none", resize: "none",
+                            fontSize: 15, color: "var(--ink)", lineHeight: "24px",
+                            fontFamily: "inherit", padding: 0,
+                            opacity: isProposed ? 0.4 : 1,
+                            cursor: isProposed ? "default" : "text",
+                            transition: "opacity 200ms",
+                            overflow: "hidden",
+                          }}
+                          rows={1}
+                        />
+                      </div>
+
+                      {/* Word count */}
+                      {(limit !== null || section.content.trim()) && (
+                        <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 8 }}>
+                          {limit !== null && (
+                            <span style={{ fontSize: 11, color: overLimit ? "var(--amber)" : "var(--ink-tertiary)" }}>
+                              {wordCount} / {limit} words
+                              {overLimit && <span style={{ marginLeft: 4 }}> — over limit</span>}
+                            </span>
+                          )}
+                          {!limit && section.content.trim() && (
+                            <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>{wordCount} words</span>
+                          )}
+                          {req?.constraint?.type === "required_attachment" && (
+                            <span style={{ fontSize: 11, color: "var(--terracotta)", display: "flex", alignItems: "center", gap: 3 }}>
+                              <Paperclip size={10} /> Attachment required: {req.constraint.value}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* ── RIGHT RAIL ────────────────────────────────────────────── */}
+          <div
+            role="complementary"
+            aria-label="AI assistant and snippets"
+            style={{
+              width: rightCollapsed ? 40 : 280,
+              flexShrink: 0, transition: "width 200ms ease",
+              borderLeft: "1px solid var(--hair)",
+              backgroundColor: "var(--surface)",
+              display: "flex", flexDirection: "column",
+              overflow: "hidden",
+              boxShadow: "var(--shadow-panel)",
+            }}
+          >
+            {rightCollapsed ? (
+              // Collapsed strip
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, gap: 6 }}>
+                <button type="button" title="AI Chat" onClick={() => { setRightCollapsed(false); setRightTab("chat") }} style={{ width: 32, height: 32, borderRadius: "var(--radius-button)", border: "none", backgroundColor: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--ink-tertiary)" }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
+                  <MessageSquare size={15} />
+                </button>
+                <button type="button" title="Snippets" onClick={() => { setRightCollapsed(false); setRightTab("snippets") }} style={{ width: 32, height: 32, borderRadius: "var(--radius-button)", border: "none", backgroundColor: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--ink-tertiary)" }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
+                  <BookOpen size={15} />
+                </button>
+                <button type="button" title="Voice" onClick={() => { setRightCollapsed(false); setRightTab("voice") }} style={{ width: 32, height: 32, borderRadius: "var(--radius-button)", border: "none", backgroundColor: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--ink-tertiary)" }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
+                  <Sliders size={15} />
+                </button>
+                <div style={{ flex: 1 }} />
+                <button type="button" title="Expand" onClick={() => setRightCollapsed(false)} style={{ width: 32, height: 32, borderRadius: "var(--radius-button)", border: "none", backgroundColor: "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--ink-tertiary)", marginBottom: 12 }}>
+                  <ChevronLeft size={14} />
+                </button>
+              </div>
+            ) : (
+              // Expanded rail
+              <>
+                {/* Rail header + tabs */}
+                <div style={{ flexShrink: 0, borderBottom: "1px solid var(--hair)" }}>
+                  <div style={{ display: "flex", alignItems: "center", padding: "0 4px 0 4px" }}>
+                    <button
+                      type="button"
+                      title="Collapse"
+                      onClick={() => setRightCollapsed(true)}
+                      style={{
+                        width: 28, height: 28, borderRadius: "var(--radius-button)",
+                        border: "none", backgroundColor: "transparent",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        cursor: "pointer", color: "var(--ink-tertiary)", flexShrink: 0, marginRight: 2,
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                    <div style={{ display: "flex", flex: 1 }}>
+                      {(["chat", "snippets", "voice"] as const).map(tab => {
+                        const active = rightTab === tab
+                        const icon   = tab === "chat" ? <MessageSquare size={12} /> : tab === "snippets" ? <BookOpen size={12} /> : <Sliders size={12} />
+                        const label  = tab === "chat" ? "Chat" : tab === "snippets" ? "Snippets" : "Voice"
+                        return (
+                          <button
+                            key={tab}
+                            type="button"
+                            onClick={() => setRightTab(tab)}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 4,
+                              padding: "10px 8px", background: "none", border: "none", cursor: "pointer",
+                              fontSize: 11, fontWeight: active ? 600 : 400,
+                              color: active ? "var(--ink)" : "var(--ink-tertiary)",
+                              borderBottom: `2px solid ${active ? "var(--slate-primary)" : "transparent"}`,
+                              transition: "all 120ms",
+                            }}
+                          >
+                            {icon}{label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── AI CHAT TAB ── */}
+                {rightTab === "chat" && (
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+                    {/* Scope indicator */}
+                    {activeSection && (
+                      <div style={{
+                        flexShrink: 0, padding: "7px 14px",
+                        borderBottom: "1px solid var(--hair)",
+                        backgroundColor: "var(--slate-tint)",
+                        display: "flex", alignItems: "center", gap: 6,
+                      }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: "var(--slate-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Section</span>
+                        <span style={{ fontSize: 11, color: "var(--slate-primary)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {activeSection.title}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setActiveSectionId(null)}
+                          style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "var(--slate-soft)", padding: 2, flexShrink: 0 }}
+                          title="Clear scope"
+                        >
+                          <X size={11} />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* AI phase: error */}
+                    {aiPhase === "error" && (
+                      <div style={{ flexShrink: 0, padding: "10px 14px", backgroundColor: "var(--error-light)", borderBottom: "1px solid rgba(185,28,28,0.15)", display: "flex", gap: 8 }}>
+                        <AlertCircle size={13} style={{ color: "var(--error)", flexShrink: 0, marginTop: 1 }} />
+                        <div>
+                          <p style={{ margin: "0 0 5px", fontSize: 12, color: "var(--error)", lineHeight: "16px" }}>{aiError}</p>
+                          <button type="button" onClick={handleAIGenerate} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 600, color: "var(--error)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                            <RefreshCw size={10} /> Retry
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Chat messages */}
+                    <div style={{ flex: 1, overflowY: "auto", padding: "14px 14px 8px" }}>
+                      {chatMessages.map(msg => (
+                        <div key={msg.id} style={{ marginBottom: 12 }}>
+                          {msg.role === "assistant" ? (
+                            <div style={{
+                              padding: "10px 12px", borderRadius: "var(--radius-button)",
+                              backgroundColor: "var(--canvas)", border: "1px solid var(--hair)",
+                              fontSize: 12, color: "var(--ink)", lineHeight: "18px",
+                            }}>
+                              {msg.content}
+                            </div>
+                          ) : (
+                            <div style={{
+                              padding: "10px 12px", borderRadius: "var(--radius-button)",
+                              backgroundColor: "var(--slate-tint)",
+                              fontSize: 12, color: "var(--ink)", lineHeight: "18px",
+                              marginLeft: 20,
+                            }}>
+                              {msg.content}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {isChatBusy && (
+                        <div style={{ display: "flex", gap: 4, alignItems: "center", padding: "8px 12px" }}>
+                          <Loader2 size={12} className="animate-spin" style={{ color: "var(--slate-soft)" }} />
+                          <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>Thinking…</span>
+                        </div>
+                      )}
+                      <div ref={chatEndRef} />
+                    </div>
+
+                    {/* AI revision controls (when idle or preview) */}
+                    {(aiPhase === "idle" || aiPhase === "error") && (
+                      <div style={{ flexShrink: 0, padding: "10px 14px", borderTop: "1px solid var(--hair)", display: "flex", flexDirection: "column", gap: 8 }}>
+                        <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+                          Revise with AI
+                        </p>
+                        <textarea
+                          value={aiPrompt}
+                          onChange={e => setAiPrompt(e.target.value)}
+                          onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && aiPrompt.trim()) { e.preventDefault(); handleAIGenerate() } }}
+                          placeholder={activeSection ? `How should "${activeSection.title.split(" ").slice(0, 3).join(" ")}…" be improved?` : "What should be changed or strengthened?"}
+                          rows={2}
+                          style={{
+                            width: "100%", padding: "7px 10px", borderRadius: "var(--radius-input)",
+                            border: "1px solid var(--hair-2)", backgroundColor: "var(--canvas)",
+                            fontSize: 12, color: "var(--ink)", lineHeight: "18px",
+                            fontFamily: "inherit", outline: "none", resize: "none", boxSizing: "border-box",
+                            transition: "border-color 120ms",
+                          }}
+                          onFocus={e  => (e.currentTarget.style.borderColor = "var(--slate-soft)")}
+                          onBlur={e   => (e.currentTarget.style.borderColor = "var(--hair-2)")}
+                        />
+                        <button
+                          type="button"
+                          disabled={!aiPrompt.trim()}
+                          onClick={handleAIGenerate}
+                          style={{
+                            width: "100%", padding: "8px 0", borderRadius: "var(--radius-button)", border: "none",
+                            background: aiPrompt.trim() ? "var(--gradient-ai-cta)" : "var(--hair-2)",
+                            color: aiPrompt.trim() ? "#fff" : "var(--ink-tertiary)",
+                            fontSize: 12, fontWeight: 600, cursor: aiPrompt.trim() ? "pointer" : "default",
+                            display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                            transition: "opacity 150ms",
+                          }}
+                          onMouseEnter={e => { if (aiPrompt.trim()) (e.currentTarget.style.opacity = "0.9") }}
+                          onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+                        >
+                          <Sparkles size={12} /> Generate revision
+                        </button>
+                        <p style={{ margin: 0, fontSize: 10, color: "var(--ink-tertiary)", lineHeight: "14px" }}>
+                          Preview before apply — nothing changes until you accept.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Generating state */}
+                    {aiPhase === "generating" && (
+                      <div style={{ flexShrink: 0, padding: "16px 14px", borderTop: "1px solid var(--hair)", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                        <Loader2 size={20} className="animate-spin" style={{ color: "var(--slate-primary)" }} />
+                        <p style={{ margin: 0, fontSize: 12, color: "var(--ink-secondary)", textAlign: "center" }}>Revising…</p>
+                        <button type="button" onClick={handleAICancel} style={{ fontSize: 11, color: "var(--ink-tertiary)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Preview accept/discard */}
+                    {aiPhase === "preview" && aiProposal && (
+                      <div style={{ flexShrink: 0, padding: "10px 14px", borderTop: "1px solid var(--hair)", display: "flex", flexDirection: "column", gap: 8 }}>
+                        <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+                          Proposed change
+                        </p>
+                        <div style={{
+                          padding: "8px 10px", borderRadius: "var(--radius-button)",
+                          backgroundColor: "var(--evergreen-tint)", border: "1px solid rgba(60,94,76,0.18)",
+                          fontSize: 11, color: "var(--ink-secondary)", lineHeight: "17px",
+                          maxHeight: 140, overflowY: "auto", whiteSpace: "pre-wrap",
+                        }}>
+                          {aiProposal.proposed.slice(0, 280)}{aiProposal.proposed.length > 280 ? "…" : ""}
+                        </div>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button type="button" onClick={handleAIAccept} style={{ flex: 1, padding: "8px 0", borderRadius: "var(--radius-button)", border: "none", backgroundColor: "var(--evergreen)", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                            <Check size={12} /> Accept
+                          </button>
+                          <button type="button" onClick={handleAIDiscard} style={{ flex: 1, padding: "8px 0", borderRadius: "var(--radius-button)", border: "1px solid var(--hair-2)", backgroundColor: "transparent", color: "var(--ink-secondary)", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                            <X size={12} /> Discard
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Chat input */}
+                    <div style={{ flexShrink: 0, padding: "10px 14px", borderTop: "1px solid var(--hair)", display: "flex", gap: 8, alignItems: "flex-end" }}>
+                      <textarea
+                        ref={chatInputRef}
+                        value={chatInput}
+                        onChange={e => setChatInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChatSend() } }}
+                        placeholder="Ask anything…"
+                        rows={1}
+                        style={{
+                          flex: 1, padding: "7px 10px", borderRadius: "var(--radius-input)",
+                          border: "1px solid var(--hair-2)", backgroundColor: "var(--canvas)",
+                          fontSize: 12, color: "var(--ink)", lineHeight: "18px",
+                          fontFamily: "inherit", outline: "none", resize: "none",
+                          transition: "border-color 120ms",
+                        }}
+                        onFocus={e  => (e.currentTarget.style.borderColor = "var(--slate-soft)")}
+                        onBlur={e   => (e.currentTarget.style.borderColor = "var(--hair-2)")}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleChatSend}
+                        disabled={!chatInput.trim() || isChatBusy}
+                        style={{
+                          width: 32, height: 32, borderRadius: "var(--radius-button)", border: "none", flexShrink: 0,
+                          backgroundColor: chatInput.trim() && !isChatBusy ? "var(--slate-primary)" : "var(--hair-2)",
+                          color: chatInput.trim() && !isChatBusy ? "#fff" : "var(--ink-tertiary)",
+                          cursor: chatInput.trim() && !isChatBusy ? "pointer" : "default",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          transition: "background-color 120ms",
                         }}
                       >
-                        <RefreshCw size={11} /> Retry
+                        <Send size={13} />
                       </button>
                     </div>
                   </div>
                 )}
 
-                {/* Scope selector */}
-                <div>
-                  <p style={{
-                    margin: "0 0 8px",
-                    fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase",
-                    color: "var(--ink-tertiary)",
-                  }}>
-                    Revise
-                  </p>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {(["document", "section"] as const).map(scope => {
-                      const active   = aiScope === scope
-                      const disabled = scope === "section" && !selection
-                      return (
-                        <button
-                          key={scope}
-                          type="button"
-                          disabled={disabled}
-                          onClick={() => !disabled && setAiScope(scope)}
+                {/* ── SNIPPETS TAB ── */}
+                {rightTab === "snippets" && (
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+                    <div style={{ flexShrink: 0, padding: "10px 14px", borderBottom: "1px solid var(--hair)" }}>
+                      <div style={{ position: "relative" }}>
+                        <Search size={12} style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "var(--ink-tertiary)", pointerEvents: "none" }} />
+                        <input
+                          value={snippetSearch}
+                          onChange={e => setSnippetSearch(e.target.value)}
+                          placeholder="Search snippets…"
                           style={{
-                            flex: 1, padding: "7px 8px", borderRadius: "var(--radius-button)",
-                            border: `1px solid ${active ? "var(--slate-primary)" : "var(--hair-2)"}`,
-                            backgroundColor: active ? "var(--slate-tint)" : "transparent",
-                            fontSize: 12, fontWeight: active ? 600 : 400,
-                            color: disabled
-                              ? "var(--ink-tertiary)"
-                              : active
-                              ? "var(--slate-primary)"
-                              : "var(--ink-secondary)",
-                            cursor: disabled ? "not-allowed" : "pointer",
-                            opacity: disabled ? 0.5 : 1,
-                            transition: "all 120ms",
+                            width: "100%", padding: "6px 10px 6px 28px",
+                            borderRadius: "var(--radius-input)", border: "1px solid var(--hair-2)",
+                            backgroundColor: "var(--canvas)", fontSize: 12, color: "var(--ink)",
+                            outline: "none", boxSizing: "border-box", transition: "border-color 120ms",
                           }}
-                        >
-                          {scope === "document" ? "Full doc" : "Selection"}
-                        </button>
-                      )
-                    })}
+                          onFocus={e  => (e.currentTarget.style.borderColor = "var(--slate-soft)")}
+                          onBlur={e   => (e.currentTarget.style.borderColor = "var(--hair-2)")}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ flex: 1, overflowY: "auto", padding: "8px 10px" }}>
+                      {filteredSnippets.length === 0 && (
+                        <p style={{ fontSize: 12, color: "var(--ink-tertiary)", textAlign: "center", marginTop: 24 }}>No snippets found.</p>
+                      )}
+                      {filteredSnippets.map(snip => {
+                        const justInserted = insertedSnip === snip.id
+                        return (
+                          <div
+                            key={snip.id}
+                            style={{
+                              padding: "10px 12px", borderRadius: "var(--radius-button)",
+                              border: "1px solid var(--hair)", backgroundColor: "var(--surface)",
+                              marginBottom: 6, transition: "background-color 120ms",
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "var(--surface)")}
+                          >
+                            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 5 }}>
+                              <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "var(--ink)", lineHeight: "16px" }}>{snip.title}</p>
+                              <button
+                                type="button"
+                                onClick={() => handleInsertSnippet(snip)}
+                                style={{
+                                  flexShrink: 0, padding: "3px 8px", borderRadius: "var(--radius-button)",
+                                  border: "none",
+                                  backgroundColor: justInserted ? "var(--evergreen)" : "var(--slate-tint)",
+                                  color: justInserted ? "#fff" : "var(--slate-secondary)",
+                                  fontSize: 10, fontWeight: 600, cursor: "pointer",
+                                  display: "flex", alignItems: "center", gap: 3,
+                                  transition: "background-color 200ms",
+                                }}
+                              >
+                                {justInserted ? <><Check size={9} /> Inserted</> : <><Copy size={9} /> Insert</>}
+                              </button>
+                            </div>
+                            <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "16px", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                              {snip.body}
+                            </p>
+                          </div>
+                        )
+                      })}
+
+                      <button
+                        type="button"
+                        style={{
+                          display: "flex", alignItems: "center", gap: 5, width: "100%",
+                          padding: "8px 12px", borderRadius: "var(--radius-button)",
+                          border: "1px dashed var(--hair-2)", backgroundColor: "transparent",
+                          fontSize: 11, color: "var(--ink-tertiary)", cursor: "pointer",
+                          transition: "background-color 120ms",
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                      >
+                        <Plus size={11} /> Save selection as snippet
+                      </button>
+                    </div>
+
+                    {!activeSectionId && (
+                      <div style={{ flexShrink: 0, padding: "8px 14px", borderTop: "1px solid var(--hair)" }}>
+                        <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "15px" }}>
+                          Focus a section to insert snippets at the cursor.
+                        </p>
+                      </div>
+                    )}
                   </div>
-
-                  <p style={{ margin: "6px 0 0", fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "15px" }}>
-                    {aiScope === "section" && selection
-                      ? `${selection.text.length} chars selected`
-                      : aiScope === "section"
-                      ? "Select text in the editor to target a section"
-                      : "Entire document will be revised"}
-                  </p>
-                </div>
-
-                {/* Prompt */}
-                <div>
-                  <p style={{
-                    margin: "0 0 6px",
-                    fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase",
-                    color: "var(--ink-tertiary)",
-                  }}>
-                    Instruction
-                  </p>
-                  <textarea
-                    value={prompt}
-                    onChange={e => setPrompt(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === "Enter" && !e.shiftKey && canGenerate) {
-                        e.preventDefault()
-                        handleGenerate()
-                      }
-                    }}
-                    placeholder={
-                      aiScope === "section"
-                        ? "How should this section be improved?"
-                        : "What should be strengthened or changed?"
-                    }
-                    rows={3}
-                    style={{
-                      width: "100%", padding: "8px 10px", borderRadius: "var(--radius-input)",
-                      border: "1px solid var(--hair-2)",
-                      backgroundColor: "var(--canvas)",
-                      fontSize: 12, color: "var(--ink)", lineHeight: "18px",
-                      fontFamily: "inherit", outline: "none", resize: "none",
-                      boxSizing: "border-box",
-                      transition: "border-color 120ms",
-                    }}
-                    onFocus={e  => { (e.currentTarget as HTMLTextAreaElement).style.borderColor = "var(--slate-soft)" }}
-                    onBlur={e   => { (e.currentTarget as HTMLTextAreaElement).style.borderColor = "var(--hair-2)" }}
-                  />
-                </div>
-
-                {/* Generate */}
-                <button
-                  type="button"
-                  disabled={!canGenerate}
-                  onClick={handleGenerate}
-                  style={{
-                    width: "100%", padding: "9px 0", borderRadius: "var(--radius-button)", border: "none",
-                    backgroundColor: canGenerate ? "var(--slate-primary)" : "var(--hair-2)",
-                    color: canGenerate ? "#fff" : "var(--ink-tertiary)",
-                    fontSize: 13, fontWeight: 600,
-                    cursor: canGenerate ? "pointer" : "default",
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    transition: "background-color 150ms",
-                  }}
-                  onMouseEnter={e => {
-                    if (canGenerate)
-                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A"
-                  }}
-                  onMouseLeave={e => {
-                    if (canGenerate)
-                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)"
-                  }}
-                >
-                  <Sparkles size={13} /> Generate revision
-                </button>
-
-                <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "16px" }}>
-                  Changes preview before they apply. Nothing updates until you accept.
-                </p>
-              </div>
-            )}
-
-            {/* ── GENERATING ── */}
-            {aiPhase === "generating" && (
-              <div style={{
-                padding: "32px 16px 16px",
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 20,
-              }}>
-                <div style={{ textAlign: "center" }}>
-                  <Loader2
-                    size={28}
-                    className="animate-spin"
-                    style={{ color: "var(--slate-primary)", marginBottom: 12 }}
-                  />
-                  <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>
-                    {aiScope === "section" ? "Revising section…" : "Revising document…"}
-                  </p>
-                  <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)" }}>
-                    Your edits are safe
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  style={{
-                    width: "100%", padding: "8px 0", borderRadius: "var(--radius-button)",
-                    border: "1px solid var(--hair-2)", backgroundColor: "transparent",
-                    fontSize: 13, color: "var(--ink-secondary)", cursor: "pointer",
-                    transition: "background-color 120ms",
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-
-            {/* ── PREVIEW ── */}
-            {aiPhase === "preview" && proposal && (
-              <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-
-                <p style={{
-                  margin: 0, fontSize: 10, fontWeight: 700,
-                  letterSpacing: "0.07em", textTransform: "uppercase",
-                  color: "var(--ink-tertiary)",
-                }}>
-                  Proposed {proposal.scope === "section" ? "section revision" : "document revision"}
-                </p>
-
-                {/* Section preview: before + after */}
-                {proposal.scope === "section" && proposal.originalSelection && (
-                  <>
-                    <div>
-                      <p style={{
-                        margin: "0 0 4px", fontSize: 10, fontWeight: 600,
-                        color: "var(--ink-tertiary)", textTransform: "uppercase", letterSpacing: "0.06em",
-                      }}>
-                        Original
-                      </p>
-                      <div style={{
-                        padding: "10px 12px", borderRadius: "var(--radius-button)",
-                        backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)",
-                        fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "18px",
-                        maxHeight: 130, overflowY: "auto",
-                      }}>
-                        {proposal.originalSelection}
-                      </div>
-                    </div>
-                    <div>
-                      <p style={{
-                        margin: "0 0 4px", fontSize: 10, fontWeight: 600,
-                        color: "var(--evergreen)", textTransform: "uppercase", letterSpacing: "0.06em",
-                      }}>
-                        Proposed
-                      </p>
-                      <div style={{
-                        padding: "10px 12px", borderRadius: "var(--radius-button)",
-                        backgroundColor: "var(--evergreen-tint)",
-                        border: "1px solid rgba(60,94,76,0.18)",
-                        fontSize: 12, color: "var(--ink-secondary)", lineHeight: "18px",
-                        maxHeight: 200, overflowY: "auto",
-                      }}>
-                        {proposal.proposed}
-                      </div>
-                    </div>
-                  </>
                 )}
 
-                {/* Document preview */}
-                {proposal.scope === "document" && (
-                  <div>
-                    <p style={{
-                      margin: "0 0 4px", fontSize: 10, fontWeight: 600,
-                      color: "var(--evergreen)", textTransform: "uppercase", letterSpacing: "0.06em",
-                    }}>
-                      Proposed document
+                {/* ── VOICE TAB ── */}
+                {rightTab === "voice" && (
+                  <div style={{ flex: 1, overflowY: "auto", padding: "16px 14px" }}>
+                    <p style={{ margin: "0 0 12px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+                      Tone
                     </p>
-                    <div style={{
-                      padding: "10px 12px", borderRadius: "var(--radius-button)",
-                      backgroundColor: "var(--evergreen-tint)",
-                      border: "1px solid rgba(60,94,76,0.18)",
-                      fontSize: 11, color: "var(--ink-secondary)", lineHeight: "17px",
-                      maxHeight: 300, overflowY: "auto",
-                      whiteSpace: "pre-wrap",
-                    }}>
-                      {proposal.proposed}
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 24 }}>
+                      {VOICE_TONES.map(tone => {
+                        const active = voiceTone === tone.value
+                        return (
+                          <button
+                            key={tone.value}
+                            type="button"
+                            onClick={() => setVoiceTone(tone.value)}
+                            style={{
+                              padding: "9px 12px", borderRadius: "var(--radius-button)",
+                              border: `1px solid ${active ? "var(--slate-primary)" : "var(--hair-2)"}`,
+                              backgroundColor: active ? "var(--slate-tint)" : "transparent",
+                              textAlign: "left", cursor: "pointer",
+                              transition: "all 120ms",
+                            }}
+                            onMouseEnter={e => { if (!active) (e.currentTarget.style.backgroundColor = "var(--canvas)") }}
+                            onMouseLeave={e => { if (!active) (e.currentTarget.style.backgroundColor = "transparent") }}
+                          >
+                            <p style={{ margin: "0 0 2px", fontSize: 12, fontWeight: active ? 600 : 400, color: active ? "var(--slate-primary)" : "var(--ink)" }}>{tone.label}</p>
+                            <p style={{ margin: 0, fontSize: 11, color: active ? "var(--slate-secondary)" : "var(--ink-tertiary)" }}>{tone.hint}</p>
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    <div style={{ borderTop: "1px solid var(--hair)", paddingTop: 20, marginBottom: 24 }}>
+                      <p style={{ margin: "0 0 8px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+                        Humanize
+                      </p>
+                      <p style={{ margin: "0 0 12px", fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "17px" }}>
+                        Softens AI-sounding patterns, calibrated against your prior proposals.
+                      </p>
+                      <button
+                        type="button"
+                        disabled={isHumanizing}
+                        onClick={handleHumanize}
+                        style={{
+                          width: "100%", padding: "9px 0", borderRadius: "var(--radius-button)", border: "none",
+                          background: isHumanizing ? "var(--hair-2)" : "var(--gradient-ai-cta)",
+                          color: isHumanizing ? "var(--ink-tertiary)" : "#fff",
+                          fontSize: 12, fontWeight: 600, cursor: isHumanizing ? "default" : "pointer",
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                          transition: "opacity 150ms",
+                        }}
+                        onMouseEnter={e => { if (!isHumanizing) (e.currentTarget.style.opacity = "0.9") }}
+                        onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+                      >
+                        {isHumanizing ? <><Loader2 size={12} className="animate-spin" /> Humanizing…</> : <><Sparkles size={12} /> Humanize{activeSection ? ` this section` : " draft"}</>}
+                      </button>
+                    </div>
+
+                    <div style={{ borderTop: "1px solid var(--hair)", paddingTop: 20 }}>
+                      <p style={{ margin: "0 0 10px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+                        Sources
+                      </p>
+                      {existingSession?.sourceAttachmentId && (
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 10px", borderRadius: "var(--radius-button)", border: "1px solid var(--hair)", backgroundColor: "var(--canvas)", marginBottom: 6 }}>
+                          <FileText size={12} style={{ color: "var(--slate-soft)", flexShrink: 0 }} />
+                          <div>
+                            <p style={{ margin: 0, fontSize: 11, color: "var(--ink)", fontWeight: 500 }}>
+                              {pipelineAttachments.find(a => a.id === existingSession?.sourceAttachmentId)?.filename ?? "RFP"}
+                            </p>
+                            <p style={{ margin: 0, fontSize: 10, color: "var(--ink-tertiary)" }}>RFP source</p>
+                          </div>
+                        </div>
+                      )}
+                      {existingSession?.contextAttachmentIds.map(id => {
+                        const att = pipelineAttachments.find(a => a.id === id)
+                        if (!att) return null
+                        return (
+                          <div key={id} style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 10px", borderRadius: "var(--radius-button)", border: "1px solid var(--hair)", backgroundColor: "var(--canvas)", marginBottom: 6 }}>
+                            <Paperclip size={12} style={{ color: "var(--slate-soft)", flexShrink: 0 }} />
+                            <div>
+                              <p style={{ margin: 0, fontSize: 11, color: "var(--ink)", fontWeight: 500 }}>{att.filename}</p>
+                              <p style={{ margin: 0, fontSize: 10, color: "var(--ink-tertiary)" }}>Context</p>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
-
-                {/* Accept / Discard */}
-                <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
-                  <button
-                    type="button"
-                    onClick={handleAccept}
-                    style={{
-                      flex: 1, padding: "9px 0", borderRadius: "var(--radius-button)", border: "none",
-                      backgroundColor: "var(--evergreen)", color: "#fff",
-                      fontSize: 13, fontWeight: 600, cursor: "pointer",
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                      transition: "background-color 150ms",
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#2E4A3A" }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--evergreen)" }}
-                  >
-                    <Check size={13} /> Accept
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDiscard}
-                    style={{
-                      flex: 1, padding: "9px 0", borderRadius: "var(--radius-button)",
-                      border: "1px solid var(--hair-2)", backgroundColor: "transparent",
-                      fontSize: 13, color: "var(--ink-secondary)", cursor: "pointer",
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                      transition: "background-color 120ms",
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
-                  >
-                    <X size={13} /> Discard
-                  </button>
-                </div>
-
-              </div>
+              </>
             )}
-
           </div>
+
         </div>
-      </div>
+      )}
+
     </div>
   )
 }

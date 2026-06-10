@@ -151,6 +151,42 @@ export interface Task {
   completed: boolean
 }
 
+// ── Writing surface ───────────────────────────────────────────────────────
+
+export interface RequirementConstraint {
+  type: "word_limit" | "required_attachment"
+  value: number | string
+}
+
+export interface Requirement {
+  id: string
+  text: string
+  constraint?: RequirementConstraint
+}
+
+export interface DraftSection {
+  id: string
+  requirementId: string
+  title: string
+  content: string
+}
+
+export interface WritingSession {
+  artifactId: string
+  requirements: Requirement[]
+  sections: DraftSection[]
+  sourceAttachmentId?: string
+  contextAttachmentIds: string[]
+}
+
+export interface Snippet {
+  id: string
+  organizationId: string
+  title: string
+  body: string
+  category: "mission" | "programs" | "outcomes" | "budget" | "other"
+}
+
 // ── Matching ───────────────────────────────────────────────────────────────
 
 export type MatchStrength = "strong" | "good" | "partial"
