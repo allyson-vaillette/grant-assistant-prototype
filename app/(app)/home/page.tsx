@@ -104,7 +104,7 @@ function getUpcomingDeadlines() {
 
 function SectionHeader({ label }: { label: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
       <span style={{
         fontSize: 11, fontWeight: 600,
         color: "var(--ink-tertiary)", flexShrink: 0,
@@ -141,7 +141,7 @@ function TaskRow({ task }: { task: ReturnType<typeof getTodayTasks>[number] }) {
           backgroundColor: "var(--surface)",
           border: `1px solid ${task.isOverdue ? "rgba(185,28,28,0.15)" : "var(--hair-2)"}`,
           borderLeft: task.isOverdue ? "3px solid var(--error)" : "1px solid var(--hair-2)",
-          borderRadius: 10, padding: "12px 16px", cursor: "pointer", transition: "box-shadow 150ms",
+          borderRadius: 10, padding: "10px 14px", cursor: "pointer", transition: "box-shadow 150ms",
         }}
         onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px rgba(28,24,64,0.07)" }}
         onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none" }}
@@ -192,7 +192,7 @@ function TeamTaskRow({
       backgroundColor: "var(--surface)",
       border: `1px solid ${task.isOverdue ? "rgba(185,28,28,0.15)" : "var(--hair-2)"}`,
       borderLeft: task.isOverdue ? "3px solid var(--error)" : "1px solid var(--hair-2)",
-      borderRadius: 10, padding: "12px 16px",
+      borderRadius: 10, padding: "10px 14px",
       display: "flex", alignItems: "center", gap: 12,
     }}>
       <div style={{
@@ -272,7 +272,7 @@ function DeadlineRow({ pip, opp, funder }: {
       <div
         style={{
           backgroundColor: "var(--surface)", border: "1px solid var(--hair-2)",
-          borderRadius: 10, padding: "12px 16px", cursor: "pointer", transition: "box-shadow 150ms",
+          borderRadius: 10, padding: "10px 14px", cursor: "pointer", transition: "box-shadow 150ms",
         }}
         onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px rgba(28,24,64,0.07)" }}
         onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none" }}
@@ -492,10 +492,10 @@ export default function HomePage() {
 
   return (
     <div style={{ flex: 1, overflowY: "auto", backgroundColor: "var(--canvas)" }}>
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "40px 32px 64px" }}>
+      <div style={{ maxWidth: 760, margin: "0 auto", padding: "28px 32px 48px" }}>
 
         {/* Greeting */}
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 20 }}>
           <h1 style={{
             margin: "0 0 4px", fontSize: 22, fontWeight: 700, color: "var(--ink)",
             letterSpacing: "-0.01em", lineHeight: 1.25,
@@ -505,13 +505,37 @@ export default function HomePage() {
           <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>{scopeLabel}</p>
         </div>
 
+        {/* Quick actions */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+          {([
+            { label: "Discover funding", href: "/discover", icon: "auto_fix_high" },
+            { label: "Open tracker",     href: "/tracker",  icon: "format_list_bulleted" },
+          ] as const).map(({ label, href, icon }) => (
+            <Link
+              key={href}
+              href={href}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "5px 12px", borderRadius: 20,
+                border: "1px solid var(--hair-2)",
+                backgroundColor: "var(--surface)",
+                fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)",
+                textDecoration: "none",
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 14, lineHeight: 1, userSelect: "none" }}>{icon}</span>
+              {label}
+            </Link>
+          ))}
+        </div>
+
         {/* Pipeline at a glance — interactive status strip */}
         <div style={{
           display: "flex",
           backgroundColor: "var(--surface)",
           border: "1px solid var(--hair-2)",
           borderRadius: 12,
-          marginBottom: 40,
+          marginBottom: 28,
           // overflow:hidden removed so panels can escape; first/last cards carry the corner radius
         }}>
           {PIPELINE_STRIP.map((s, i) => (
@@ -527,41 +551,41 @@ export default function HomePage() {
           ))}
         </div>
 
+        {/* Upcoming deadlines */}
+        <section style={{ marginBottom: 28 }}>
+          <SectionHeader label="Upcoming deadlines" />
+          {deadlines.length === 0 ? (
+            <EmptyState message="No upcoming deadlines in your pipeline." />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {deadlines.map(({ pip, opp, funder }) => (
+                <DeadlineRow key={pip.id} pip={pip} opp={opp} funder={funder} />
+              ))}
+            </div>
+          )}
+        </section>
+
         {/* Your tasks */}
-        <section style={{ marginBottom: 40 }}>
+        <section style={{ marginBottom: 28 }}>
           <SectionHeader label="Your tasks" />
           {tasks.length === 0 ? (
             <EmptyState message="No tasks due today. You're all caught up." />
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {tasks.map(t => <TaskRow key={t.id} task={t} />)}
             </div>
           )}
         </section>
 
         {/* Tasks pending with team */}
-        <section style={{ marginBottom: 40 }}>
+        <section style={{ marginBottom: 28 }}>
           <SectionHeader label="Tasks pending with team" />
           {teamTasks.length === 0 ? (
             <EmptyState message="No open tasks waiting on teammates." />
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {teamTasks.map(t => (
                 <TeamTaskRow key={t.id} task={t} onNudge={nudge} />
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Upcoming deadlines */}
-        <section style={{ marginBottom: 40 }}>
-          <SectionHeader label="Upcoming deadlines" />
-          {deadlines.length === 0 ? (
-            <EmptyState message="No upcoming deadlines in your pipeline." />
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {deadlines.map(({ pip, opp, funder }) => (
-                <DeadlineRow key={pip.id} pip={pip} opp={opp} funder={funder} />
               ))}
             </div>
           )}

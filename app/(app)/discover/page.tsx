@@ -229,28 +229,29 @@ function MatchCard({ match, opp, onDismiss, onOppClick, onFunderClick }: {
         <MatchDots strength={match.matchStrength} />
       </div>
 
-      {/* Opp name */}
-      <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 700, color: "var(--ink)", lineHeight: "20px", paddingRight: 24 }}>
-        {opp.name}
-      </p>
-
-      {/* Funder name — clickable */}
+      {/* Funder name — primary headline, clickable */}
       {funder && (
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onFunderClick(funder.id, e.currentTarget) }}
           onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onFunderClick(funder.id, e.currentTarget as HTMLElement) } }}
           style={{
-            background: "none", border: "none", padding: 0, margin: "0 0 10px", cursor: "pointer",
-            fontSize: 12, color: "var(--ink-tertiary)", textAlign: "left",
+            background: "none", border: "none", padding: 0, margin: "0 0 2px", cursor: "pointer",
+            fontSize: 13, fontWeight: 700, color: "var(--ink)", textAlign: "left",
+            lineHeight: "19px", paddingRight: 24,
             transition: "color 120ms",
           }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink)" }}
         >
           {funder.name}
         </button>
       )}
+
+      {/* Opp name — secondary */}
+      <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 400, color: "var(--ink-secondary)", lineHeight: "17px", paddingRight: 24 }}>
+        {opp.name}
+      </p>
 
       {/* Amount + deadline */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
@@ -381,26 +382,27 @@ function CatalogueCard({ opp, onOppClick, onFunderClick }: {
         {match && <MatchDots strength={match.matchStrength} />}
       </div>
 
-      <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: "var(--ink)", lineHeight: "18px" }}>
-        {opp.name}
-      </p>
-
       {funder && (
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onFunderClick(funder.id, e.currentTarget) }}
           onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onFunderClick(funder.id, e.currentTarget as HTMLElement) } }}
           style={{
-            background: "none", border: "none", padding: 0, margin: "0 0 10px", cursor: "pointer",
-            fontSize: 12, color: "var(--ink-tertiary)", textAlign: "left",
+            background: "none", border: "none", padding: 0, margin: "0 0 2px", cursor: "pointer",
+            fontSize: 13, fontWeight: 700, color: "var(--ink)", textAlign: "left",
+            lineHeight: "18px",
             transition: "color 120ms",
           }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink)" }}
         >
           {funder.name}
         </button>
       )}
+
+      <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 400, color: "var(--ink-secondary)", lineHeight: "17px" }}>
+        {opp.name}
+      </p>
 
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         {opp.amount && (
