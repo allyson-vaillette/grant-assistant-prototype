@@ -5,7 +5,7 @@ import Link from "next/link"
 import { ContentContainer } from "@/components/layout/content-container"
 import {
   ChevronRight, Bell, Telescope, Plus, FilePlus,
-  CheckSquare, CalendarDays, Clock,
+  CheckSquare, Clock, AlertTriangle,
 } from "lucide-react"
 import {
   USER, TEAMMATES,
@@ -23,9 +23,9 @@ const PIPELINE_STRIP: { phase: PipelinePhase; label: string; activeColor: string
   { phase: "awards",       label: "Awards",       activeColor: "var(--evergreen)"    },
 ]
 
-// ── Feed types ─────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-type FeedKind = "my-task" | "team-task" | "deadline"
+type FeedKind = "my-task" | "team-task"
 
 type FeedItem = {
   kind: FeedKind
@@ -37,6 +37,16 @@ type FeedItem = {
   isOverdue: boolean
   pursuitHref: string
   teammate?: { name: string; initials: string }
+}
+
+type DeadlineItem = {
+  pipId: string
+  pursuitHref: string
+  funderName: string
+  grantName: string
+  deadline: Date
+  rawDueStr: string
+  isUrgent: boolean
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -68,6 +78,7 @@ function greeting() {
   return "Good evening"
 }
 
+// Tasks (my + team), sorted overdue-first then upcoming ascending
 function buildFeed(scopedPipelineIds: Set<string>): FeedItem[] {
   const now = new Date(); now.setHours(0, 0, 0, 0)
   const items: FeedItem[] = []
@@ -117,7 +128,21 @@ function buildFeed(scopedPipelineIds: Set<string>): FeedItem[] {
       })
     })
 
-  // Application deadlines (active pursuits, overdue + upcoming)
+  return items.sort((a, b) => {
+    const ta = a.dueDate ? a.dueDate.getTime() : Infinity
+    const tb = b.dueDate ? b.dueDate.getTime() : Infinity
+    return ta - tb
+  })
+}
+
+const URGENT_DAYS = 21
+
+// Upcoming application deadlines, soonest first
+function buildDeadlines(scopedPipelineIds: Set<string>): DeadlineItem[] {
+  const now = new Date(); now.setHours(0, 0, 0, 0)
+  const urgentCutoff = new Date(now.getTime() + URGENT_DAYS * 24 * 60 * 60 * 1000)
+  const results: DeadlineItem[] = []
+
   PIPELINE_OPPORTUNITIES
     .filter(p =>
       scopedPipelineIds.has(p.id) &&
@@ -130,24 +155,19 @@ function buildFeed(scopedPipelineIds: Set<string>): FeedItem[] {
       const d = parseDate(opp.deadline)
       if (!d) return
       d.setHours(0, 0, 0, 0)
-      items.push({
-        kind: "deadline",
-        id: `deadline-${pip.id}`,
-        title: funder?.name ?? "Unknown funder",
-        meta: opp.name ?? "",
-        dueDate: d,
-        rawDueStr: opp.deadline,
-        isOverdue: d < now,
+      if (d < now) return  // past deadlines omitted from this section
+      results.push({
+        pipId: pip.id,
         pursuitHref: `/pursuit/${pip.opportunityId}`,
+        funderName: funder?.name ?? "Unknown funder",
+        grantName: opp.name ?? "",
+        deadline: d,
+        rawDueStr: opp.deadline,
+        isUrgent: d <= urgentCutoff,
       })
     })
 
-  // Sort: ascending by date (overdue = past, oldest first; then today; then future). No-date last.
-  return items.sort((a, b) => {
-    const ta = a.dueDate ? a.dueDate.getTime() : Infinity
-    const tb = b.dueDate ? b.dueDate.getTime() : Infinity
-    return ta - tb
-  })
+  return results.sort((a, b) => a.deadline.getTime() - b.deadline.getTime())
 }
 
 // ── StatusCard with hover/focus/tap panel ─────────────────────────────────────
@@ -450,6 +470,122 @@ function AddTaskModal({
   )
 }
 
+// ── Application deadlines section ─────────────────────────────────────────────
+
+function DeadlineRow({ item, isFirst }: { item: DeadlineItem; isFirst: boolean }) {
+  return (
+    <Link href={item.pursuitHref} style={{ textDecoration: "none", display: "block" }}>
+      <div
+        style={{
+          display: "flex", alignItems: "center", gap: 12,
+          padding: "9px 16px",
+          borderTop: !isFirst ? "1px solid var(--hair)" : undefined,
+          transition: "background-color 120ms",
+        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--canvas)" }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{
+            margin: 0, fontSize: 14, fontWeight: 500, color: "var(--ink)", lineHeight: "18px",
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>
+            {item.funderName}
+          </p>
+          {item.grantName && (
+            <p style={{
+              margin: 0, fontSize: 12.5, color: "var(--ink-tertiary)", lineHeight: "17px",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+              {item.grantName}
+            </p>
+          )}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+          {item.isUrgent && (
+            <AlertTriangle
+              size={12}
+              style={{ color: "var(--amber)", flexShrink: 0 }}
+            />
+          )}
+          <span style={{
+            fontSize: 12, whiteSpace: "nowrap",
+            color: item.isUrgent ? "var(--amber)" : "var(--ink-tertiary)",
+            fontWeight: item.isUrgent ? 500 : 400,
+          }}>
+            {item.rawDueStr}
+          </span>
+          <ChevronRight size={14} style={{ color: "var(--ink-tertiary)", marginLeft: 2 }} />
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+const DEADLINE_LIMIT = 5
+
+function ApplicationDeadlines({ items }: { items: DeadlineItem[] }) {
+  const [showAll, setShowAll] = useState(false)
+  const visible = showAll ? items : items.slice(0, DEADLINE_LIMIT)
+  const overflow = items.length - DEADLINE_LIMIT
+
+  if (items.length === 0) return null
+
+  return (
+    <section style={{ marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+        <span style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+          Application deadlines
+        </span>
+      </div>
+
+      <div style={{
+        backgroundColor: "var(--surface)",
+        border: "1px solid var(--hair-2)",
+        borderRadius: 12,
+        overflow: "hidden",
+      }}>
+        {visible.map((item, i) => (
+          <DeadlineRow key={item.pipId} item={item} isFirst={i === 0} />
+        ))}
+
+        {overflow > 0 && !showAll && (
+          <div style={{ borderTop: "1px solid var(--hair)", padding: "10px 16px" }}>
+            <button
+              type="button"
+              onClick={() => setShowAll(true)}
+              style={{
+                background: "none", border: "none", padding: 0,
+                fontSize: 13, fontWeight: 500, color: "var(--slate-secondary)",
+                cursor: "pointer",
+              }}
+            >
+              Show {overflow} more
+            </button>
+          </div>
+        )}
+
+        {showAll && overflow > 0 && (
+          <div style={{ borderTop: "1px solid var(--hair)", padding: "10px 16px" }}>
+            <button
+              type="button"
+              onClick={() => setShowAll(false)}
+              style={{
+                background: "none", border: "none", padding: 0,
+                fontSize: 13, fontWeight: 500, color: "var(--slate-secondary)",
+                cursor: "pointer",
+              }}
+            >
+              Show less
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
 // ── Needs your attention feed ─────────────────────────────────────────────────
 
 function TypeTag({ kind, teammate }: { kind: FeedKind; teammate?: FeedItem["teammate"] }) {
@@ -463,19 +599,6 @@ function TypeTag({ kind, teammate }: { kind: FeedKind; teammate?: FeedItem["team
       }}>
         <CheckSquare size={10} strokeWidth={2.5} />
         Task
-      </span>
-    )
-  }
-  if (kind === "deadline") {
-    return (
-      <span style={{
-        display: "inline-flex", alignItems: "center", gap: 4,
-        padding: "2px 7px", borderRadius: 4,
-        backgroundColor: "var(--terracotta-tint)", color: "var(--terracotta)",
-        fontSize: 11, fontWeight: 600, lineHeight: "16px", flexShrink: 0, whiteSpace: "nowrap",
-      }}>
-        <CalendarDays size={10} strokeWidth={2.5} />
-        Deadline
       </span>
     )
   }
@@ -631,7 +754,6 @@ function NeedsAttentionFeed({
         overflow: "hidden",
       }}>
         {items.length === 0 ? (
-          /* Empty state */
           <div style={{ padding: "28px 16px", textAlign: "center" }}>
             <p style={{ margin: "0 0 14px", fontSize: 14, color: "var(--ink-secondary)", lineHeight: "20px" }}>
               You&rsquo;re all caught up.
@@ -725,6 +847,7 @@ export default function HomePage() {
     ])
   ) as Record<PipelinePhase, StatusPursuit[]>
 
+  const deadlines = buildDeadlines(scopedPipelineIds)
   const feed = buildFeed(scopedPipelineIds)
 
   function showToast(msg: string) {
@@ -777,7 +900,7 @@ export default function HomePage() {
         </div>
 
         {/* Quick actions */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 28 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 20 }}>
           <QuickActionCard
             icon={<Telescope size={16} />}
             label="Discover"
@@ -795,7 +918,10 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Unified attention feed */}
+        {/* Application deadlines */}
+        <ApplicationDeadlines items={deadlines} />
+
+        {/* Needs your attention (tasks only) */}
         <NeedsAttentionFeed items={feed} onNudge={nudge} />
 
       </ContentContainer>
