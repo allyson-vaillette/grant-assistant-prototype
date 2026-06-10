@@ -2,9 +2,9 @@
 
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { ArrowLeft, FileText, Paperclip, CheckSquare, Square, ExternalLink, ChevronDown, Plus, Download, Sparkles, CheckCircle, AlertTriangle, Circle } from "lucide-react"
-import ArtifactEditorPage from "./artifact/[artifactId]/page"
+import { useRouter, useSearchParams } from "next/navigation"
+import { ArrowLeft, FileText, Paperclip, CheckSquare, Square, ExternalLink, ChevronDown, Plus, Download, Sparkles, CheckCircle, AlertTriangle, Circle, Check } from "lucide-react"
+import { ArtifactEditorContent } from "./artifact/[artifactId]/page"
 import {
   FUNDERS, OPPORTUNITIES, USER, TEAMMATES,
   getArtifactsForPipeline, getAttachmentsForPipeline, getTasksForPipeline,
@@ -311,9 +311,12 @@ function sectionCompliance(section: DraftSection, req: Requirement): ComplianceS
 // params.id is the opportunity ID
 export default function PursuitPage({ params }: { params: { id: string } }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const draftParam = searchParams.get("draft")
   const [activeTab, setActiveTab] = useState<Tab>("requirements")
 
   const initialPip = getPipelineForOpportunity(params.id)
+  const initialArtifacts = initialPip ? getArtifactsForPipeline(initialPip.id) : []
   const [currentStatus, setCurrentStatus] = useState<PipelineStatus>(
     initialPip?.status ?? "researching"
   )
@@ -326,6 +329,27 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
   const [addingTask,      setAddingTask]      = useState(false)
   const [newTaskTitle,    setNewTaskTitle]    = useState("")
   const [newTaskAssignee, setNewTaskAssignee] = useState(USER.id)
+
+  const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(() => {
+    if (!initialPip) return null
+    if (draftParam && initialArtifacts.find(a => a.id === draftParam)) return draftParam
+    const sorted = [...initialArtifacts].sort((a, b) => (b.updatedAt > a.updatedAt ? 1 : -1))
+    if (sorted[0]) return sorted[0].id
+    // No drafts yet — auto-create so onramp shows immediately
+    const a = createArtifact(initialPip.id)
+    return a.id
+  })
+  const [draftPickerOpen, setDraftPickerOpen] = useState(false)
+  const draftPickerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!draftPickerOpen) return
+    function onDown(e: MouseEvent) {
+      if (draftPickerRef.current && !draftPickerRef.current.contains(e.target as Node)) setDraftPickerOpen(false)
+    }
+    document.addEventListener("mousedown", onDown)
+    return () => document.removeEventListener("mousedown", onDown)
+  }, [draftPickerOpen])
 
   const pip    = initialPip
   const opp    = OPPORTUNITIES.find(o => o.id === params.id)
@@ -353,7 +377,8 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
   const attachments    = getAttachmentsForPipeline(pip.id)
   const openTasks      = tasks.filter(t => !t.completed)
   const doneTasks      = tasks.filter(t => t.completed)
-  const writingSession = artifacts[0] ? getWritingSession(artifacts[0].id) : null
+  const selectedArtifact = artifacts.find(a => a.id === selectedArtifactId) ?? null
+  const writingSession = selectedArtifact ? getWritingSession(selectedArtifact.id) : null
   const ALL_USERS      = [USER, ...TEAMMATES]
   const currentPhase   = phaseFromStatus(currentStatus)
   const phaseCfg       = PHASE_COLOR[currentPhase]
@@ -426,25 +451,93 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
         </div>
 
         {/* Draft bar */}
-        <div style={{ padding: "10px 24px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+        <div ref={draftPickerRef} style={{ padding: "10px 24px 12px", display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
           <button
             type="button"
+            onClick={() => setDraftPickerOpen(v => !v)}
             style={{
               display: "inline-flex", alignItems: "center", gap: 6,
               padding: "4px 10px 4px 10px", borderRadius: "var(--radius-button)",
               border: "1px solid var(--hair-2)", backgroundColor: "var(--canvas)",
-              fontSize: 12, fontWeight: 500, color: "var(--ink)", cursor: "default",
+              fontSize: 12, fontWeight: 500, color: "var(--ink)", cursor: "pointer",
+              transition: "background-color 120ms",
             }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface)" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
           >
             <FileText size={12} style={{ color: "var(--slate-primary)", flexShrink: 0 }} />
             <span style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {artifacts[0]?.name ?? "Draft 1"}
+              {selectedArtifact?.name ?? "Draft 1"}
             </span>
             <ChevronDown size={12} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
           </button>
+
+          {draftPickerOpen && (
+            <div style={{
+              position: "absolute", top: "calc(100% - 2px)", left: 24, zIndex: 200,
+              minWidth: 220, backgroundColor: "var(--surface)",
+              border: "1px solid var(--hair-2)", borderRadius: 10,
+              boxShadow: "0 8px 24px rgba(28,24,64,0.12)",
+              overflow: "hidden",
+            }}>
+              {artifacts.map(a => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedArtifactId(a.id)
+                    setDraftPickerOpen(false)
+                    router.push(`/pursuit/${params.id}?draft=${a.id}`)
+                  }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    width: "100%", padding: "8px 12px", border: "none",
+                    backgroundColor: a.id === selectedArtifactId ? "var(--surface-sunk)" : "transparent",
+                    cursor: "pointer", fontSize: 12, textAlign: "left",
+                    color: a.id === selectedArtifactId ? "var(--ink)" : "var(--ink-secondary)",
+                    fontWeight: a.id === selectedArtifactId ? 600 : 400,
+                    transition: "background-color 100ms",
+                  }}
+                  onMouseEnter={(e) => { if (a.id !== selectedArtifactId) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface-sunk)" }}
+                  onMouseLeave={(e) => { if (a.id !== selectedArtifactId) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+                >
+                  <FileText size={11} style={{ color: "var(--slate-soft)", flexShrink: 0 }} />
+                  <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</span>
+                  {a.id === selectedArtifactId && <Check size={11} style={{ color: "var(--slate-primary)", flexShrink: 0 }} />}
+                </button>
+              ))}
+              <div style={{ height: 1, backgroundColor: "var(--hair)" }} />
+              <button
+                type="button"
+                onClick={() => {
+                  const a = createArtifact(pip.id)
+                  setSelectedArtifactId(a.id)
+                  setDraftPickerOpen(false)
+                  router.push(`/pursuit/${params.id}?draft=${a.id}`)
+                }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  width: "100%", padding: "8px 12px", border: "none",
+                  backgroundColor: "transparent", cursor: "pointer",
+                  fontSize: 12, color: "var(--ink-secondary)",
+                  transition: "background-color 100ms",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface-sunk)" }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+              >
+                <Plus size={11} style={{ flexShrink: 0 }} /> New draft
+              </button>
+            </div>
+          )}
+
           <div style={{ flex: 1 }} />
           <button
             type="button"
+            onClick={() => {
+              const a = createArtifact(pip.id)
+              setSelectedArtifactId(a.id)
+              router.push(`/pursuit/${params.id}?draft=${a.id}`)
+            }}
             style={{
               display: "inline-flex", alignItems: "center", gap: 5,
               padding: "4px 10px", borderRadius: "var(--radius-button)",
@@ -487,7 +580,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
           <TabBar
             active={activeTab}
             onChange={setActiveTab}
-            counts={{ requirements: 0, documents: artifacts.length, tasks: tasks.length }}
+            counts={{ requirements: writingSession?.requirements.length ?? 0, documents: artifacts.length, tasks: tasks.length }}
           />
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
@@ -777,33 +870,10 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
           </div>
         </div>
 
-        {/* Center: draft editor (as-is) */}
+        {/* Center: draft editor */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", borderRight: "1px solid var(--hair)" }}>
-          {artifacts.length > 0 ? (
-            <ArtifactEditorPage params={{ id: params.id, artifactId: artifacts[0].id }} />
-          ) : (
-            <div style={{
-              flex: 1, display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center", gap: 12,
-              padding: 32,
-            }}>
-              <FileText size={32} style={{ color: "var(--ink-tertiary)", opacity: 0.4 }} />
-              <p style={{ margin: 0, fontSize: 14, color: "var(--ink-tertiary)", textAlign: "center" }}>
-                No drafts yet. Create one to get started.
-              </p>
-              <button
-                type="button"
-                onClick={() => { const a = createArtifact(pip.id); router.push(`/pursuit/${params.id}/artifact/${a.id}`) }}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                  padding: "7px 14px", borderRadius: "var(--radius-button)",
-                  border: "none", backgroundColor: "var(--slate-primary)", color: "#fff",
-                  fontSize: 12, fontWeight: 600, cursor: "pointer",
-                }}
-              >
-                <Plus size={13} /> Start a draft
-              </button>
-            </div>
+          {selectedArtifactId && (
+            <ArtifactEditorContent params={{ id: params.id, artifactId: selectedArtifactId }} />
           )}
         </div>
 

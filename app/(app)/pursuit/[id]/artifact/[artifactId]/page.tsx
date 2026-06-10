@@ -151,7 +151,7 @@ function mockAIChatReply(userMessage: string, sectionTitle?: string): string {
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
-export default function ArtifactEditorPage({
+export function ArtifactEditorContent({
   params,
 }: {
   params: { id: string; artifactId: string }
@@ -2536,6 +2536,19 @@ export default function ArtifactEditorPage({
         </div>
       )}
 
+    </div>
+  )
+}
+
+// Standalone route — redirect to workspace
+export default function ArtifactEditorPage({ params }: { params: { id: string; artifactId: string } }) {
+  const router = useRouter()
+  useEffect(() => {
+    router.replace(`/pursuit/${params.id}?draft=${params.artifactId}`)
+  }, [params.id, params.artifactId, router])
+  return (
+    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "var(--canvas)" }}>
+      <p style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>Redirecting…</p>
     </div>
   )
 }
