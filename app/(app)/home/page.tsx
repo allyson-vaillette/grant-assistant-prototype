@@ -508,12 +508,11 @@ function AttentionRow({
     <div
       style={{
         display: "flex", alignItems: "center", gap: 12,
-        padding: "9px 0",
-        borderTop: isFirst ? "1px solid var(--hair)" : undefined,
-        borderBottom: "1px solid var(--hair)",
+        padding: "9px 16px",
+        borderTop: !isFirst ? "1px solid var(--hair)" : undefined,
         transition: "background-color 120ms",
       }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--surface)" }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--canvas)" }}
       onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
     >
       {/* Left: tag + text */}
@@ -625,65 +624,74 @@ function NeedsAttentionFeed({
         )}
       </div>
 
-      {items.length === 0 ? (
-        /* Empty state */
-        <div style={{ padding: "28px 0", textAlign: "center" }}>
-          <p style={{ margin: "0 0 14px", fontSize: 14, color: "var(--ink-secondary)", lineHeight: "20px" }}>
-            You&rsquo;re all caught up.
-          </p>
-          <Link
-            href="/discover"
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "8px 16px", borderRadius: 8,
-              backgroundColor: "var(--surface)", border: "1px solid var(--hair-2)",
-              fontSize: 13, fontWeight: 600, color: "var(--slate-primary)",
-              textDecoration: "none", transition: "box-shadow 150ms",
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.boxShadow = "var(--lift-2)" }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.boxShadow = "none" }}
-          >
-            <Telescope size={14} />
-            Find opportunities
-          </Link>
-        </div>
-      ) : (
-        <>
-          {visible.map((item, i) => (
-            <AttentionRow key={item.id} item={item} isFirst={i === 0} onNudge={onNudge} />
-          ))}
-
-          {overflow > 0 && !showAll && (
-            <button
-              type="button"
-              onClick={() => setShowAll(true)}
+      <div style={{
+        backgroundColor: "var(--surface)",
+        border: "1px solid var(--hair-2)",
+        borderRadius: 12,
+        overflow: "hidden",
+      }}>
+        {items.length === 0 ? (
+          /* Empty state */
+          <div style={{ padding: "28px 16px", textAlign: "center" }}>
+            <p style={{ margin: "0 0 14px", fontSize: 14, color: "var(--ink-secondary)", lineHeight: "20px" }}>
+              You&rsquo;re all caught up.
+            </p>
+            <Link
+              href="/discover"
               style={{
-                marginTop: 10, padding: "6px 0",
-                background: "none", border: "none",
-                fontSize: 13, fontWeight: 500, color: "var(--slate-secondary)",
-                cursor: "pointer", textDecoration: "none",
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "8px 16px", borderRadius: 8,
+                backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)",
+                fontSize: 13, fontWeight: 600, color: "var(--slate-primary)",
+                textDecoration: "none", transition: "box-shadow 150ms",
               }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.boxShadow = "var(--lift-2)" }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.boxShadow = "none" }}
             >
-              Show {overflow} more
-            </button>
-          )}
+              <Telescope size={14} />
+              Find opportunities
+            </Link>
+          </div>
+        ) : (
+          <>
+            {visible.map((item, i) => (
+              <AttentionRow key={item.id} item={item} isFirst={i === 0} onNudge={onNudge} />
+            ))}
 
-          {showAll && overflow > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowAll(false)}
-              style={{
-                marginTop: 10, padding: "6px 0",
-                background: "none", border: "none",
-                fontSize: 13, fontWeight: 500, color: "var(--slate-secondary)",
-                cursor: "pointer",
-              }}
-            >
-              Show less
-            </button>
-          )}
-        </>
-      )}
+            {overflow > 0 && !showAll && (
+              <div style={{ borderTop: "1px solid var(--hair)", padding: "10px 16px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAll(true)}
+                  style={{
+                    background: "none", border: "none", padding: 0,
+                    fontSize: 13, fontWeight: 500, color: "var(--slate-secondary)",
+                    cursor: "pointer",
+                  }}
+                >
+                  Show {overflow} more
+                </button>
+              </div>
+            )}
+
+            {showAll && overflow > 0 && (
+              <div style={{ borderTop: "1px solid var(--hair)", padding: "10px 16px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAll(false)}
+                  style={{
+                    background: "none", border: "none", padding: 0,
+                    fontSize: 13, fontWeight: 500, color: "var(--slate-secondary)",
+                    cursor: "pointer",
+                  }}
+                >
+                  Show less
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </section>
   )
 }
