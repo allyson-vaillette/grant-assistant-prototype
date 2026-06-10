@@ -127,9 +127,10 @@ export interface Artifact {
   stage: ArtifactStage
   updatedAt: string
   content?: string
+  isSubmitted?: boolean
 }
 
-export type AttachmentCategory = "rfp" | "prior_proposal" | "report" | "contact_notes" | "other"
+export type AttachmentCategory = "rfp" | "prior_proposal" | "report" | "contact_notes" | "other" | "application"
 
 export interface Attachment {
   id: string
@@ -164,6 +165,7 @@ export interface Requirement {
   wordLimit?: number
   charLimit?: number
   constraint?: RequirementConstraint
+  source?: "rfp-extracted" | "user-entered"
 }
 
 export interface DraftSection {

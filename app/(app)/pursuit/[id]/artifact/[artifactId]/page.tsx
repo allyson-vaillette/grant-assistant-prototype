@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   ArrowLeft, Download, Sparkles, Loader2,
   Check, X, AlertCircle, RefreshCw,
@@ -1828,7 +1829,7 @@ export function ArtifactEditorContent({
             role="complementary"
             aria-label="AI assistant and snippets"
             style={{
-              width: mode === "right-rail" ? undefined : (rightCollapsed ? 40 : 280),
+              width: mode === "right-rail" ? undefined : (rightCollapsed ? 40 : 320),
               flex: mode === "right-rail" ? 1 : undefined,
               flexShrink: mode === "right-rail" ? undefined : 0,
               transition: "width 200ms ease",
@@ -1895,7 +1896,7 @@ export function ArtifactEditorContent({
                     >
                       <ChevronRight size={14} />
                     </button>
-                    <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+                    <div style={{ display: "flex", flex: 1 }}>
                       {(["chat", "snippets", "voice", "comments"] as const).map(tab => {
                         const active = rightTab === tab
                         const icon   = tab === "chat" ? <Sparkles size={11} /> : tab === "snippets" ? <BookOpen size={11} /> : tab === "voice" ? <Sliders size={11} /> : <Users size={11} />

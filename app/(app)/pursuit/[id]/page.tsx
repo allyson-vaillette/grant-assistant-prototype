@@ -3,14 +3,14 @@
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, FileText, FileSpreadsheet, Paperclip, ChevronDown, Plus, Download, CheckCircle, AlertTriangle, Circle, Check, Lock } from "lucide-react"
+import { ArrowLeft, FileText, FileSpreadsheet, Paperclip, ChevronDown, Plus, Download, CheckCircle, AlertTriangle, Circle, Check, Lock, Trash2, X } from "lucide-react"
 import { ArtifactEditorContent } from "./artifact/[artifactId]/page"
 import {
   FUNDERS, OPPORTUNITIES, USER, TEAMMATES,
   getArtifactsForPipeline, getAttachmentsForPipeline, getTasksForPipeline,
   getPipelineForOpportunity, createArtifact, getWritingSession,
 } from "@/lib/mock-data"
-import type { PipelineStatus, PipelinePhase, ArtifactStage, AttachmentCategory, Attachment, Task, Requirement, DraftSection } from "@/lib/types"
+import type { PipelineStatus, PipelinePhase, ArtifactStage, AttachmentCategory, Attachment, Task, Requirement, DraftSection, Artifact } from "@/lib/types"
 import { phaseFromStatus } from "@/lib/types"
 
 // ── Phase + status config ──────────────────────────────────────────────────
@@ -583,8 +583,18 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
     const a = createArtifact(initialPip.id)
     return a.id
   })
+  const [artifacts, setArtifacts] = useState<Artifact[]>(() =>
+    initialPip ? getArtifactsForPipeline(initialPip.id) : []
+  )
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [draftPickerOpen, setDraftPickerOpen] = useState(false)
   const draftPickerRef = useRef<HTMLDivElement>(null)
+  const [localUserReqs,       setLocalUserReqs]       = useState<Requirement[]>([])
+  const [addingReq,           setAddingReq]           = useState(false)
+  const [newReqText,          setNewReqText]          = useState("")
+  const [newReqWordLimit,     setNewReqWordLimit]     = useState("")
+  const [newReqCharLimit,     setNewReqCharLimit]     = useState("")
+  const [newReqAttachmentNote, setNewReqAttachmentNote] = useState("")
 
   useEffect(() => {
     if (!draftPickerOpen) return
@@ -617,12 +627,49 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
     }
   }
 
-  const artifacts      = getArtifactsForPipeline(pip.id)
+  function doDeleteDraft(artifactId: string) {
+    const remaining = artifacts.filter(a => a.id !== artifactId)
+    setConfirmDeleteId(null)
+    setDraftPickerOpen(false)
+    if (remaining.length === 0) {
+      const newArt = createArtifact(pip!.id)
+      setArtifacts([newArt])
+      setSelectedArtifactId(newArt.id)
+      router.push(`/pursuit/${params.id}?draft=${newArt.id}`)
+    } else {
+      setArtifacts(remaining)
+      if (artifactId === selectedArtifactId) {
+        const next = remaining[0]
+        setSelectedArtifactId(next.id)
+        router.push(`/pursuit/${params.id}?draft=${next.id}`)
+      }
+    }
+  }
+
+  function saveNewReq() {
+    if (!newReqText.trim()) return
+    const req: Requirement = {
+      id: `req-user-${Date.now()}`,
+      text: newReqText.trim(),
+      source: "user-entered",
+      ...(newReqWordLimit.trim() && { wordLimit: Number(newReqWordLimit) || undefined }),
+      ...(newReqCharLimit.trim() && { charLimit: Number(newReqCharLimit) || undefined }),
+      ...(newReqAttachmentNote.trim() && { constraint: { type: "required_attachment" as const, value: newReqAttachmentNote.trim() } }),
+    }
+    setLocalUserReqs(prev => [...prev, req])
+    setNewReqText("")
+    setNewReqWordLimit("")
+    setNewReqCharLimit("")
+    setNewReqAttachmentNote("")
+    setAddingReq(false)
+  }
+
   const attachments    = getAttachmentsForPipeline(pip.id)
   const openTasks      = tasks.filter(t => !t.completed)
   const doneTasks      = tasks.filter(t => t.completed)
   const selectedArtifact = artifacts.find(a => a.id === selectedArtifactId) ?? null
   const writingSession = selectedArtifact ? getWritingSession(selectedArtifact.id) : null
+  const allReqs        = [...(writingSession?.requirements ?? []), ...localUserReqs]
   const ALL_USERS      = [USER, ...TEAMMATES]
   const currentPhase   = phaseFromStatus(currentStatus)
   const phaseCfg       = PHASE_COLOR[currentPhase]
@@ -719,44 +766,111 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
           {draftPickerOpen && (
             <div style={{
               position: "absolute", top: "calc(100% - 2px)", left: 24, zIndex: 200,
-              minWidth: 220, backgroundColor: "var(--surface)",
+              minWidth: 240, backgroundColor: "var(--surface)",
               border: "1px solid var(--hair-2)", borderRadius: 10,
               boxShadow: "0 8px 24px rgba(28,24,64,0.12)",
               overflow: "hidden",
             }}>
               {artifacts.map(a => (
-                <button
-                  key={a.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedArtifactId(a.id)
-                    setDraftPickerOpen(false)
-                    router.push(`/pursuit/${params.id}?draft=${a.id}`)
-                  }}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 8,
-                    width: "100%", padding: "8px 12px", border: "none",
-                    backgroundColor: a.id === selectedArtifactId ? "var(--surface-sunk)" : "transparent",
-                    cursor: "pointer", fontSize: 12, textAlign: "left",
-                    color: a.id === selectedArtifactId ? "var(--ink)" : "var(--ink-secondary)",
-                    fontWeight: a.id === selectedArtifactId ? 600 : 400,
-                    transition: "background-color 100ms",
-                  }}
-                  onMouseEnter={(e) => { if (a.id !== selectedArtifactId) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface-sunk)" }}
-                  onMouseLeave={(e) => { if (a.id !== selectedArtifactId) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
-                >
-                  <FileText size={11} style={{ color: "var(--slate-soft)", flexShrink: 0 }} />
-                  <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</span>
-                  {a.id === selectedArtifactId && <Check size={11} style={{ color: "var(--slate-primary)", flexShrink: 0 }} />}
-                </button>
+                confirmDeleteId === a.id ? (
+                  // Confirm delete row
+                  <div key={a.id} style={{ padding: "8px 12px", backgroundColor: "var(--surface-sunk)" }}>
+                    <p style={{ margin: "0 0 8px", fontSize: 12, color: "var(--ink)", fontWeight: 500, lineHeight: "16px" }}>
+                      Delete &ldquo;{a.name}&rdquo;?
+                    </p>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button
+                        type="button"
+                        onClick={() => doDeleteDraft(a.id)}
+                        style={{
+                          flex: 1, padding: "4px 0", borderRadius: "var(--radius-button)",
+                          border: "none", backgroundColor: "var(--terracotta)", color: "#fff",
+                          fontSize: 11, fontWeight: 600, cursor: "pointer",
+                        }}
+                      >
+                        Delete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(null)}
+                        style={{
+                          flex: 1, padding: "4px 0", borderRadius: "var(--radius-button)",
+                          border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+                          color: "var(--ink-secondary)", fontSize: 11, cursor: "pointer",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  // Normal draft row
+                  <div
+                    key={a.id}
+                    style={{
+                      display: "flex", alignItems: "center",
+                      backgroundColor: a.id === selectedArtifactId ? "var(--surface-sunk)" : "transparent",
+                      transition: "background-color 100ms",
+                    }}
+                    onMouseEnter={e => { if (a.id !== selectedArtifactId) (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--surface-sunk)" }}
+                    onMouseLeave={e => { if (a.id !== selectedArtifactId) (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedArtifactId(a.id)
+                        setDraftPickerOpen(false)
+                        setConfirmDeleteId(null)
+                        router.push(`/pursuit/${params.id}?draft=${a.id}`)
+                      }}
+                      style={{
+                        flex: 1, display: "flex", alignItems: "center", gap: 8,
+                        padding: "8px 12px", border: "none",
+                        backgroundColor: "transparent",
+                        cursor: "pointer", fontSize: 12, textAlign: "left",
+                        color: a.id === selectedArtifactId ? "var(--ink)" : "var(--ink-secondary)",
+                        fontWeight: a.id === selectedArtifactId ? 600 : 400,
+                      }}
+                    >
+                      <FileText size={11} style={{ color: "var(--slate-soft)", flexShrink: 0 }} />
+                      <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</span>
+                      {a.id === selectedArtifactId && <Check size={11} style={{ color: "var(--slate-primary)", flexShrink: 0 }} />}
+                    </button>
+                    {!a.isSubmitted && (
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); setConfirmDeleteId(a.id) }}
+                        title="Delete draft"
+                        style={{
+                          flexShrink: 0, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
+                          border: "none", backgroundColor: "transparent", cursor: "pointer",
+                          color: "var(--ink-tertiary)", marginRight: 4, borderRadius: "var(--radius-button)",
+                          transition: "color 120ms, background-color 120ms",
+                        }}
+                        onMouseEnter={e => {
+                          (e.currentTarget as HTMLButtonElement).style.color = "var(--terracotta)"
+                          ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--terracotta-tint)"
+                        }}
+                        onMouseLeave={e => {
+                          (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)"
+                          ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"
+                        }}
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    )}
+                  </div>
+                )
               ))}
               <div style={{ height: 1, backgroundColor: "var(--hair)" }} />
               <button
                 type="button"
                 onClick={() => {
                   const a = createArtifact(pip.id)
+                  setArtifacts(prev => [...prev, a])
                   setSelectedArtifactId(a.id)
                   setDraftPickerOpen(false)
+                  setConfirmDeleteId(null)
                   router.push(`/pursuit/${params.id}?draft=${a.id}`)
                 }}
                 style={{
@@ -779,6 +893,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
             type="button"
             onClick={() => {
               const a = createArtifact(pip.id)
+              setArtifacts(prev => [...prev, a])
               setSelectedArtifactId(a.id)
               router.push(`/pursuit/${params.id}?draft=${a.id}`)
             }}
@@ -850,53 +965,165 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
 
                 {/* Requirements list */}
                 {reqSubTab === "list" && (
-                  <div style={{ flex: 1, overflowY: "auto", padding: "12px 8px" }}>
-                    {!writingSession || writingSession.requirements.length === 0 ? (
-                      <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "18px", padding: "4px" }}>
-                        Requirements will appear here once extracted from the RFP.
-                      </p>
-                    ) : writingSession.requirements.map((req, idx) => {
-                      const section = writingSession.sections.find(s => s.requirementId === req.id)
-                      const status  = section ? sectionCompliance(section, req) : "uncovered"
-                      return (
-                        <div
-                          key={req.id}
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                    <div style={{ flex: 1, overflowY: "auto", padding: "12px 8px 4px" }}>
+                      {allReqs.length === 0 && (
+                        <p style={{ margin: "0 0 8px", fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "18px", padding: "4px" }}>
+                          No requirements yet. Add one below or extract from an RFP in the draft editor.
+                        </p>
+                      )}
+                      {allReqs.map((req, idx) => {
+                        const section = writingSession?.sections.find(s => s.requirementId === req.id)
+                        const status  = section ? sectionCompliance(section, req) : "uncovered"
+                        return (
+                          <div
+                            key={req.id}
+                            style={{
+                              padding: "9px 10px", borderRadius: "var(--radius-button)",
+                              marginBottom: 2, transition: "background-color 120ms",
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                          >
+                            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                              <span style={{ fontSize: 10, color: "var(--ink-tertiary)", fontWeight: 600, paddingTop: 2, flexShrink: 0 }}>
+                                {idx + 1}
+                              </span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ margin: "0 0 4px", fontSize: 12, color: "var(--ink)", lineHeight: "16px", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                                  {req.text}
+                                </p>
+                                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                                  {req.source === "user-entered" && (
+                                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--plum-soft)", background: "var(--plum-tint)", padding: "1px 5px", borderRadius: 3 }}>
+                                      Added by you
+                                    </span>
+                                  )}
+                                  {req.wordLimit && (
+                                    <span style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-tertiary)" }}>≤{req.wordLimit} w</span>
+                                  )}
+                                  {req.charLimit && (
+                                    <span style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-tertiary)" }}>≤{req.charLimit} ch</span>
+                                  )}
+                                  {req.constraint?.type === "required_attachment" && (
+                                    <span style={{ fontSize: 10, fontWeight: 600, color: "var(--terracotta)" }}>Attachment req.</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div style={{ flexShrink: 0 }}>
+                                {status === "covered"   && <CheckCircle   size={13} style={{ color: "var(--evergreen)" }} />}
+                                {status === "partial"   && <AlertTriangle size={13} style={{ color: "var(--amber)"    }} />}
+                                {status === "uncovered" && <Circle        size={13} style={{ color: "var(--hair-2)"   }} />}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {/* Add requirement — always available */}
+                    <div style={{ flexShrink: 0, borderTop: "1px solid var(--hair)" }}>
+                      {addingReq ? (
+                        <div style={{ padding: "10px 8px" }}>
+                          <input
+                            autoFocus
+                            type="text"
+                            placeholder="Describe this requirement…"
+                            value={newReqText}
+                            onChange={e => setNewReqText(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === "Enter" && newReqText.trim()) saveNewReq()
+                              if (e.key === "Escape") { setAddingReq(false); setNewReqText(""); setNewReqWordLimit(""); setNewReqCharLimit(""); setNewReqAttachmentNote("") }
+                            }}
+                            style={{
+                              width: "100%", padding: "5px 8px", borderRadius: "var(--radius-button)",
+                              border: "1px solid var(--slate-soft)", fontSize: 12, outline: "none",
+                              backgroundColor: "var(--canvas)", marginBottom: 6, boxSizing: "border-box",
+                            }}
+                          />
+                          <div style={{ display: "flex", gap: 5, marginBottom: 6 }}>
+                            <input
+                              type="number"
+                              placeholder="Word limit"
+                              value={newReqWordLimit}
+                              onChange={e => setNewReqWordLimit(e.target.value)}
+                              style={{
+                                flex: 1, padding: "4px 6px", borderRadius: "var(--radius-button)",
+                                border: "1px solid var(--hair-2)", fontSize: 11, outline: "none",
+                                backgroundColor: "var(--canvas)", color: "var(--ink)",
+                              }}
+                            />
+                            <input
+                              type="number"
+                              placeholder="Char limit"
+                              value={newReqCharLimit}
+                              onChange={e => setNewReqCharLimit(e.target.value)}
+                              style={{
+                                flex: 1, padding: "4px 6px", borderRadius: "var(--radius-button)",
+                                border: "1px solid var(--hair-2)", fontSize: 11, outline: "none",
+                                backgroundColor: "var(--canvas)", color: "var(--ink)",
+                              }}
+                            />
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Attachment note (optional)"
+                            value={newReqAttachmentNote}
+                            onChange={e => setNewReqAttachmentNote(e.target.value)}
+                            style={{
+                              width: "100%", padding: "4px 6px", borderRadius: "var(--radius-button)",
+                              border: "1px solid var(--hair-2)", fontSize: 11, outline: "none",
+                              backgroundColor: "var(--canvas)", color: "var(--ink)",
+                              marginBottom: 8, boxSizing: "border-box",
+                            }}
+                          />
+                          <div style={{ display: "flex", gap: 5 }}>
+                            <button
+                              type="button"
+                              disabled={!newReqText.trim()}
+                              onClick={saveNewReq}
+                              style={{
+                                flex: 1, padding: "5px 0", borderRadius: "var(--radius-button)",
+                                border: "none",
+                                backgroundColor: newReqText.trim() ? "var(--slate-primary)" : "var(--hair-2)",
+                                color: newReqText.trim() ? "#fff" : "var(--ink-tertiary)",
+                                fontSize: 11, fontWeight: 600,
+                                cursor: newReqText.trim() ? "pointer" : "default",
+                              }}
+                            >
+                              Add
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setAddingReq(false); setNewReqText(""); setNewReqWordLimit(""); setNewReqCharLimit(""); setNewReqAttachmentNote("") }}
+                              style={{
+                                padding: "5px 10px", borderRadius: "var(--radius-button)",
+                                border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+                                color: "var(--ink-secondary)", fontSize: 11, cursor: "pointer",
+                              }}
+                            >
+                              <X size={11} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setAddingReq(true)}
                           style={{
-                            padding: "9px 10px", borderRadius: "var(--radius-button)",
-                            marginBottom: 2, transition: "background-color 120ms",
+                            display: "flex", alignItems: "center", gap: 5,
+                            width: "100%", padding: "8px 16px", borderRadius: 0,
+                            border: "none", backgroundColor: "transparent",
+                            fontSize: 11, color: "var(--ink-tertiary)", cursor: "pointer",
+                            transition: "background-color 120ms",
                           }}
                           onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
                           onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
                         >
-                          <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                            <span style={{ fontSize: 10, color: "var(--ink-tertiary)", fontWeight: 600, paddingTop: 2, flexShrink: 0 }}>
-                              {idx + 1}
-                            </span>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <p style={{ margin: "0 0 4px", fontSize: 12, color: "var(--ink)", lineHeight: "16px", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-                                {req.text}
-                              </p>
-                              <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                                {req.wordLimit && (
-                                  <span style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-tertiary)" }}>≤{req.wordLimit} w</span>
-                                )}
-                                {req.charLimit && (
-                                  <span style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-tertiary)" }}>≤{req.charLimit} ch</span>
-                                )}
-                                {req.constraint?.type === "required_attachment" && (
-                                  <span style={{ fontSize: 10, fontWeight: 600, color: "var(--terracotta)" }}>Attachment req.</span>
-                                )}
-                              </div>
-                            </div>
-                            <div style={{ flexShrink: 0 }}>
-                              {status === "covered"   && <CheckCircle   size={13} style={{ color: "var(--evergreen)" }} />}
-                              {status === "partial"   && <AlertTriangle size={13} style={{ color: "var(--amber)"    }} />}
-                              {status === "uncovered" && <Circle        size={13} style={{ color: "var(--hair-2)"   }} />}
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
+                          <Plus size={11} /> Add requirement
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -906,12 +1133,12 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
                     <p style={{ margin: "0 0 10px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)", padding: "0 4px" }}>
                       Compliance matrix
                     </p>
-                    {!writingSession || writingSession.requirements.length === 0 ? (
+                    {allReqs.length === 0 ? (
                       <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "18px", padding: "0 4px" }}>
                         No requirements to audit yet.
                       </p>
-                    ) : writingSession.requirements.map(req => {
-                      const section = writingSession.sections.find(s => s.requirementId === req.id)
+                    ) : allReqs.map(req => {
+                      const section = writingSession?.sections.find(s => s.requirementId === req.id)
                       const status  = section ? sectionCompliance(section, req) : "uncovered"
                       const words   = section ? countWords(section.content) : 0
                       const chars   = section ? countChars(section.content) : 0
