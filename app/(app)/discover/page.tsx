@@ -667,7 +667,7 @@ function DiscoverPage() {
     <div style={{ height: "100%", position: "relative", overflow: "hidden", backgroundColor: "var(--canvas)" }}>
 
       <div style={{ height: "100%", overflowY: "auto" }}>
-        <div style={{ maxWidth: 880, margin: "0 auto", padding: "36px 32px 80px" }}>
+        <div style={{ maxWidth: 1120, margin: 0, padding: "36px 32px 80px" }}>
 
           {/* Page header */}
           <div style={{ marginBottom: 28 }}>

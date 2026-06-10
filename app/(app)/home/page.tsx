@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useRef } from "react"
+import React, { useState, useRef } from "react"
 import Link from "next/link"
-import { ChevronRight, Bell } from "lucide-react"
+import { ChevronRight, Bell, Telescope, Plus, FilePlus } from "lucide-react"
 import {
   USER, TEAMMATES,
   PIPELINE_OPPORTUNITIES, OPPORTUNITIES, FUNDERS, TASKS,
@@ -104,18 +104,14 @@ function getUpcomingDeadlines() {
 
 function SectionHeader({ label }: { label: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-      <span style={{
-        fontSize: 11, fontWeight: 600,
-        color: "var(--ink-tertiary)", flexShrink: 0,
-      }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+      <span style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-tertiary)", flexShrink: 0 }}>
         {label}
       </span>
       <div style={{ flex: 1, height: 1, backgroundColor: "var(--hair)" }} />
     </div>
   )
 }
-
 
 function EmptyState({ message }: { message: string }) {
   return (
@@ -125,6 +121,177 @@ function EmptyState({ message }: { message: string }) {
     }}>
       <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>{message}</p>
     </div>
+  )
+}
+
+function QuickActionCard({
+  icon,
+  label,
+  href,
+  onClick,
+}: {
+  icon: React.ReactNode
+  label: string
+  href?: string
+  onClick?: () => void
+}) {
+  const inner = (
+    <div
+      style={{
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "13px 16px",
+        backgroundColor: "var(--surface)",
+        border: "1px solid var(--hair-2)",
+        borderRadius: 12,
+        transition: "box-shadow 150ms, border-color 150ms",
+      }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.boxShadow = "var(--lift-2)"
+        el.style.borderColor = "var(--slate-light)"
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.boxShadow = "none"
+        el.style.borderColor = "var(--hair-2)"
+      }}
+    >
+      <div style={{ color: "var(--slate-secondary)", flexShrink: 0, display: "flex" }}>
+        {icon}
+      </div>
+      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", flex: 1, lineHeight: "17px" }}>
+        {label}
+      </span>
+      <ChevronRight size={14} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
+    </div>
+  )
+
+  if (href) {
+    return (
+      <Link href={href} style={{ textDecoration: "none", display: "block" }}>
+        {inner}
+      </Link>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        background: "none", border: "none", padding: 0, margin: 0,
+        cursor: "pointer", width: "100%", display: "block", textAlign: "left",
+      }}
+    >
+      {inner}
+    </button>
+  )
+}
+
+function AddTaskModal({
+  onClose,
+  onAdd,
+}: {
+  onClose: () => void
+  onAdd: (title: string) => void
+}) {
+  const [title, setTitle] = useState("")
+  const [dueDate, setDueDate] = useState("")
+
+  function submit() {
+    if (title.trim()) onAdd(title.trim())
+  }
+
+  return (
+    <>
+      <div
+        style={{ position: "fixed", inset: 0, zIndex: 200, backgroundColor: "rgba(42,42,42,0.35)" }}
+        onClick={onClose}
+      />
+      <div style={{
+        position: "fixed", top: "50%", left: "50%", zIndex: 201,
+        transform: "translate(-50%, -50%)",
+        backgroundColor: "var(--surface)", borderRadius: 16,
+        padding: "28px 32px", width: 440, maxWidth: "90vw",
+        boxShadow: "0 8px 16px rgba(42,42,42,0.08), 0 30px 60px rgba(42,42,42,0.15)",
+      }}>
+        <h2 style={{ margin: "0 0 24px", fontSize: 16, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+          Add task
+        </h2>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--ink-secondary)", marginBottom: 6 }}>
+            Task
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="What needs to be done?"
+            autoFocus
+            onKeyDown={(e) => { if (e.key === "Enter") submit() }}
+            style={{
+              width: "100%", padding: "9px 12px",
+              borderRadius: "var(--radius-input)",
+              border: "1px solid var(--hair-2)",
+              backgroundColor: "var(--canvas)",
+              fontSize: 14, color: "var(--ink)", outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: 28 }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--ink-secondary)", marginBottom: 6 }}>
+            Due date{" "}
+            <span style={{ fontWeight: 400, color: "var(--ink-tertiary)" }}>(optional)</span>
+          </label>
+          <input
+            type="text"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            placeholder="Jun 15, 2026"
+            style={{
+              width: "100%", padding: "9px 12px",
+              borderRadius: "var(--radius-input)",
+              border: "1px solid var(--hair-2)",
+              backgroundColor: "var(--canvas)",
+              fontSize: 14, color: "var(--ink)", outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: "8px 16px", borderRadius: 8,
+              border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+              fontSize: 13, color: "var(--ink-secondary)", cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!title.trim()}
+            style={{
+              padding: "8px 16px", borderRadius: 8, border: "none",
+              backgroundColor: title.trim() ? "var(--slate-primary)" : "var(--hair-2)",
+              fontSize: 13, fontWeight: 600,
+              color: title.trim() ? "#fff" : "var(--ink-tertiary)",
+              cursor: title.trim() ? "pointer" : "not-allowed",
+              transition: "background-color 150ms",
+            }}
+          >
+            Add task
+          </button>
+        </div>
+      </div>
+    </>
   )
 }
 
@@ -141,20 +308,18 @@ function TaskRow({ task }: { task: ReturnType<typeof getTodayTasks>[number] }) {
           backgroundColor: "var(--surface)",
           border: `1px solid ${task.isOverdue ? "rgba(185,28,28,0.15)" : "var(--hair-2)"}`,
           borderLeft: task.isOverdue ? "3px solid var(--error)" : "1px solid var(--hair-2)",
-          borderRadius: 10, padding: "10px 14px", cursor: "pointer", transition: "box-shadow 150ms",
+          borderRadius: 10, padding: "8px 14px", cursor: "pointer", transition: "box-shadow 150ms",
         }}
         onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px rgba(28,24,64,0.07)" }}
         onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none" }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "space-between" }}>
           <div style={{ minWidth: 0 }}>
-            <p style={{ margin: "0 0 3px", fontSize: 13, fontWeight: 500, color: "var(--ink)", lineHeight: "18px" }}>
+            <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 600, color: "var(--ink)", lineHeight: "19px" }}>
               {task.title}
             </p>
-            <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "15px" }}>
-              <span style={{ fontWeight: 600, fontSize: 11 }}>
-                {funder?.name}
-              </span>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "17px" }}>
+              {funder?.name}
               {opp?.name && <span> · {opp.name}</span>}
             </p>
           </div>
@@ -192,7 +357,7 @@ function TeamTaskRow({
       backgroundColor: "var(--surface)",
       border: `1px solid ${task.isOverdue ? "rgba(185,28,28,0.15)" : "var(--hair-2)"}`,
       borderLeft: task.isOverdue ? "3px solid var(--error)" : "1px solid var(--hair-2)",
-      borderRadius: 10, padding: "10px 14px",
+      borderRadius: 10, padding: "8px 14px",
       display: "flex", alignItems: "center", gap: 12,
     }}>
       <div style={{
@@ -206,14 +371,12 @@ function TeamTaskRow({
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: "0 0 3px", fontSize: 13, fontWeight: 500, color: "var(--ink)", lineHeight: "18px" }}>
+        <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 600, color: "var(--ink)", lineHeight: "19px" }}>
           {task.title}
         </p>
-        <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "15px" }}>
-          <span style={{ fontWeight: 600 }}>{task.teammate.name}</span>
-          {funder && (
-            <span> · <span style={{ fontWeight: 600, fontSize: 11 }}>{funder.name}</span></span>
-          )}
+        <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "17px" }}>
+          {task.teammate.name}
+          {funder && <span> · {funder.name}</span>}
           {opp?.name && <span> · {opp.name}</span>}
         </p>
       </div>
@@ -228,7 +391,7 @@ function TeamTaskRow({
             Overdue
           </span>
         ) : task.dueDate ? (
-          <span style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: 13, color: "var(--ink-secondary)", whiteSpace: "nowrap" }}>
             Due {task.dueDate}
           </span>
         ) : null}
@@ -272,23 +435,23 @@ function DeadlineRow({ pip, opp, funder }: {
       <div
         style={{
           backgroundColor: "var(--surface)", border: "1px solid var(--hair-2)",
-          borderRadius: 10, padding: "10px 14px", cursor: "pointer", transition: "box-shadow 150ms",
+          borderRadius: 10, padding: "8px 14px", cursor: "pointer", transition: "box-shadow 150ms",
         }}
         onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px rgba(28,24,64,0.07)" }}
         onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none" }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "space-between" }}>
           <div style={{ minWidth: 0 }}>
-            <p style={{ margin: "0 0 3px", fontSize: 13, fontWeight: 500, color: "var(--ink)", lineHeight: "18px" }}>
-              {opp?.name}
-            </p>
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: "var(--ink-tertiary)" }}>
+            <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 600, color: "var(--ink)", lineHeight: "19px" }}>
               {funder?.name}
+            </p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "17px" }}>
+              {opp?.name}
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             {opp?.deadline && (
-              <span style={{ fontSize: 12, color: "var(--ink-secondary)", whiteSpace: "nowrap" }}>
+              <span style={{ fontSize: 13, color: "var(--ink-secondary)", whiteSpace: "nowrap" }}>
                 Due {opp.deadline}
               </span>
             )}
@@ -324,7 +487,6 @@ function StatusCard({
 
   const count = pursuits.length
 
-  // Compensate for removed overflow:hidden on strip container
   const borderRadius = [
     isFirst ? "11px" : "0",
     isLast  ? "11px" : "0",
@@ -340,28 +502,21 @@ function StatusCard({
       onMouseLeave={() => setOpen(false)}
       onFocus={() => setOpen(true)}
       onBlur={(e) => {
-        // Keep open when focus moves to a child (e.g. a link inside the panel)
-        if (!containerRef.current?.contains(e.relatedTarget as Node)) {
-          setOpen(false)
-        }
+        if (!containerRef.current?.contains(e.relatedTarget as Node)) setOpen(false)
       }}
     >
       <div
         style={{
-          padding: "16px 20px",
+          padding: "20px",
           borderRight: !isLast ? "1px solid var(--hair)" : "none",
           borderRadius,
           backgroundColor: open ? "var(--surface-sunk)" : "transparent",
           transition: "background-color 150ms",
         }}
       >
-        <p style={{
-          margin: "0 0 4px", fontSize: 10, fontWeight: 600,
-          color: "var(--ink-tertiary)",
-        }}>
+        <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 600, color: "var(--ink-tertiary)" }}>
           {label}
         </p>
-        {/* Count routes to Tracker; always focusable so keyboard can open the panel */}
         <Link
           href="/tracker"
           style={{ textDecoration: "none", display: "inline-block", outline: "none" }}
@@ -377,7 +532,6 @@ function StatusCard({
         </Link>
       </div>
 
-      {/* Pursuit panel */}
       {open && (
         <div
           role="region"
@@ -396,20 +550,13 @@ function StatusCard({
           }}
         >
           {pursuits.length === 0 ? (
-            <p style={{
-              margin: 0, padding: "14px 16px",
-              fontSize: 13, color: "var(--ink-tertiary)", textAlign: "center",
-            }}>
+            <p style={{ margin: 0, padding: "14px 16px", fontSize: 13, color: "var(--ink-tertiary)", textAlign: "center" }}>
               No pursuits here yet
             </p>
           ) : (
             <div>
               {pursuits.map(({ pip, opp, funder }, i) => (
-                <Link
-                  key={pip.id}
-                  href={`/pursuit/${pip.opportunityId}`}
-                  style={{ textDecoration: "none", display: "block" }}
-                >
+                <Link key={pip.id} href={`/pursuit/${pip.opportunityId}`} style={{ textDecoration: "none", display: "block" }}>
                   <div
                     style={{
                       padding: "11px 16px",
@@ -419,23 +566,14 @@ function StatusCard({
                     onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--surface-sunk)" }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
                   >
-                    <p style={{
-                      margin: "0 0 1px", fontSize: 12, fontWeight: 600,
-                      color: "var(--ink)", lineHeight: "16px",
-                    }}>
+                    <p style={{ margin: "0 0 1px", fontSize: 12, fontWeight: 600, color: "var(--ink)", lineHeight: "16px" }}>
                       {funder?.name}
                     </p>
-                    <p style={{
-                      margin: 0, fontSize: 13, fontWeight: 400,
-                      color: "var(--ink-secondary)", lineHeight: "17px",
-                    }}>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 400, color: "var(--ink-secondary)", lineHeight: "17px" }}>
                       {opp?.name}
                     </p>
                     {opp?.deadline && (
-                      <p style={{
-                        margin: "3px 0 0", fontSize: 11,
-                        color: "var(--ink-tertiary)", lineHeight: "14px",
-                      }}>
+                      <p style={{ margin: "3px 0 0", fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "14px" }}>
                         Due {opp.deadline}
                       </p>
                     )}
@@ -455,6 +593,7 @@ function StatusCard({
 export default function HomePage() {
   const { scopeLabel, selectedProjectId } = useScope()
   const [toast, setToast] = useState<string | null>(null)
+  const [showAddTask, setShowAddTask] = useState(false)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const firstName = USER.name.split(" ")[0]
@@ -465,12 +604,10 @@ export default function HomePage() {
 
   const scopedPipelineIds = new Set(scopedPipelines.map(p => p.id))
 
-  // Filter tasks/deadlines to scoped pipelines
   const tasks = getTodayTasks().filter(t => scopedPipelineIds.has(t.pipelineOpportunityId))
   const teamTasks = getTeamTasks().filter(t => scopedPipelineIds.has(t.pipelineOpportunityId))
   const deadlines = getUpcomingDeadlines().filter(({ pip }) => scopedPipelineIds.has(pip.id))
 
-  // Pre-group pipeline opportunities by phase for the strip panels
   const phasePursuits = Object.fromEntries(
     PIPELINE_STRIP.map(s => [
       s.phase,
@@ -484,15 +621,22 @@ export default function HomePage() {
     ])
   ) as Record<PipelinePhase, StatusPursuit[]>
 
-  function nudge(name: string) {
+  function showToast(msg: string) {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
-    setToast(`Reminder sent to ${name}`)
+    setToast(msg)
     toastTimerRef.current = setTimeout(() => setToast(null), 3000)
+  }
+
+  function nudge(name: string) { showToast(`Reminder sent to ${name}`) }
+
+  function handleAddTask(title: string) {
+    setShowAddTask(false)
+    showToast(`Task "${title}" added`)
   }
 
   return (
     <div style={{ flex: 1, overflowY: "auto", backgroundColor: "var(--canvas)" }}>
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "28px 32px 48px" }}>
+      <div style={{ maxWidth: 1120, margin: 0, padding: "28px 32px 48px" }}>
 
         {/* Greeting */}
         <div style={{ marginBottom: 20 }}>
@@ -505,38 +649,13 @@ export default function HomePage() {
           <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>{scopeLabel}</p>
         </div>
 
-        {/* Quick actions */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-          {([
-            { label: "Discover funding", href: "/discover", icon: "auto_fix_high" },
-            { label: "Open tracker",     href: "/tracker",  icon: "format_list_bulleted" },
-          ] as const).map(({ label, href, icon }) => (
-            <Link
-              key={href}
-              href={href}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "5px 12px", borderRadius: 20,
-                border: "1px solid var(--hair-2)",
-                backgroundColor: "var(--surface)",
-                fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)",
-                textDecoration: "none",
-              }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 14, lineHeight: 1, userSelect: "none" }}>{icon}</span>
-              {label}
-            </Link>
-          ))}
-        </div>
-
-        {/* Pipeline at a glance — interactive status strip */}
+        {/* Stat strip */}
         <div style={{
           display: "flex",
           backgroundColor: "var(--surface)",
           border: "1px solid var(--hair-2)",
           borderRadius: 12,
-          marginBottom: 28,
-          // overflow:hidden removed so panels can escape; first/last cards carry the corner radius
+          marginBottom: 16,
         }}>
           {PIPELINE_STRIP.map((s, i) => (
             <StatusCard
@@ -551,8 +670,27 @@ export default function HomePage() {
           ))}
         </div>
 
+        {/* Quick actions */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 32 }}>
+          <QuickActionCard
+            icon={<Telescope size={16} />}
+            label="Discover"
+            href="/discover"
+          />
+          <QuickActionCard
+            icon={<Plus size={16} />}
+            label="Add task"
+            onClick={() => setShowAddTask(true)}
+          />
+          <QuickActionCard
+            icon={<FilePlus size={16} />}
+            label="Start new application"
+            href="/discover"
+          />
+        </div>
+
         {/* Upcoming deadlines */}
-        <section style={{ marginBottom: 28 }}>
+        <section style={{ marginBottom: 32 }}>
           <SectionHeader label="Upcoming deadlines" />
           {deadlines.length === 0 ? (
             <EmptyState message="No upcoming deadlines in your pipeline." />
@@ -566,7 +704,7 @@ export default function HomePage() {
         </section>
 
         {/* Your tasks */}
-        <section style={{ marginBottom: 28 }}>
+        <section style={{ marginBottom: 32 }}>
           <SectionHeader label="Your tasks" />
           {tasks.length === 0 ? (
             <EmptyState message="No tasks due today. You're all caught up." />
@@ -578,7 +716,7 @@ export default function HomePage() {
         </section>
 
         {/* Tasks pending with team */}
-        <section style={{ marginBottom: 28 }}>
+        <section style={{ marginBottom: 32 }}>
           <SectionHeader label="Tasks pending with team" />
           {teamTasks.length === 0 ? (
             <EmptyState message="No open tasks waiting on teammates." />
@@ -593,7 +731,7 @@ export default function HomePage() {
 
       </div>
 
-      {/* Nudge toast */}
+      {/* Nudge / task toast */}
       {toast && (
         <div style={{
           position: "fixed", bottom: 24, right: 24, zIndex: 100,
@@ -605,6 +743,14 @@ export default function HomePage() {
         }}>
           {toast}
         </div>
+      )}
+
+      {/* Add task modal */}
+      {showAddTask && (
+        <AddTaskModal
+          onClose={() => setShowAddTask(false)}
+          onAdd={handleAddTask}
+        />
       )}
     </div>
   )

@@ -314,12 +314,12 @@ export default function TrackerPage() {
         </Link>
       </div>
 
-      <div style={{ maxWidth: 800, margin: "0 auto", padding: "32px 32px 64px" }}>
+      <div style={{ maxWidth: 1120, margin: 0, padding: "32px 32px 64px" }}>
         {/* Stats */}
         <div style={{
           display: "flex", gap: 1,
           backgroundColor: "var(--surface)", border: "1px solid var(--hair-2)", borderRadius: 12, overflow: "hidden",
-          marginBottom: 40,
+          marginBottom: 32,
         }}>
           {[
             { label: "In pipeline", value: String(stats.total) },
@@ -327,10 +327,10 @@ export default function TrackerPage() {
             { label: "Submitted", value: formatDollars(stats.submitted) },
           ].map((s, i) => (
             <div key={i} style={{
-              flex: 1, padding: "16px 20px",
+              flex: 1, padding: "20px",
               borderRight: i < 2 ? "1px solid var(--hair)" : "none",
             }}>
-              <p style={{ margin: "0 0 3px", fontSize: 10, fontWeight: 600, color: "var(--ink-tertiary)" }}>{s.label}</p>
+              <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 600, color: "var(--ink-tertiary)" }}>{s.label}</p>
               <p style={{ margin: 0, fontSize: 22, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.02em", fontFamily: "var(--font-lora), Georgia, serif" }}>{s.value}</p>
             </div>
           ))}
@@ -341,7 +341,7 @@ export default function TrackerPage() {
           const items = scopedPipelines.filter(p => phaseFromStatus(p.status) === phase)
           if (!alwaysShow && items.length === 0) return null
           return (
-            <section key={phase} style={{ marginBottom: 36 }}>
+            <section key={phase} style={{ marginBottom: 32 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <span style={{
                   fontSize: 11, fontWeight: 600,
