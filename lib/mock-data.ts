@@ -804,3 +804,25 @@ export const COMMENT_THREADS: CommentThread[] = [
 export function getCommentThreadsForArtifact(artifactId: string): CommentThread[] {
   return COMMENT_THREADS.filter((t) => t.artifactId === artifactId)
 }
+
+export function submitPursuitApplication(
+  pipId: string,
+  artifactId: string,
+  appAttachmentIds: string[],
+): void {
+  const today = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+
+  const pip = PIPELINE_OPPORTUNITIES.find(p => p.id === pipId)
+  if (pip) {
+    pip.status = "application-submitted"
+    pip.submittedAt = today
+  }
+
+  const artifact = ARTIFACTS.find(a => a.id === artifactId)
+  if (artifact) artifact.isSubmitted = true
+
+  for (const id of appAttachmentIds) {
+    const att = ATTACHMENTS.find(a => a.id === id)
+    if (att) att.includedInSubmission = true
+  }
+}

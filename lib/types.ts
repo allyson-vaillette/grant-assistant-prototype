@@ -141,6 +141,7 @@ export interface Attachment {
   category: AttachmentCategory
   uploadDate: string
   uploaderId: string
+  includedInSubmission?: boolean
 }
 
 export interface Task {

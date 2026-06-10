@@ -3,12 +3,12 @@
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, FileText, FileSpreadsheet, Paperclip, ChevronDown, Plus, Download, CheckCircle, AlertTriangle, Circle, Check, Lock, Trash2, X } from "lucide-react"
+import { ArrowLeft, FileText, FileSpreadsheet, Paperclip, ChevronDown, Plus, Download, CheckCircle, AlertTriangle, Circle, Check, Lock, Trash2, X, Pencil } from "lucide-react"
 import { ArtifactEditorContent } from "./artifact/[artifactId]/page"
 import {
   FUNDERS, OPPORTUNITIES, USER, TEAMMATES,
   getArtifactsForPipeline, getAttachmentsForPipeline, getTasksForPipeline,
-  getPipelineForOpportunity, createArtifact, getWritingSession,
+  getPipelineForOpportunity, createArtifact, getWritingSession, submitPursuitApplication,
 } from "@/lib/mock-data"
 import type { PipelineStatus, PipelinePhase, ArtifactStage, AttachmentCategory, Attachment, Task, Requirement, DraftSection, Artifact } from "@/lib/types"
 import { phaseFromStatus } from "@/lib/types"
@@ -140,9 +140,11 @@ function PhaseIndicator({ current }: { current: PipelinePhase }) {
 function StatusPicker({
   status,
   onStatusChange,
+  onUndo,
 }: {
   status: PipelineStatus
   onStatusChange: (s: PipelineStatus) => void
+  onUndo?: () => void
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -201,6 +203,27 @@ function StatusPicker({
           boxShadow: "0 8px 24px rgba(28,24,64,0.12)",
           overflow: "hidden",
         }}>
+          {status === "application-submitted" && onUndo && (
+            <>
+              <button
+                type="button"
+                onClick={() => { onUndo(); setOpen(false) }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  width: "100%", padding: "9px 12px", border: "none",
+                  backgroundColor: "transparent", cursor: "pointer",
+                  fontSize: 12, color: "var(--ink-secondary)",
+                  transition: "background-color 100ms",
+                }}
+                onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface-sunk)"}
+                onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"}
+              >
+                <span style={{ fontSize: 13 }}>↩</span>
+                Undo submission
+              </button>
+              <div style={{ height: 1, backgroundColor: "var(--hair)" }} />
+            </>
+          )}
           {STATUS_GROUPS_FOR_DROPDOWN.map((group, gi) => (
             <div key={group.phase}>
               {gi > 0 && <div style={{ height: 1, backgroundColor: "var(--hair)" }} />}
@@ -329,7 +352,12 @@ function AttachmentFileIcon({ fileType }: { fileType: string }) {
 
 type UploadStatus = "idle" | "uploading" | "error"
 
-function DocumentsTab({ initialAttachments, pipId }: { initialAttachments: Attachment[]; pipId: string }) {
+function DocumentsTab({ initialAttachments, pipId, onAppAttachmentIdsChange, frozenSubmission }: {
+  initialAttachments: Attachment[]
+  pipId: string
+  onAppAttachmentIdsChange?: (ids: string[]) => void
+  frozenSubmission?: { artifactName: string; submittedAt: string; attachmentIds: string[] } | null
+}) {
   const [atts,       setAtts]       = useState<Attachment[]>(initialAttachments)
   const [srcStatus,  setSrcStatus]  = useState<UploadStatus>("idle")
   const [appStatus,  setAppStatus]  = useState<UploadStatus>("idle")
@@ -349,6 +377,11 @@ function DocumentsTab({ initialAttachments, pipId }: { initialAttachments: Attac
     document.addEventListener("mousedown", onDown)
     return () => document.removeEventListener("mousedown", onDown)
   }, [srcLibOpen, appLibOpen])
+
+  useEffect(() => {
+    const ids = atts.filter(a => a.category === "application").map(a => a.id)
+    onAppAttachmentIdsChange?.(ids)
+  }, [atts, onAppAttachmentIdsChange])
 
   const srcAtts = atts.filter(a => SOURCE_CATS.includes(a.category))
   const appAtts = atts.filter(a => a.category === "application")
@@ -543,11 +576,154 @@ function DocumentsTab({ initialAttachments, pipId }: { initialAttachments: Attac
           </p>
           <Lock size={10} style={{ color: "var(--ink-tertiary)" }} />
         </div>
-        <p style={{ margin: 0, padding: "0 14px 12px", fontSize: 11, color: "var(--ink-tertiary)", fontStyle: "italic" }}>
-          Frozen when you submit.
-        </p>
+        {frozenSubmission ? (
+          <>
+            <p style={{ margin: 0, padding: "0 14px 8px", fontSize: 10, color: "var(--ink-tertiary)" }}>
+              {frozenSubmission.submittedAt} · Read-only
+            </p>
+            <div style={{ padding: "0 8px 8px" }}>
+              {/* Submitted draft */}
+              <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 6px", borderRadius: 6, backgroundColor: "var(--canvas)" }}>
+                <FileText size={13} style={{ color: "var(--slate-soft)", flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: 11, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {frozenSubmission.artifactName}
+                </span>
+                <span style={{ fontSize: 10, color: "var(--ink-tertiary)", flexShrink: 0 }}>Draft</span>
+              </div>
+              {/* Included application attachments */}
+              {frozenSubmission.attachmentIds.map(id => {
+                const att = atts.find(a => a.id === id)
+                if (!att) return null
+                return (
+                  <div key={id} style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 6px", borderRadius: 6, backgroundColor: "var(--canvas)", marginTop: 2 }}>
+                    <AttachmentFileIcon fileType={att.fileType} />
+                    <span style={{ flex: 1, fontSize: 11, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {att.filename}
+                    </span>
+                    <span style={{ fontSize: 10, color: "var(--ink-tertiary)", flexShrink: 0 }}>Attachment</span>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        ) : (
+          <p style={{ margin: 0, padding: "0 14px 12px", fontSize: 11, color: "var(--ink-tertiary)", fontStyle: "italic" }}>
+            Frozen when you submit.
+          </p>
+        )}
       </div>
 
+    </div>
+  )
+}
+
+// ── Submit dialog ─────────────────────────────────────────────────────────
+
+function SubmitDialog({
+  artifacts,
+  selectedId,
+  onSelect,
+  onConfirm,
+  onCancel,
+}: {
+  artifacts: Artifact[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const hasMultiple = artifacts.length > 1
+  const chosen = artifacts.find(a => a.id === selectedId)
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 1000,
+        backgroundColor: "rgba(28,24,64,0.35)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}
+      onClick={onCancel}
+    >
+      <div
+        style={{
+          width: 420, backgroundColor: "var(--surface)",
+          borderRadius: 14,
+          boxShadow: "0 20px 60px rgba(28,24,64,0.25)",
+          padding: "28px 28px 24px",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+          {hasMultiple ? "Which draft are you submitting?" : `Submit "${chosen?.name ?? "this draft"}"?`}
+        </h2>
+        <p style={{ margin: "0 0 20px", fontSize: 13, color: "var(--ink-secondary)", lineHeight: "19px" }}>
+          {hasMultiple
+            ? "Select the draft to mark as submitted. The chosen draft and application attachments will be frozen."
+            : "This draft and application attachments will be frozen. This cannot be undone."}
+        </p>
+
+        {hasMultiple && (
+          <div style={{ marginBottom: 20 }}>
+            {artifacts.map(a => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => onSelect(a.id)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  width: "100%", padding: "10px 12px", borderRadius: 8, textAlign: "left",
+                  border: `1.5px solid ${selectedId === a.id ? "var(--slate-primary)" : "var(--hair-2)"}`,
+                  backgroundColor: selectedId === a.id ? "var(--slate-tint)" : "transparent",
+                  cursor: "pointer", marginBottom: 6,
+                  transition: "border-color 120ms, background-color 120ms",
+                }}
+              >
+                <FileText size={13} style={{ color: "var(--slate-primary)", flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{a.name}</p>
+                  <p style={{ margin: "1px 0 0", fontSize: 11, color: "var(--ink-tertiary)" }}>Edited {a.updatedAt}</p>
+                </div>
+                {selectedId === a.id && <Check size={13} style={{ color: "var(--slate-primary)", flexShrink: 0 }} />}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{
+              padding: "7px 16px", borderRadius: 8,
+              border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+              fontSize: 13, color: "var(--ink-secondary)", cursor: "pointer",
+              transition: "background-color 120ms",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--surface-sunk)" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={selectedId === null}
+            style={{
+              padding: "7px 16px", borderRadius: 8,
+              border: "none",
+              backgroundColor: selectedId !== null ? "var(--slate-primary)" : "var(--hair-2)",
+              fontSize: 13, fontWeight: 600,
+              color: selectedId !== null ? "#fff" : "var(--ink-tertiary)",
+              cursor: selectedId !== null ? "pointer" : "default",
+              transition: "background-color 120ms",
+            }}
+            onMouseEnter={(e) => { if (selectedId !== null) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
+            onMouseLeave={(e) => { if (selectedId !== null) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
+          >
+            Submit application
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -595,6 +771,24 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
   const [newReqWordLimit,     setNewReqWordLimit]     = useState("")
   const [newReqCharLimit,     setNewReqCharLimit]     = useState("")
   const [newReqAttachmentNote, setNewReqAttachmentNote] = useState("")
+  const [submitDialogOpen,    setSubmitDialogOpen]    = useState(false)
+  const [submitDraftId,       setSubmitDraftId]       = useState<string | null>(null)
+  const [submitToast,         setSubmitToast]         = useState(false)
+  const appAttachmentIdsRef = useRef<string[]>([])
+  const [frozenSubmission, setFrozenSubmission] = useState<{
+    artifactName: string; submittedAt: string; attachmentIds: string[]
+  } | null>(() => {
+    if (!initialPip?.submittedAt) return null
+    const submittedArt = initialArtifacts.find(a => a.isSubmitted)
+    if (!submittedArt) return null
+    return {
+      artifactName: submittedArt.name,
+      submittedAt: initialPip.submittedAt,
+      attachmentIds: getAttachmentsForPipeline(initialPip.id).filter(a => a.includedInSubmission).map(a => a.id),
+    }
+  })
+  const [renamingArtifactId, setRenamingArtifactId] = useState<string | null>(null)
+  const [renameText,         setRenameText]         = useState("")
 
   useEffect(() => {
     if (!draftPickerOpen) return
@@ -625,6 +819,37 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
     if (s === "application-submitted" && !submittedAt) {
       setSubmittedAt(todayStr())
     }
+  }
+
+  function handleSubmitClick() {
+    setSubmitDraftId(artifacts.length === 1 ? artifacts[0].id : selectedArtifactId)
+    setSubmitDialogOpen(true)
+  }
+
+  function handleSubmitConfirm() {
+    if (!submitDraftId) return
+    const now = todayStr()
+    const submittedArt = artifacts.find(a => a.id === submitDraftId)
+    setArtifacts(prev => prev.map(a => a.id === submitDraftId ? { ...a, isSubmitted: true } : a))
+    setCurrentStatus("application-submitted")
+    setSubmittedAt(now)
+    setFrozenSubmission({
+      artifactName: submittedArt?.name ?? "Draft",
+      submittedAt: now,
+      attachmentIds: [...appAttachmentIdsRef.current],
+    })
+    submitPursuitApplication(pip!.id, submitDraftId, appAttachmentIdsRef.current)
+    setSubmitDialogOpen(false)
+    setSubmitToast(true)
+    setTimeout(() => setSubmitToast(false), 4000)
+  }
+
+  function handleUndoSubmission() {
+    setArtifacts(prev => prev.map(a => ({ ...a, isSubmitted: false })))
+    setCurrentStatus("application-in-progress")
+    setSubmittedAt(undefined)
+    setFrozenSubmission(null)
+    setSubmitToast(false)
   }
 
   function doDeleteDraft(artifactId: string) {
@@ -721,23 +946,28 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, paddingTop: 2 }}>
-            <StatusPicker status={currentStatus} onStatusChange={handleStatusChange} />
+            <StatusPicker status={currentStatus} onStatusChange={handleStatusChange} onUndo={handleUndoSubmission} />
             {(submittedAt || opp.deadline) && (
               <span style={{ fontSize: 12, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>
                 {submittedAt ? `Submitted ${submittedAt}` : `Due ${opp.deadline}`}
               </span>
             )}
-            <button
-              type="button"
-              disabled
-              style={{
-                padding: "6px 14px", borderRadius: "var(--radius-button)",
-                border: "none", backgroundColor: "var(--slate-primary)", color: "#fff",
-                fontSize: 12, fontWeight: 600, cursor: "not-allowed", opacity: 0.45,
-              }}
-            >
-              Submit
-            </button>
+            {currentStatus !== "application-submitted" && (
+              <button
+                type="button"
+                onClick={handleSubmitClick}
+                style={{
+                  padding: "6px 14px", borderRadius: "var(--radius-button)",
+                  border: "none", backgroundColor: "var(--slate-primary)", color: "#fff",
+                  fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  transition: "background-color 120ms",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
+              >
+                Submit
+              </button>
+            )}
           </div>
         </div>
 
@@ -803,6 +1033,58 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
                       </button>
                     </div>
                   </div>
+                ) : renamingArtifactId === a.id ? (
+                  // Inline rename row
+                  <div key={a.id} style={{ padding: "6px 10px", display: "flex", alignItems: "center", gap: 6 }}>
+                    <input
+                      autoFocus
+                      type="text"
+                      value={renameText}
+                      onChange={e => setRenameText(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === "Enter" && renameText.trim()) {
+                          setArtifacts(prev => prev.map(x => x.id === a.id ? { ...x, name: renameText.trim() } : x))
+                          setRenamingArtifactId(null)
+                        } else if (e.key === "Escape") {
+                          setRenamingArtifactId(null)
+                        }
+                      }}
+                      style={{
+                        flex: 1, padding: "4px 8px", borderRadius: "var(--radius-button)",
+                        border: "1px solid var(--slate-soft)", fontSize: 12, outline: "none",
+                        backgroundColor: "var(--canvas)", color: "var(--ink)",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={!renameText.trim()}
+                      onClick={() => {
+                        if (renameText.trim()) {
+                          setArtifacts(prev => prev.map(x => x.id === a.id ? { ...x, name: renameText.trim() } : x))
+                        }
+                        setRenamingArtifactId(null)
+                      }}
+                      style={{
+                        padding: "4px 8px", borderRadius: "var(--radius-button)", border: "none",
+                        backgroundColor: renameText.trim() ? "var(--slate-primary)" : "var(--hair-2)",
+                        color: renameText.trim() ? "#fff" : "var(--ink-tertiary)",
+                        fontSize: 11, fontWeight: 600, cursor: renameText.trim() ? "pointer" : "default", flexShrink: 0,
+                      }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRenamingArtifactId(null)}
+                      style={{
+                        padding: "4px 6px", borderRadius: "var(--radius-button)",
+                        border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+                        color: "var(--ink-secondary)", fontSize: 11, cursor: "pointer", flexShrink: 0,
+                      }}
+                    >
+                      <X size={11} />
+                    </button>
+                  </div>
                 ) : (
                   // Normal draft row
                   <div
@@ -821,6 +1103,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
                         setSelectedArtifactId(a.id)
                         setDraftPickerOpen(false)
                         setConfirmDeleteId(null)
+                        setRenamingArtifactId(null)
                         router.push(`/pursuit/${params.id}?draft=${a.id}`)
                       }}
                       style={{
@@ -839,10 +1122,33 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
                     {!a.isSubmitted && (
                       <button
                         type="button"
+                        onClick={e => { e.stopPropagation(); setRenamingArtifactId(a.id); setRenameText(a.name) }}
+                        title="Rename draft"
+                        style={{
+                          flexShrink: 0, width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center",
+                          border: "none", backgroundColor: "transparent", cursor: "pointer",
+                          color: "var(--ink-tertiary)", borderRadius: "var(--radius-button)",
+                          transition: "color 120ms, background-color 120ms",
+                        }}
+                        onMouseEnter={e => {
+                          (e.currentTarget as HTMLButtonElement).style.color = "var(--ink)"
+                          ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)"
+                        }}
+                        onMouseLeave={e => {
+                          (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)"
+                          ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"
+                        }}
+                      >
+                        <Pencil size={10} />
+                      </button>
+                    )}
+                    {!a.isSubmitted && (
+                      <button
+                        type="button"
                         onClick={e => { e.stopPropagation(); setConfirmDeleteId(a.id) }}
                         title="Delete draft"
                         style={{
-                          flexShrink: 0, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
+                          flexShrink: 0, width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center",
                           border: "none", backgroundColor: "transparent", cursor: "pointer",
                           color: "var(--ink-tertiary)", marginRight: 4, borderRadius: "var(--radius-button)",
                           transition: "color 120ms, background-color 120ms",
@@ -1185,7 +1491,12 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
 
             {/* ── Documents tab ────────────────────────────────────────── */}
             {activeTab === "documents" && (
-              <DocumentsTab initialAttachments={attachments} pipId={pip.id} />
+              <DocumentsTab
+                initialAttachments={attachments}
+                pipId={pip.id}
+                onAppAttachmentIdsChange={(ids) => { appAttachmentIdsRef.current = ids }}
+                frozenSubmission={frozenSubmission}
+              />
             )}
 
             {/* ── Tasks tab ─────────────────────────────────────────────── */}
@@ -1352,6 +1663,46 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
         </div>
 
       </div>
+
+      {submitDialogOpen && (
+        <SubmitDialog
+          artifacts={artifacts}
+          selectedId={submitDraftId}
+          onSelect={setSubmitDraftId}
+          onConfirm={handleSubmitConfirm}
+          onCancel={() => setSubmitDialogOpen(false)}
+        />
+      )}
+
+      {submitToast && (
+        <div style={{
+          position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)",
+          zIndex: 2000,
+          backgroundColor: "var(--evergreen)", color: "#fff",
+          padding: "9px 12px 9px 16px", borderRadius: 8,
+          fontSize: 13, fontWeight: 500,
+          boxShadow: "0 4px 16px rgba(28,24,64,0.18)",
+          display: "flex", alignItems: "center", gap: 10,
+        }}>
+          <CheckCircle size={15} />
+          Application submitted
+          <button
+            type="button"
+            onClick={handleUndoSubmission}
+            style={{
+              padding: "2px 9px", borderRadius: 5,
+              border: "1px solid rgba(255,255,255,0.4)",
+              backgroundColor: "transparent", color: "#fff",
+              fontSize: 12, cursor: "pointer",
+              transition: "background-color 120ms",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.15)" }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+          >
+            Undo
+          </button>
+        </div>
+      )}
     </div>
   )
 }
