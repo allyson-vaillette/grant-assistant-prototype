@@ -1368,7 +1368,7 @@ export default function ArtifactEditorPage({
           <div
             role="main"
             aria-label="Document editor"
-            style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}
+            style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, backgroundColor: "#fff" }}
           >
             {/* Preview notice banner */}
             {aiPhase === "preview" && aiProposal && (
@@ -1559,7 +1559,7 @@ export default function ArtifactEditorPage({
                   borderTop: "1px solid var(--hair)",
                   padding: "8px 48px",
                   display: "flex", alignItems: "center", gap: 20,
-                  backgroundColor: "var(--surface)",
+                  backgroundColor: "#fff",
                 }}>
                   <span style={{ fontSize: 11, color: "var(--ink-tertiary)", fontWeight: 600 }}>Document total</span>
                   {docWordLimit != null && (
