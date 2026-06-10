@@ -105,7 +105,7 @@ function getUpcomingDeadlines() {
 function SectionHeader({ label }: { label: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-      <span style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-tertiary)", flexShrink: 0 }}>
+      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-tertiary)", flexShrink: 0 }}>
         {label}
       </span>
       <div style={{ flex: 1, height: 1, backgroundColor: "var(--hair)" }} />
@@ -159,7 +159,7 @@ function QuickActionCard({
       <div style={{ color: "var(--slate-secondary)", flexShrink: 0, display: "flex" }}>
         {icon}
       </div>
-      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", flex: 1, lineHeight: "17px" }}>
+      <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", flex: 1, lineHeight: "18px" }}>
         {label}
       </span>
       <ChevronRight size={14} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
@@ -315,10 +315,10 @@ function TaskRow({ task }: { task: ReturnType<typeof getTodayTasks>[number] }) {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "space-between" }}>
           <div style={{ minWidth: 0 }}>
-            <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 600, color: "var(--ink)", lineHeight: "19px" }}>
+            <p style={{ margin: "0 0 2px", fontSize: 15, fontWeight: 600, color: "var(--ink)", lineHeight: "20px" }}>
               {task.title}
             </p>
-            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "17px" }}>
+            <p style={{ margin: 0, fontSize: 14, color: "var(--slate-primary)", lineHeight: "18px" }}>
               {funder?.name}
               {opp?.name && <span> · {opp.name}</span>}
             </p>
@@ -371,10 +371,10 @@ function TeamTaskRow({
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 600, color: "var(--ink)", lineHeight: "19px" }}>
+        <p style={{ margin: "0 0 2px", fontSize: 15, fontWeight: 600, color: "var(--ink)", lineHeight: "20px" }}>
           {task.title}
         </p>
-        <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "17px" }}>
+        <p style={{ margin: 0, fontSize: 14, color: "var(--slate-primary)", lineHeight: "18px" }}>
           {task.teammate.name}
           {funder && <span> · {funder.name}</span>}
           {opp?.name && <span> · {opp.name}</span>}
@@ -391,7 +391,7 @@ function TeamTaskRow({
             Overdue
           </span>
         ) : task.dueDate ? (
-          <span style={{ fontSize: 13, color: "var(--ink-secondary)", whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: 14, color: "var(--ink-secondary)", whiteSpace: "nowrap" }}>
             Due {task.dueDate}
           </span>
         ) : null}
@@ -442,16 +442,16 @@ function DeadlineRow({ pip, opp, funder }: {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "space-between" }}>
           <div style={{ minWidth: 0 }}>
-            <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 600, color: "var(--ink)", lineHeight: "19px" }}>
+            <p style={{ margin: "0 0 2px", fontSize: 15, fontWeight: 600, color: "var(--ink)", lineHeight: "20px" }}>
               {funder?.name}
             </p>
-            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "17px" }}>
+            <p style={{ margin: 0, fontSize: 14, color: "var(--slate-primary)", lineHeight: "18px" }}>
               {opp?.name}
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             {opp?.deadline && (
-              <span style={{ fontSize: 13, color: "var(--ink-secondary)", whiteSpace: "nowrap" }}>
+              <span style={{ fontSize: 14, color: "var(--ink-secondary)", whiteSpace: "nowrap" }}>
                 Due {opp.deadline}
               </span>
             )}
@@ -514,16 +514,16 @@ function StatusCard({
           transition: "background-color 150ms",
         }}
       >
-        <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 600, color: "var(--ink-tertiary)" }}>
+        <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "var(--ink-tertiary)" }}>
           {label}
         </p>
         <Link
           href="/tracker"
-          style={{ textDecoration: "none", display: "inline-block", outline: "none" }}
+          style={{ textDecoration: "none", display: "block", outline: "none" }}
           aria-label={`${count} ${label} — view in Tracker`}
         >
           <p style={{
-            margin: 0, fontSize: 24, fontWeight: 600, letterSpacing: "-0.02em",
+            margin: 0, fontSize: 28, fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1,
             color: count > 0 ? activeColor : "var(--hair)",
             fontFamily: "var(--font-lora), Georgia, serif",
           }}>
@@ -636,12 +636,12 @@ export default function HomePage() {
 
   return (
     <div style={{ flex: 1, overflowY: "auto", backgroundColor: "var(--canvas)" }}>
-      <div style={{ maxWidth: 1120, margin: 0, padding: "28px 32px 48px" }}>
+      <div style={{ maxWidth: 1120, margin: "0 auto", padding: "28px 40px 48px" }}>
 
         {/* Greeting */}
         <div style={{ marginBottom: 20 }}>
           <h1 style={{
-            margin: "0 0 4px", fontSize: 22, fontWeight: 700, color: "var(--ink)",
+            margin: "0 0 4px", fontSize: 26, fontWeight: 700, color: "var(--ink)",
             letterSpacing: "-0.01em", lineHeight: 1.25,
           }}>
             {greeting()}, {firstName}.
@@ -671,7 +671,7 @@ export default function HomePage() {
         </div>
 
         {/* Quick actions */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 32 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 20 }}>
           <QuickActionCard
             icon={<Telescope size={16} />}
             label="Discover"
@@ -690,7 +690,7 @@ export default function HomePage() {
         </div>
 
         {/* Upcoming deadlines */}
-        <section style={{ marginBottom: 32 }}>
+        <section style={{ marginBottom: 20 }}>
           <SectionHeader label="Upcoming deadlines" />
           {deadlines.length === 0 ? (
             <EmptyState message="No upcoming deadlines in your pipeline." />
@@ -704,7 +704,7 @@ export default function HomePage() {
         </section>
 
         {/* Your tasks */}
-        <section style={{ marginBottom: 32 }}>
+        <section style={{ marginBottom: 20 }}>
           <SectionHeader label="Your tasks" />
           {tasks.length === 0 ? (
             <EmptyState message="No tasks due today. You're all caught up." />
@@ -716,7 +716,7 @@ export default function HomePage() {
         </section>
 
         {/* Tasks pending with team */}
-        <section style={{ marginBottom: 32 }}>
+        <section style={{ marginBottom: 20 }}>
           <SectionHeader label="Tasks pending with team" />
           {teamTasks.length === 0 ? (
             <EmptyState message="No open tasks waiting on teammates." />
