@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { ContentContainer } from "@/components/layout/content-container"
 import { Search, X, Check, ArrowRight } from "lucide-react"
 import {
   OPPORTUNITIES, MATCHES, FUNDERS,
@@ -169,7 +170,7 @@ function MatchCard({ match, opp, onDismiss, onOppClick, onFunderClick }: {
       onClick={(e) => onOppClick(opp.id, e.currentTarget)}
       onKeyDown={(e) => e.key === "Enter" && onOppClick(opp.id, e.currentTarget as HTMLElement)}
       style={{
-        padding: "16px 20px",
+        padding: "12px 16px",
         backgroundColor: "var(--surface)",
         border: "1px solid var(--hair)",
         borderRadius: 12,
@@ -249,7 +250,7 @@ function MatchCard({ match, opp, onDismiss, onOppClick, onFunderClick }: {
       )}
 
       {/* Opp name — secondary */}
-      <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 400, color: "var(--ink-secondary)", lineHeight: "17px", paddingRight: 24 }}>
+      <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 400, color: "var(--slate-primary)", lineHeight: "17px", paddingRight: 24 }}>
         {opp.name}
       </p>
 
@@ -350,7 +351,7 @@ function CatalogueCard({ opp, onOppClick, onFunderClick }: {
       onClick={(e) => onOppClick(opp.id, e.currentTarget)}
       onKeyDown={(e) => e.key === "Enter" && onOppClick(opp.id, e.currentTarget as HTMLElement)}
       style={{
-        padding: "14px 16px",
+        padding: "10px 14px",
         backgroundColor: "var(--surface)",
         border: "1px solid var(--hair)",
         borderRadius: 12,
@@ -400,7 +401,7 @@ function CatalogueCard({ opp, onOppClick, onFunderClick }: {
         </button>
       )}
 
-      <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 400, color: "var(--ink-secondary)", lineHeight: "17px" }}>
+      <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 400, color: "var(--slate-primary)", lineHeight: "17px" }}>
         {opp.name}
       </p>
 
@@ -667,7 +668,7 @@ function DiscoverPage() {
     <div style={{ height: "100%", position: "relative", overflow: "hidden", backgroundColor: "var(--canvas)" }}>
 
       <div style={{ height: "100%", overflowY: "auto" }}>
-        <div style={{ maxWidth: 1120, margin: 0, padding: "36px 32px 80px" }}>
+        <ContentContainer style={{ padding: "36px 40px 80px" }}>
 
           {/* Page header */}
           <div style={{ marginBottom: 28 }}>
@@ -680,7 +681,7 @@ function DiscoverPage() {
           </div>
 
           {/* Lens toggle */}
-          <div style={{ marginBottom: 36 }}>
+          <div style={{ marginBottom: 24 }}>
             <LensToggle value={lens} onChange={setLens} />
           </div>
 
@@ -688,7 +689,7 @@ function DiscoverPage() {
           {lens === "opportunities" && (
             <>
               {/* Matches */}
-              <section style={{ marginBottom: 52 }}>
+              <section style={{ marginBottom: 32 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
                   <span className="material-symbols-outlined" style={{ fontSize: 18, color: "var(--slate-primary)", userSelect: "none" }}>
                     auto_fix_high
@@ -1014,7 +1015,7 @@ function DiscoverPage() {
             </section>
           )}
 
-        </div>
+        </ContentContainer>
       </div>
 
       {selectedOppId && (

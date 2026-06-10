@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react"
 import Link from "next/link"
+import { ContentContainer } from "@/components/layout/content-container"
 import { ChevronRight, Bell, Telescope, Plus, FilePlus } from "lucide-react"
 import {
   USER, TEAMMATES,
@@ -636,7 +637,7 @@ export default function HomePage() {
 
   return (
     <div style={{ flex: 1, overflowY: "auto", backgroundColor: "var(--canvas)" }}>
-      <div style={{ maxWidth: 1120, margin: "0 auto", padding: "28px 40px 48px" }}>
+      <ContentContainer style={{ padding: "28px 40px 48px" }}>
 
         {/* Greeting */}
         <div style={{ marginBottom: 20 }}>
@@ -729,7 +730,7 @@ export default function HomePage() {
           )}
         </section>
 
-      </div>
+      </ContentContainer>
 
       {/* Nudge / task toast */}
       {toast && (

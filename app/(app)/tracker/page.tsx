@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
+import { ContentContainer } from "@/components/layout/content-container"
 import { useRouter } from "next/navigation"
 import { Telescope, ChevronDown } from "lucide-react"
 import {
@@ -34,7 +35,7 @@ const STATUS_LABEL: Record<PipelineStatus, string> = {
   "application-submitted":    "Application Submitted",
   "declined":                 "Declined",
   "abandoned":                "Abandoned",
-  "awarded-active":           "Awarded — Active",
+  "awarded-active":           "Awarded - Active",
   "awarded-closed":           "Awarded — Closed",
 }
 
@@ -210,7 +211,7 @@ function PursuitCard({
         backgroundColor: "var(--surface)",
         border: "1px solid var(--hair-2)",
         borderRadius: 12,
-        padding: "16px 20px",
+        padding: "10px 16px",
         cursor: "pointer",
         transition: "box-shadow 150ms, border-color 150ms",
       }}
@@ -228,10 +229,10 @@ function PursuitCard({
     >
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 6 }}>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <p style={{ margin: "0 0 3px", fontSize: 11, fontWeight: 600, color: "var(--ink-tertiary)", lineHeight: 1 }}>
+          <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 700, color: "var(--ink)", lineHeight: "19px" }}>
             {funder?.name}
           </p>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--ink)", lineHeight: "19px" }}>
+          <p style={{ margin: 0, fontSize: 12, fontWeight: 400, color: "var(--slate-primary)", lineHeight: "17px" }}>
             {opp?.name}
           </p>
         </div>
@@ -246,9 +247,9 @@ function PursuitCard({
           <span style={{ fontSize: 13, fontWeight: 600, color: "var(--slate-primary)" }}>{opp.amount}</span>
         )}
         {pip.submittedAt ? (
-          <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>Submitted {pip.submittedAt}</span>
+          <span style={{ fontSize: 12, color: "var(--slate-primary)" }}>Submitted {pip.submittedAt}</span>
         ) : opp?.deadline ? (
-          <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>Due {opp.deadline}</span>
+          <span style={{ fontSize: 12, color: "var(--slate-primary)" }}>Due {opp.deadline}</span>
         ) : null}
       </div>
     </div>
@@ -314,12 +315,12 @@ export default function TrackerPage() {
         </Link>
       </div>
 
-      <div style={{ maxWidth: 1120, margin: 0, padding: "32px 32px 64px" }}>
+      <ContentContainer style={{ padding: "32px 40px 64px" }}>
         {/* Stats */}
         <div style={{
           display: "flex", gap: 1,
           backgroundColor: "var(--surface)", border: "1px solid var(--hair-2)", borderRadius: 12, overflow: "hidden",
-          marginBottom: 32,
+          marginBottom: 20,
         }}>
           {[
             { label: "In pipeline", value: String(stats.total) },
@@ -331,7 +332,7 @@ export default function TrackerPage() {
               borderRight: i < 2 ? "1px solid var(--hair)" : "none",
             }}>
               <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 600, color: "var(--ink-tertiary)" }}>{s.label}</p>
-              <p style={{ margin: 0, fontSize: 22, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.02em", fontFamily: "var(--font-lora), Georgia, serif" }}>{s.value}</p>
+              <p style={{ margin: 0, fontSize: 22, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.02em", fontFamily: "var(--font-lora), Georgia, serif", lineHeight: 1 }}>{s.value}</p>
             </div>
           ))}
         </div>
@@ -341,7 +342,7 @@ export default function TrackerPage() {
           const items = scopedPipelines.filter(p => phaseFromStatus(p.status) === phase)
           if (!alwaysShow && items.length === 0) return null
           return (
-            <section key={phase} style={{ marginBottom: 32 }}>
+            <section key={phase} style={{ marginBottom: 20 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <span style={{
                   fontSize: 11, fontWeight: 600,
@@ -376,7 +377,7 @@ export default function TrackerPage() {
             </section>
           )
         })}
-      </div>
+      </ContentContainer>
     </div>
   )
 }
