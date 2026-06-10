@@ -204,8 +204,7 @@ function StatusPicker({
               {gi > 0 && <div style={{ height: 1, backgroundColor: "var(--hair)" }} />}
               <p style={{
                 margin: 0, padding: "8px 12px 4px",
-                fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
-                textTransform: "uppercase", color: "var(--ink-tertiary)",
+                fontSize: 11, fontWeight: 600, color: "var(--ink-tertiary)",
               }}>
                 {group.label}
               </p>
@@ -372,7 +371,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 12 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
-              <p style={{ margin: 0, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: "var(--ink-tertiary)" }}>
                 {funder.name}
               </p>
               <span style={{
@@ -580,7 +579,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
                 ))}
                 {doneTasks.length > 0 && (
                   <div style={{ marginTop: 12 }}>
-                    <p style={{ margin: "0 0 8px", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+                    <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 600, color: "var(--ink-tertiary)" }}>
                       Completed
                     </p>
                     {doneTasks.map(task => (

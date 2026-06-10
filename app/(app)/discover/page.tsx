@@ -8,7 +8,7 @@ import {
   getFunder, getMatchForOpportunity,
 } from "@/lib/mock-data"
 import { useScope } from "@/lib/scope-context"
-import type { Opportunity, FunderType, MatchStrength, Match } from "@/lib/types"
+import type { Opportunity, Funder, FunderType, MatchStrength, Match } from "@/lib/types"
 import { OpportunityPeekPanel } from "./OpportunityPeekPanel"
 import { FunderPeekPanel } from "./FunderPeekPanel"
 
@@ -49,7 +49,6 @@ function parseAmount(str: string | undefined): number | null {
   return digits ? parseInt(digits) : null
 }
 
-// Derive filter options from data
 const ALL_FOCUS_AREAS = Array.from(new Set([
   ...FUNDERS.flatMap(f => f.focusAreas),
   ...OPPORTUNITIES.flatMap(o => o.focusAreas ?? []),
@@ -61,6 +60,17 @@ const STRONG_MATCHES = MATCHES
   .filter(m => m.matchStrength === "strong" && m.opportunityId)
   .map(m => ({ match: m, opp: OPPORTUNITIES.find(o => o.id === m.opportunityId) }))
   .filter((item): item is { match: Match; opp: Opportunity } => !!item.opp)
+
+// ── Dismiss reasons ────────────────────────────────────────────────────────
+
+type DismissReason = "off_geography" | "wrong_size" | "not_eligible" | "not_relevant"
+
+const DISMISS_REASONS: { value: DismissReason; label: string }[] = [
+  { value: "off_geography", label: "Off geography" },
+  { value: "wrong_size",    label: "Wrong size"    },
+  { value: "not_eligible",  label: "Not eligible"  },
+  { value: "not_relevant",  label: "Not relevant"  },
+]
 
 // ── Match dots ─────────────────────────────────────────────────────────────
 
@@ -78,6 +88,38 @@ function MatchDots({ strength }: { strength: MatchStrength }) {
         />
       ))}
     </span>
+  )
+}
+
+// ── Lens toggle ────────────────────────────────────────────────────────────
+
+function LensToggle({ value, onChange }: {
+  value: "opportunities" | "funders"
+  onChange: (v: "opportunities" | "funders") => void
+}) {
+  return (
+    <div style={{
+      display: "inline-flex", borderRadius: 8,
+      border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
+      padding: 3,
+    }}>
+      {(["opportunities", "funders"] as const).map(l => (
+        <button
+          key={l}
+          type="button"
+          onClick={() => onChange(l)}
+          style={{
+            padding: "5px 16px", borderRadius: 6, border: "none",
+            fontSize: 13, fontWeight: value === l ? 600 : 400,
+            color: value === l ? "var(--ink)" : "var(--ink-tertiary)",
+            backgroundColor: value === l ? "var(--canvas)" : "transparent",
+            cursor: "pointer", transition: "all 120ms",
+          }}
+        >
+          {l === "opportunities" ? "Opportunities" : "Funders"}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -326,7 +368,6 @@ function CatalogueCard({ opp, onOppClick, onFunderClick }: {
         el.style.boxShadow = "none"
       }}
     >
-      {/* Funder type badge + match dots */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         {funder && (
           <span style={{
@@ -340,12 +381,10 @@ function CatalogueCard({ opp, onOppClick, onFunderClick }: {
         {match && <MatchDots strength={match.matchStrength} />}
       </div>
 
-      {/* Name */}
       <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: "var(--ink)", lineHeight: "18px" }}>
         {opp.name}
       </p>
 
-      {/* Funder name — clickable */}
       {funder && (
         <button
           type="button"
@@ -363,7 +402,6 @@ function CatalogueCard({ opp, onOppClick, onFunderClick }: {
         </button>
       )}
 
-      {/* Amount + deadline */}
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         {opp.amount && (
           <span style={{ fontSize: 12, fontWeight: 700, color: "var(--slate-primary)" }}>{opp.amount}</span>
@@ -371,6 +409,65 @@ function CatalogueCard({ opp, onOppClick, onFunderClick }: {
         {opp.deadline && (
           <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
             {opp.deadline === "Rolling" ? "Rolling deadline" : `Due ${opp.deadline}`}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Funder card ────────────────────────────────────────────────────────────
+
+function FunderCard({ funder, onFunderClick }: {
+  funder: Funder
+  onFunderClick: (funderId: string, el: HTMLElement) => void
+}) {
+  const opps = OPPORTUNITIES.filter(o => o.funderId === funder.id)
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={(e) => onFunderClick(funder.id, e.currentTarget)}
+      onKeyDown={(e) => e.key === "Enter" && onFunderClick(funder.id, e.currentTarget as HTMLElement)}
+      style={{
+        padding: "16px 18px", backgroundColor: "var(--surface)",
+        border: "1px solid var(--hair)", borderRadius: 12,
+        cursor: "pointer", display: "flex", flexDirection: "column", gap: 0,
+        transition: "border-color 150ms, box-shadow 150ms",
+      }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = "var(--slate-light)"
+        el.style.boxShadow = "var(--lift-2)"
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = "var(--hair)"
+        el.style.boxShadow = "none"
+      }}
+    >
+      <div style={{ marginBottom: 8 }}>
+        <span style={{
+          display: "inline-block", padding: "2px 8px", borderRadius: 20,
+          fontSize: 11, fontWeight: 500,
+          backgroundColor: "var(--slate-tint)", color: "var(--slate-secondary)",
+        }}>
+          {FUNDER_TYPE_LABELS[funder.type]}
+        </span>
+      </div>
+      <p style={{ margin: "0 0 3px", fontSize: 14, fontWeight: 700, color: "var(--ink)", lineHeight: "20px" }}>
+        {funder.name}
+      </p>
+      <p style={{ margin: "0 0 12px", fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "16px" }}>
+        {funder.geography}
+      </p>
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        {funder.fundingRange && (
+          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--slate-primary)" }}>{funder.fundingRange}</span>
+        )}
+        {opps.length > 0 && (
+          <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
+            {opps.length} open {opps.length === 1 ? "grant" : "grants"}
           </span>
         )}
       </div>
@@ -412,9 +509,18 @@ function DiscoverPage() {
   const searchParams = useSearchParams()
   const { scopeLabel } = useScope()
   const [matchesLoaded, setMatchesLoaded] = useState(false)
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
 
-  // Browse filter state
+  // Lens
+  const [lens, setLens] = useState<"opportunities" | "funders">("opportunities")
+  const [funderQuery, setFunderQuery] = useState("")
+
+  // Dismiss / hidden
+  const [hiddenMatches, setHiddenMatches] = useState<Array<{ matchId: string; reason?: DismissReason }>>([])
+  const [dismissToast, setDismissToast] = useState<{ matchId: string } | null>(null)
+  const [showHidden, setShowHidden] = useState(false)
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Browse filters
   const [query, setQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState<FunderType | "">("")
   const [focusAreaFilter, setFocusAreaFilter] = useState("")
@@ -429,25 +535,19 @@ function DiscoverPage() {
   const selectedOppId = searchParams.get("opp")
   const selectedFunderId = searchParams.get("funder")
 
-  // Simulate async matching analysis
   useEffect(() => {
     const t = setTimeout(() => setMatchesLoaded(true), 1200)
     return () => clearTimeout(t)
   }, [])
 
-  // Return focus to triggering element when panel closes
   const prevOppIdRef = useRef<string | null>(null)
   const prevFunderIdRef = useRef<string | null>(null)
   useEffect(() => {
-    if (prevOppIdRef.current && !selectedOppId) {
-      lastFocusedRef.current?.focus()
-    }
+    if (prevOppIdRef.current && !selectedOppId) lastFocusedRef.current?.focus()
     prevOppIdRef.current = selectedOppId
   }, [selectedOppId])
   useEffect(() => {
-    if (prevFunderIdRef.current && !selectedFunderId) {
-      lastFocusedRef.current?.focus()
-    }
+    if (prevFunderIdRef.current && !selectedFunderId) lastFocusedRef.current?.focus()
     prevFunderIdRef.current = selectedFunderId
   }, [selectedFunderId])
 
@@ -465,10 +565,23 @@ function DiscoverPage() {
     router.push("/discover")
   }, [router])
 
-  const visibleMatches = STRONG_MATCHES.filter(({ match }) => !dismissedIds.has(match.id))
+  const hiddenIds = new Set(hiddenMatches.map(m => m.matchId))
+  const visibleMatches = STRONG_MATCHES.filter(({ match }) => !hiddenIds.has(match.id))
 
   const handleDismiss = (matchId: string) => {
-    setDismissedIds(prev => { const next = new Set(prev); next.add(matchId); return next })
+    setHiddenMatches(prev => [...prev, { matchId }])
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    setDismissToast({ matchId })
+    toastTimerRef.current = setTimeout(() => setDismissToast(null), 6000)
+  }
+
+  const handleSetReason = (matchId: string, reason: DismissReason) => {
+    setHiddenMatches(prev => prev.map(m => m.matchId === matchId ? { ...m, reason } : m))
+    setDismissToast(null)
+  }
+
+  const handleUnhide = (matchId: string) => {
+    setHiddenMatches(prev => prev.filter(m => m.matchId !== matchId))
   }
 
   const scrollToBrowse = () => {
@@ -478,24 +591,25 @@ function DiscoverPage() {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
+  // Funders lens
+  const filteredFunders = FUNDERS.filter(funder => {
+    if (!funderQuery.trim()) return true
+    const q = funderQuery.toLowerCase()
+    return [funder.name, funder.description ?? "", ...funder.focusAreas, funder.geography]
+      .join(" ").toLowerCase().includes(q)
+  })
+
+  // Opportunities lens
   const filtered: Opportunity[] = OPPORTUNITIES.filter((opp) => {
     const funder = getFunder(opp.funderId)
     if (!funder) return false
-
-    // Funder type
     if (typeFilter && funder.type !== typeFilter) return false
-
-    // Focus area — check funder focusAreas and opp focusAreas
     if (focusAreaFilter) {
       const inFunder = funder.focusAreas.includes(focusAreaFilter)
       const inOpp = (opp.focusAreas ?? []).includes(focusAreaFilter)
       if (!inFunder && !inOpp) return false
     }
-
-    // Geography
     if (geographyFilter && funder.geography !== geographyFilter) return false
-
-    // Award range
     if (awardRangeFilter) {
       const amt = parseAmount(opp.amount)
       if (amt === null) return false
@@ -503,8 +617,6 @@ function DiscoverPage() {
       if (awardRangeFilter === "25k-50k" && (amt < 25000 || amt > 50000)) return false
       if (awardRangeFilter === "over-50k" && amt <= 50000) return false
     }
-
-    // Deadline (within N days from today)
     if (deadlineFilter) {
       const days = parseInt(deadlineFilter)
       const deadline = parseDeadlineDate(opp.deadline ?? "")
@@ -514,26 +626,17 @@ function DiscoverPage() {
       const daysUntil = Math.ceil((deadline.getTime() - today.getTime()) / msPerDay)
       if (daysUntil < 0 || daysUntil > days) return false
     }
-
-    // Semantic search (name, funder name, focus areas, description)
     if (query.trim()) {
       const q = query.toLowerCase()
       const searchable = [
-        opp.name,
-        funder.name,
-        funder.description ?? "",
-        opp.description ?? "",
-        ...(opp.focusAreas ?? []),
-        ...funder.focusAreas,
-        opp.eligibility ?? "",
+        opp.name, funder.name, funder.description ?? "", opp.description ?? "",
+        ...(opp.focusAreas ?? []), ...funder.focusAreas, opp.eligibility ?? "",
       ].join(" ").toLowerCase()
       if (!searchable.includes(q)) return false
     }
-
     return true
   })
 
-  // Sort
   const sorted = [...filtered].sort((a, b) => {
     if (sortBy === "deadline") {
       const da = parseDeadlineDate(a.deadline ?? "")
@@ -544,37 +647,28 @@ function DiscoverPage() {
       return da.getTime() - db.getTime()
     }
     if (sortBy === "award") {
-      const aa = parseAmount(a.amount) ?? -1
-      const ab = parseAmount(b.amount) ?? -1
-      return ab - aa
+      return (parseAmount(b.amount) ?? -1) - (parseAmount(a.amount) ?? -1)
     }
-    // "match" — sort by matchScore desc, then original order
-    const ma = getMatchForOpportunity(a.id)
-    const mb = getMatchForOpportunity(b.id)
-    const sa = ma?.matchScore ?? 0
-    const sb = mb?.matchScore ?? 0
+    const sa = getMatchForOpportunity(a.id)?.matchScore ?? 0
+    const sb = getMatchForOpportunity(b.id)?.matchScore ?? 0
     return sb - sa
   })
 
   const hasActiveFilters = !!(typeFilter || focusAreaFilter || geographyFilter || awardRangeFilter || deadlineFilter)
 
   function clearFilters() {
-    setTypeFilter("")
-    setFocusAreaFilter("")
-    setGeographyFilter("")
-    setAwardRangeFilter("")
-    setDeadlineFilter("")
+    setTypeFilter(""); setFocusAreaFilter(""); setGeographyFilter("")
+    setAwardRangeFilter(""); setDeadlineFilter("")
   }
 
   return (
     <div style={{ height: "100%", position: "relative", overflow: "hidden", backgroundColor: "var(--canvas)" }}>
 
-      {/* Scrollable list — stays visible behind the panel */}
       <div style={{ height: "100%", overflowY: "auto" }}>
         <div style={{ maxWidth: 880, margin: "0 auto", padding: "36px 32px 80px" }}>
 
           {/* Page header */}
-          <div style={{ marginBottom: 36 }}>
+          <div style={{ marginBottom: 28 }}>
             <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700, color: "var(--ink)" }}>
               Discover
             </h1>
@@ -583,208 +677,359 @@ function DiscoverPage() {
             </p>
           </div>
 
-          {/* ── Matches ──────────────────────────────────────────────────── */}
-          <section style={{ marginBottom: 52 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 18, color: "var(--slate-primary)", userSelect: "none" }}>
-                auto_fix_high
-              </span>
-              <h2 style={{ margin: 0, fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
-                Matched for {scopeLabel}
-              </h2>
-              {matchesLoaded && visibleMatches.length > 0 && (
-                <span style={{
-                  display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  minWidth: 20, height: 20, padding: "0 6px", borderRadius: 10,
-                  fontSize: 11, fontWeight: 700,
-                  backgroundColor: "var(--evergreen-tint)", color: "var(--evergreen)",
+          {/* Lens toggle */}
+          <div style={{ marginBottom: 36 }}>
+            <LensToggle value={lens} onChange={setLens} />
+          </div>
+
+          {/* ── Opportunities lens ──────────────────────────────────────── */}
+          {lens === "opportunities" && (
+            <>
+              {/* Matches */}
+              <section style={{ marginBottom: 52 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18, color: "var(--slate-primary)", userSelect: "none" }}>
+                    auto_fix_high
+                  </span>
+                  <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--ink-tertiary)" }}>
+                    Matched for {scopeLabel}
+                  </h2>
+                  {matchesLoaded && visibleMatches.length > 0 && (
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      minWidth: 20, height: 20, padding: "0 6px", borderRadius: 10,
+                      fontSize: 11, fontWeight: 700,
+                      backgroundColor: "var(--evergreen-tint)", color: "var(--evergreen)",
+                    }}>
+                      {visibleMatches.length}
+                    </span>
+                  )}
+                </div>
+
+                {/* Dismiss reason bar */}
+                {dismissToast && (
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+                    padding: "8px 14px", borderRadius: 8,
+                    backgroundColor: "var(--surface)", border: "1px solid var(--hair)",
+                    marginBottom: 12,
+                  }}>
+                    <span style={{ fontSize: 12, color: "var(--ink-tertiary)", flexShrink: 0 }}>Why?</span>
+                    {DISMISS_REASONS.map(r => (
+                      <button
+                        key={r.value}
+                        type="button"
+                        onClick={() => handleSetReason(dismissToast.matchId, r.value)}
+                        style={{
+                          padding: "3px 10px", borderRadius: 20,
+                          border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+                          fontSize: 11, color: "var(--ink-secondary)", cursor: "pointer",
+                          transition: "background-color 120ms, border-color 120ms",
+                        }}
+                        onMouseEnter={(e) => {
+                          const el = e.currentTarget as HTMLButtonElement
+                          el.style.backgroundColor = "var(--canvas)"
+                          el.style.borderColor = "var(--ink-tertiary)"
+                        }}
+                        onMouseLeave={(e) => {
+                          const el = e.currentTarget as HTMLButtonElement
+                          el.style.backgroundColor = "transparent"
+                          el.style.borderColor = "var(--hair-2)"
+                        }}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setDismissToast(null)}
+                      style={{
+                        marginLeft: "auto", background: "none", border: "none",
+                        cursor: "pointer", color: "var(--ink-tertiary)",
+                        display: "flex", alignItems: "center", padding: 2,
+                      }}
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
+
+                {!matchesLoaded ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+                    <SkeletonMatchCard /><SkeletonMatchCard /><SkeletonMatchCard />
+                  </div>
+                ) : visibleMatches.length === 0 ? (
+                  <EmptyMatches scopeLabel={scopeLabel} onBrowseAll={scrollToBrowse} />
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+                    {visibleMatches.map(({ match, opp }) => (
+                      <MatchCard
+                        key={match.id}
+                        match={match}
+                        opp={opp}
+                        onDismiss={() => handleDismiss(match.id)}
+                        onOppClick={handleOppClick}
+                        onFunderClick={handleFunderClick}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Hidden matches */}
+                {hiddenMatches.length > 0 && (
+                  <div style={{ marginTop: 14 }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowHidden(s => !s)}
+                      style={{
+                        background: "none", border: "none", cursor: "pointer", padding: 0,
+                        fontSize: 12, color: "var(--ink-tertiary)",
+                      }}
+                    >
+                      {hiddenMatches.length} hidden · {showHidden ? "Hide" : "Show"}
+                    </button>
+                    {showHidden && (
+                      <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+                        {hiddenMatches.map(({ matchId, reason }) => {
+                          const sm = STRONG_MATCHES.find(m => m.match.id === matchId)
+                          if (!sm) return null
+                          return (
+                            <div key={matchId} style={{
+                              display: "flex", alignItems: "center", gap: 12,
+                              padding: "9px 14px", borderRadius: 9,
+                              backgroundColor: "var(--surface)", border: "1px solid var(--hair)",
+                            }}>
+                              <span style={{ flex: 1, fontSize: 12, color: "var(--ink-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {sm.opp.name}
+                              </span>
+                              {reason && (
+                                <span style={{ fontSize: 11, color: "var(--ink-tertiary)", flexShrink: 0 }}>
+                                  {DISMISS_REASONS.find(r => r.value === reason)?.label}
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleUnhide(matchId)}
+                                style={{
+                                  background: "none", border: "none", cursor: "pointer",
+                                  fontSize: 12, color: "var(--slate-secondary)", padding: 0, flexShrink: 0,
+                                }}
+                              >
+                                Unhide
+                              </button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+
+              {/* Browse */}
+              <section ref={browseRef}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                  <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--ink-tertiary)" }}>
+                    Browse
+                  </h2>
+                  <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
+                    {sorted.length} {sorted.length === 1 ? "opportunity" : "opportunities"}
+                  </span>
+                </div>
+
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  padding: "8px 12px", borderRadius: "var(--radius-input)",
+                  border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
+                  marginBottom: 10,
                 }}>
-                  {visibleMatches.length}
+                  <Search size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search opportunities and funders"
+                    style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 13, color: "var(--ink)", lineHeight: "17px" }}
+                  />
+                  {query && (
+                    <button type="button" onClick={() => setQuery("")}
+                      style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "var(--ink-tertiary)", padding: 0 }}
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+                  <FilterSelect value={typeFilter} onChange={(v) => setTypeFilter(v as FunderType | "")}>
+                    <option value="">All funder types</option>
+                    {(Object.keys(FUNDER_TYPE_LABELS) as FunderType[]).map(t => (
+                      <option key={t} value={t}>{FUNDER_TYPE_LABELS[t]}</option>
+                    ))}
+                  </FilterSelect>
+
+                  <FilterSelect value={focusAreaFilter} onChange={setFocusAreaFilter}>
+                    <option value="">All focus areas</option>
+                    {ALL_FOCUS_AREAS.map(fa => (
+                      <option key={fa} value={fa}>{fa}</option>
+                    ))}
+                  </FilterSelect>
+
+                  <FilterSelect value={geographyFilter} onChange={setGeographyFilter}>
+                    <option value="">All geographies</option>
+                    {ALL_GEOGRAPHIES.map(g => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </FilterSelect>
+
+                  <FilterSelect value={awardRangeFilter} onChange={setAwardRangeFilter}>
+                    <option value="">Any award size</option>
+                    <option value="under-25k">Up to $25k</option>
+                    <option value="25k-50k">$25k – $50k</option>
+                    <option value="over-50k">Over $50k</option>
+                  </FilterSelect>
+
+                  <FilterSelect value={deadlineFilter} onChange={setDeadlineFilter}>
+                    <option value="">Any deadline</option>
+                    <option value="30">Within 30 days</option>
+                    <option value="60">Within 60 days</option>
+                    <option value="90">Within 90 days</option>
+                  </FilterSelect>
+
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 4,
+                        padding: "7px 10px", borderRadius: "var(--radius-input)",
+                        border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+                        fontSize: 12, color: "var(--ink-tertiary)", cursor: "pointer",
+                        transition: "background-color 120ms, color 120ms",
+                      }}
+                      onMouseEnter={(e) => {
+                        const el = e.currentTarget as HTMLButtonElement
+                        el.style.backgroundColor = "var(--canvas)"
+                        el.style.color = "var(--ink-secondary)"
+                      }}
+                      onMouseLeave={(e) => {
+                        const el = e.currentTarget as HTMLButtonElement
+                        el.style.backgroundColor = "transparent"
+                        el.style.color = "var(--ink-tertiary)"
+                      }}
+                    >
+                      <X size={11} /> Clear
+                    </button>
+                  )}
+
+                  <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>Sort</span>
+                    <FilterSelect value={sortBy} onChange={(v) => setSortBy(v as "match" | "deadline" | "award")}>
+                      <option value="match">Best match</option>
+                      <option value="deadline">Soonest deadline</option>
+                      <option value="award">Award size</option>
+                    </FilterSelect>
+                  </div>
+                </div>
+
+                {sorted.length > 0 ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+                    {sorted.map(opp => (
+                      <CatalogueCard
+                        key={opp.id}
+                        opp={opp}
+                        onOppClick={handleOppClick}
+                        onFunderClick={handleFunderClick}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ padding: "56px 0", textAlign: "center" }}>
+                    <p style={{ margin: "0 0 8px", fontSize: 13, color: "var(--ink-tertiary)" }}>No results match these filters.</p>
+                    {hasActiveFilters && (
+                      <button type="button" onClick={clearFilters}
+                        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--slate-secondary)", textDecoration: "underline", padding: 0 }}
+                      >
+                        Clear all filters
+                      </button>
+                    )}
+                  </div>
+                )}
+              </section>
+            </>
+          )}
+
+          {/* ── Funders lens ───────────────────────────────────────────── */}
+          {lens === "funders" && (
+            <section>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--ink-tertiary)" }}>
+                  Funders
+                </h2>
+                <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
+                  {filteredFunders.length} {filteredFunders.length === 1 ? "funder" : "funders"}
                 </span>
-              )}
-            </div>
-
-            {!matchesLoaded ? (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-                <SkeletonMatchCard /><SkeletonMatchCard /><SkeletonMatchCard />
               </div>
-            ) : visibleMatches.length === 0 ? (
-              <EmptyMatches scopeLabel={scopeLabel} onBrowseAll={scrollToBrowse} />
-            ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-                {visibleMatches.map(({ match, opp }) => (
-                  <MatchCard
-                    key={match.id}
-                    match={match}
-                    opp={opp}
-                    onDismiss={() => handleDismiss(match.id)}
-                    onOppClick={handleOppClick}
-                    onFunderClick={handleFunderClick}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
 
-          {/* ── Browse ───────────────────────────────────────────────────── */}
-          <section ref={browseRef}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <h2 style={{ margin: 0, fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
-                Browse
-              </h2>
-              <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
-                {sorted.length} {sorted.length === 1 ? "opportunity" : "opportunities"}
-              </span>
-            </div>
-
-            {/* Search row */}
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8,
-              padding: "8px 12px", borderRadius: "var(--radius-input)",
-              border: "1px solid var(--hair-2)",
-              backgroundColor: "var(--surface)",
-              marginBottom: 10,
-            }}>
-              <Search size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search opportunities and funders"
-                style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 13, color: "var(--ink)", lineHeight: "17px" }}
-              />
-              {query && (
-                <button type="button" onClick={() => setQuery("")}
-                  style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "var(--ink-tertiary)", padding: 0 }}
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-
-            {/* Filter + sort row */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
-              <FilterSelect value={typeFilter} onChange={(v) => setTypeFilter(v as FunderType | "")}>
-                <option value="">All funder types</option>
-                {(Object.keys(FUNDER_TYPE_LABELS) as FunderType[]).map(t => (
-                  <option key={t} value={t}>{FUNDER_TYPE_LABELS[t]}</option>
-                ))}
-              </FilterSelect>
-
-              <FilterSelect value={focusAreaFilter} onChange={setFocusAreaFilter}>
-                <option value="">All focus areas</option>
-                {ALL_FOCUS_AREAS.map(fa => (
-                  <option key={fa} value={fa}>{fa}</option>
-                ))}
-              </FilterSelect>
-
-              <FilterSelect value={geographyFilter} onChange={setGeographyFilter}>
-                <option value="">All geographies</option>
-                {ALL_GEOGRAPHIES.map(g => (
-                  <option key={g} value={g}>{g}</option>
-                ))}
-              </FilterSelect>
-
-              <FilterSelect value={awardRangeFilter} onChange={setAwardRangeFilter}>
-                <option value="">Any award size</option>
-                <option value="under-25k">Up to $25k</option>
-                <option value="25k-50k">$25k – $50k</option>
-                <option value="over-50k">Over $50k</option>
-              </FilterSelect>
-
-              <FilterSelect value={deadlineFilter} onChange={setDeadlineFilter}>
-                <option value="">Any deadline</option>
-                <option value="30">Within 30 days</option>
-                <option value="60">Within 60 days</option>
-                <option value="90">Within 90 days</option>
-              </FilterSelect>
-
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 4,
-                    padding: "7px 10px", borderRadius: "var(--radius-input)",
-                    border: "1px solid var(--hair-2)", backgroundColor: "transparent",
-                    fontSize: 12, color: "var(--ink-tertiary)", cursor: "pointer",
-                    transition: "background-color 120ms, color 120ms",
-                  }}
-                  onMouseEnter={(e) => {
-                    const el = e.currentTarget as HTMLButtonElement
-                    el.style.backgroundColor = "var(--canvas)"
-                    el.style.color = "var(--ink-secondary)"
-                  }}
-                  onMouseLeave={(e) => {
-                    const el = e.currentTarget as HTMLButtonElement
-                    el.style.backgroundColor = "transparent"
-                    el.style.color = "var(--ink-tertiary)"
-                  }}
-                >
-                  <X size={11} /> Clear
-                </button>
-              )}
-
-              {/* Sort — pushed right */}
-              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>Sort</span>
-                <FilterSelect value={sortBy} onChange={(v) => setSortBy(v as "match" | "deadline" | "award")}>
-                  <option value="match">Best match</option>
-                  <option value="deadline">Soonest deadline</option>
-                  <option value="award">Award size</option>
-                </FilterSelect>
-              </div>
-            </div>
-
-            {/* Cards */}
-            {sorted.length > 0 ? (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
-                {sorted.map(opp => (
-                  <CatalogueCard
-                    key={opp.id}
-                    opp={opp}
-                    onOppClick={handleOppClick}
-                    onFunderClick={handleFunderClick}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div style={{ padding: "56px 0", textAlign: "center" }}>
-                <p style={{ margin: "0 0 8px", fontSize: 13, color: "var(--ink-tertiary)" }}>No results match these filters.</p>
-                {hasActiveFilters && (
-                  <button type="button" onClick={clearFilters}
-                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--slate-secondary)", textDecoration: "underline", padding: 0 }}
+              <div style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "8px 12px", borderRadius: "var(--radius-input)",
+                border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
+                marginBottom: 20,
+              }}>
+                <Search size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
+                <input
+                  type="text"
+                  value={funderQuery}
+                  onChange={(e) => setFunderQuery(e.target.value)}
+                  placeholder="Search by name, focus area, or geography"
+                  style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 13, color: "var(--ink)", lineHeight: "17px" }}
+                />
+                {funderQuery && (
+                  <button type="button" onClick={() => setFunderQuery("")}
+                    style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "var(--ink-tertiary)", padding: 0 }}
                   >
-                    Clear all filters
+                    <X size={12} />
                   </button>
                 )}
               </div>
-            )}
-          </section>
+
+              {filteredFunders.length > 0 ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+                  {filteredFunders.map(funder => (
+                    <FunderCard
+                      key={funder.id}
+                      funder={funder}
+                      onFunderClick={handleFunderClick}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div style={{ padding: "56px 0", textAlign: "center" }}>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>No funders match your search.</p>
+                </div>
+              )}
+            </section>
+          )}
+
         </div>
       </div>
 
-      {/* Opportunity peek panel */}
       {selectedOppId && (
         <OpportunityPeekPanel
           key={selectedOppId}
           oppId={selectedOppId}
           onClose={handleClose}
-          onFunderClick={(funderId) => {
-            router.push(`/discover?funder=${funderId}`)
-          }}
+          onFunderClick={(funderId) => router.push(`/discover?funder=${funderId}`)}
         />
       )}
 
-      {/* Funder peek panel */}
       {selectedFunderId && (
         <FunderPeekPanel
           key={selectedFunderId}
           funderId={selectedFunderId}
           onClose={handleClose}
-          onOppClick={(oppId) => {
-            router.push(`/discover?opp=${oppId}`)
-          }}
+          onOppClick={(oppId) => router.push(`/discover?opp=${oppId}`)}
         />
       )}
     </div>

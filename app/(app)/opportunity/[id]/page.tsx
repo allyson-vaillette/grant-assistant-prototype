@@ -163,21 +163,21 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
             marginBottom: 28,
           }}>
             <div>
-              <p style={{ margin: "0 0 3px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Geography</p>
+              <p style={{ margin: "0 0 3px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Geography</p>
               <p style={{ margin: 0, fontSize: 13, color: "var(--ink)" }}>{funder.geography}</p>
             </div>
             {funder.fundingRange && (
               <div>
-                <p style={{ margin: "0 0 3px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Funding range</p>
+                <p style={{ margin: "0 0 3px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Funding range</p>
                 <p style={{ margin: 0, fontSize: 13, color: "var(--ink)" }}>{funder.fundingRange}</p>
               </div>
             )}
             <div>
-              <p style={{ margin: "0 0 3px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Unsolicited</p>
+              <p style={{ margin: "0 0 3px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Unsolicited</p>
               <p style={{ margin: 0, fontSize: 13, color: "var(--ink)" }}>{funder.acceptsUnsolicited ? "Yes" : "No — LOI required"}</p>
             </div>
             <div>
-              <p style={{ margin: "0 0 3px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Focus areas</p>
+              <p style={{ margin: "0 0 3px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Focus areas</p>
               <p style={{ margin: 0, fontSize: 13, color: "var(--ink)" }}>{(opp.focusAreas ?? funder.focusAreas).join(" · ")}</p>
             </div>
           </div>
@@ -196,7 +196,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
               marginBottom: 28, padding: "14px 18px", borderRadius: 10,
               backgroundColor: "var(--surface)", border: "1px solid var(--hair-2)",
             }}>
-              <p style={{ margin: "0 0 6px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+              <p style={{ margin: "0 0 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>
                 Eligibility requirements
               </p>
               <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "19px" }}>{opp.eligibility}</p>

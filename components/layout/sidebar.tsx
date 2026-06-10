@@ -195,13 +195,13 @@ function NotificationTray({
         <div style={{ flex: 1, overflowY: "auto" }}>
           {todayNotifs.length > 0 && (
             <div>
-              <p style={{ margin: 0, padding: "10px 16px 4px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Today</p>
+              <p style={{ margin: 0, padding: "10px 16px 4px", fontSize: 11, fontWeight: 600, color: "var(--ink-tertiary)" }}>Today</p>
               {todayNotifs.map(n => <NotifRow key={n.id} n={n} />)}
             </div>
           )}
           {earlierNotifs.length > 0 && (
             <div>
-              <p style={{ margin: 0, padding: "10px 16px 4px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Earlier</p>
+              <p style={{ margin: 0, padding: "10px 16px 4px", fontSize: 11, fontWeight: 600, color: "var(--ink-tertiary)" }}>Earlier</p>
               {earlierNotifs.map(n => <NotifRow key={n.id} n={n} />)}
             </div>
           )}
@@ -390,7 +390,7 @@ export function Sidebar() {
         {/* Nav */}
         <nav style={{ flex: 1, padding: "4px 8px", display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" }}>
           {!collapsed ? (
-            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.09em", textTransform: "uppercase", color: "rgba(255,255,255,0.40)", padding: "10px 8px 6px 8px", display: "block" }}>Main</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.40)", padding: "10px 8px 6px 8px", display: "block" }}>Main</span>
           ) : <div style={{ height: 10 }} />}
 
           {MAIN_NAV.map(({ label, href, icon: Icon }) => {
@@ -408,7 +408,7 @@ export function Sidebar() {
           })}
 
           {!collapsed ? (
-            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.09em", textTransform: "uppercase", color: "rgba(255,255,255,0.40)", padding: "14px 8px 6px 8px", display: "block" }}>Workspace</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.40)", padding: "14px 8px 6px 8px", display: "block" }}>Workspace</span>
           ) : <div style={{ margin: "10px 4px", borderTop: "1px solid rgba(255,255,255,0.12)" }} />}
 
           {WORKSPACE_NAV.map(({ label, href, icon: Icon }) => {

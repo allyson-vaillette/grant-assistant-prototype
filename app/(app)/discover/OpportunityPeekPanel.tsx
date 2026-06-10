@@ -239,21 +239,21 @@ export function OpportunityPeekPanel({ oppId, onClose, onFunderClick }: Props) {
           {/* Meta row */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 16px", padding: "14px 0", borderTop: "1px solid var(--hair)", borderBottom: "1px solid var(--hair)", marginBottom: 20 }}>
             <div>
-              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Geography</p>
+              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Geography</p>
               <p style={{ margin: 0, fontSize: 12, color: "var(--ink)" }}>{funder.geography}</p>
             </div>
             {funder.fundingRange && (
               <div>
-                <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Funding range</p>
+                <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Funding range</p>
                 <p style={{ margin: 0, fontSize: 12, color: "var(--ink)" }}>{funder.fundingRange}</p>
               </div>
             )}
             <div>
-              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Unsolicited</p>
+              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Unsolicited</p>
               <p style={{ margin: 0, fontSize: 12, color: "var(--ink)" }}>{funder.acceptsUnsolicited ? "Yes" : "No — LOI required"}</p>
             </div>
             <div>
-              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Focus areas</p>
+              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Focus areas</p>
               <p style={{ margin: 0, fontSize: 12, color: "var(--ink)", lineHeight: "17px" }}>{(opp.focusAreas ?? funder.focusAreas).join(" · ")}</p>
             </div>
           </div>
@@ -269,7 +269,7 @@ export function OpportunityPeekPanel({ oppId, onClose, onFunderClick }: Props) {
           {/* Eligibility */}
           {opp.eligibility && (
             <div style={{ marginBottom: 20, padding: "12px 14px", borderRadius: 10, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)" }}>
-              <p style={{ margin: "0 0 5px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+              <p style={{ margin: "0 0 5px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>
                 Eligibility requirements
               </p>
               <p style={{ margin: 0, fontSize: 12, color: "var(--ink-secondary)", lineHeight: "18px" }}>{opp.eligibility}</p>

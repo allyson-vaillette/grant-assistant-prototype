@@ -171,21 +171,21 @@ export function FunderPeekPanel({ funderId, onClose, onOppClick }: Props) {
           {/* Meta */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 16px", padding: "0 0 16px", borderBottom: "1px solid var(--hair)", marginBottom: 20 }}>
             <div>
-              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Geography</p>
+              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Geography</p>
               <p style={{ margin: 0, fontSize: 12, color: "var(--ink)" }}>{funder.geography}</p>
             </div>
             {funder.fundingRange && (
               <div>
-                <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Funding range</p>
+                <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Funding range</p>
                 <p style={{ margin: 0, fontSize: 12, color: "var(--ink)" }}>{funder.fundingRange}</p>
               </div>
             )}
             <div>
-              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Unsolicited</p>
+              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Unsolicited</p>
               <p style={{ margin: 0, fontSize: 12, color: "var(--ink)" }}>{funder.acceptsUnsolicited ? "Yes" : "No — LOI required"}</p>
             </div>
             <div>
-              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>Focus areas</p>
+              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Focus areas</p>
               <p style={{ margin: 0, fontSize: 12, color: "var(--ink)", lineHeight: "17px" }}>{funder.focusAreas.join(" · ")}</p>
             </div>
           </div>

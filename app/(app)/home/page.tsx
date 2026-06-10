@@ -106,8 +106,8 @@ function SectionHeader({ label }: { label: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
       <span style={{
-        fontSize: 10, fontWeight: 700, letterSpacing: "0.09em",
-        textTransform: "uppercase", color: "var(--ink-tertiary)", flexShrink: 0,
+        fontSize: 11, fontWeight: 600,
+        color: "var(--ink-tertiary)", flexShrink: 0,
       }}>
         {label}
       </span>
@@ -152,7 +152,7 @@ function TaskRow({ task }: { task: ReturnType<typeof getTodayTasks>[number] }) {
               {task.title}
             </p>
             <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "15px" }}>
-              <span style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", fontSize: 10 }}>
+              <span style={{ fontWeight: 600, fontSize: 11 }}>
                 {funder?.name}
               </span>
               {opp?.name && <span> · {opp.name}</span>}
@@ -212,7 +212,7 @@ function TeamTaskRow({
         <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "15px" }}>
           <span style={{ fontWeight: 600 }}>{task.teammate.name}</span>
           {funder && (
-            <span> · <span style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", fontSize: 10 }}>{funder.name}</span></span>
+            <span> · <span style={{ fontWeight: 600, fontSize: 11 }}>{funder.name}</span></span>
           )}
           {opp?.name && <span> · {opp.name}</span>}
         </p>
@@ -282,7 +282,7 @@ function DeadlineRow({ pip, opp, funder }: {
             <p style={{ margin: "0 0 3px", fontSize: 13, fontWeight: 500, color: "var(--ink)", lineHeight: "18px" }}>
               {opp?.name}
             </p>
-            <p style={{ margin: 0, fontSize: 10, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: "var(--ink-tertiary)" }}>
               {funder?.name}
             </p>
           </div>
@@ -357,7 +357,7 @@ function StatusCard({
       >
         <p style={{
           margin: "0 0 4px", fontSize: 10, fontWeight: 600,
-          letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)",
+          color: "var(--ink-tertiary)",
         }}>
           {label}
         </p>
@@ -422,7 +422,6 @@ function StatusCard({
                     <p style={{
                       margin: "0 0 1px", fontSize: 12, fontWeight: 600,
                       color: "var(--ink)", lineHeight: "16px",
-                      textTransform: "uppercase", letterSpacing: "0.04em",
                     }}>
                       {funder?.name}
                     </p>
