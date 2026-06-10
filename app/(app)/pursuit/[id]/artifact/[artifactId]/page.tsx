@@ -173,8 +173,8 @@ export default function ArtifactEditorPage({
   const [sections,      setSections]      = useState<DraftSection[]>(existingSession?.sections ?? [])
   const [saveStatus,    setSaveStatus]    = useState<"saved" | "saving">("saved")
   const [updatedAt,     setUpdatedAt]     = useState(artifact?.updatedAt ?? "")
-  const [docWordLimit,  setDocWordLimit]  = useState<number | undefined>(existingSession?.wordLimit)
-  const [docCharLimit,  setDocCharLimit]  = useState<number | undefined>(existingSession?.charLimit)
+  const docWordLimit = existingSession?.wordLimit
+  const docCharLimit = existingSession?.charLimit
 
   // ── Working state: layout ────────────────────────────────────────────
   const [leftTab,        setLeftTab]        = useState<LeftTab>("requirements")
