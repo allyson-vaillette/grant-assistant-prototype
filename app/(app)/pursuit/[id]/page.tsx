@@ -1311,7 +1311,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
         <div style={{
           width: 240, flexShrink: 0,
           display: "flex", flexDirection: "column",
-          backgroundColor: "var(--surface-sunk)",
+          backgroundColor: "var(--slate-tint)",
           borderRight: "1px solid var(--hair)",
         }}>
           <TabBar active={activeTab} onChange={setActiveTab} />
