@@ -125,19 +125,34 @@
   }
 }
 
-/* ── AI gradient band drift ── */
-@keyframes ai-gradient-drift {
-  from { background-position: 0% 50%; }
-  to   { background-position: 100% 50%; }
+/* ── AI gradient band: drifting glow blob ── */
+@keyframes ai-blob-drift {
+  0%   { transform: translate(0%,   0%); }
+  50%  { transform: translate(40%,  5%); }
+  100% { transform: translate(80%,  0%); }
 }
 
-.ai-band {
-  animation: ai-gradient-drift 15s ease-in-out infinite alternate;
+.ai-blob {
+  position: absolute;
+  top: -40%;
+  left: -5%;
+  width: 55%;
+  height: 200%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(91, 69, 200, 0.28) 0%,
+    rgba(107, 168, 164, 0.15) 40%,
+    transparent 70%
+  );
+  filter: blur(52px);
+  pointer-events: none;
+  z-index: -1;
+  animation: ai-blob-drift 16s ease-in-out infinite alternate;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ai-band {
+  .ai-blob {
     animation: none;
-    background-position: 0% 50%;
+    transform: translate(0%, 0%);
   }
 }
