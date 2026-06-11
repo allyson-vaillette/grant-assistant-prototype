@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, FileText, FileSpreadsheet, ChevronDown, Plus, Download, CheckCircle, AlertTriangle, Circle, Check, Lock, Trash2, X, Pencil } from "lucide-react"
+import { ArrowLeft, FileText, FileSpreadsheet, ChevronDown, Plus, Download, CheckCircle, AlertTriangle, Circle, Check, Lock, Trash2, X, Pencil, Link as LinkIcon } from "lucide-react"
 import { ArtifactEditorContent } from "./artifact/[artifactId]/page"
 import {
   FUNDERS, OPPORTUNITIES, USER, TEAMMATES,
@@ -363,6 +363,9 @@ function DocumentsTab({ initialAttachments, pipId, onAppAttachmentIdsChange, fro
   const [appStatus,  setAppStatus]  = useState<UploadStatus>("idle")
   const [srcLibOpen, setSrcLibOpen] = useState(false)
   const [appLibOpen, setAppLibOpen] = useState(false)
+  const [urlSources, setUrlSources] = useState<{ id: string; url: string }[]>([])
+  const [addingUrl,  setAddingUrl]  = useState(false)
+  const [newUrl,     setNewUrl]     = useState("")
   const srcInputRef = useRef<HTMLInputElement>(null)
   const appInputRef = useRef<HTMLInputElement>(null)
   const srcLibRef   = useRef<HTMLDivElement>(null)
@@ -402,6 +405,15 @@ function DocumentsTab({ initialAttachments, pipId, onAppAttachmentIdsChange, fro
       }])
       set("idle")
     }, 1200)
+  }
+
+  function addUrl() {
+    const raw = newUrl.trim()
+    if (!raw) return
+    const url = raw.startsWith("http://") || raw.startsWith("https://") ? raw : `https://${raw}`
+    setUrlSources(prev => [...prev, { id: `url-${Math.random().toString(36).slice(2)}`, url }])
+    setNewUrl("")
+    setAddingUrl(false)
   }
 
   function addLib(zone: "src" | "app", doc: typeof ORG_LIBRARY_DOCS[number]) {
@@ -455,7 +467,7 @@ function DocumentsTab({ initialAttachments, pipId, onAppAttachmentIdsChange, fro
         <p style={{ margin: 0, padding: "2px 14px 8px", fontSize: 10, color: "var(--ink-tertiary)", lineHeight: "14px" }}>
           Feeds the AI for grounding. Not submitted.
         </p>
-        {srcAtts.length > 0 && (
+        {(srcAtts.length > 0 || urlSources.length > 0) && (
           <div style={{ padding: "0 8px 4px" }}>
             {srcAtts.map(att => (
               <div key={att.id}
@@ -471,13 +483,25 @@ function DocumentsTab({ initialAttachments, pipId, onAppAttachmentIdsChange, fro
                 </span>
               </div>
             ))}
+            {urlSources.map(src => (
+              <div key={src.id}
+                style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 6px", borderRadius: 6, transition: "background-color 120ms" }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}>
+                <LinkIcon size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: 11, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {src.url}
+                </span>
+                <span style={{ fontSize: 10, color: "var(--ink-tertiary)", flexShrink: 0 }}>URL</span>
+              </div>
+            ))}
           </div>
         )}
         <input ref={srcInputRef} type="file" style={{ display: "none" }}
           onChange={e => { const f = e.target.files?.[0]; if (f) doUpload("src", f); e.target.value = "" }} />
-        <div style={{ padding: "2px 8px 0", display: "flex", gap: 6, alignItems: "center" }}>
+        <div style={{ padding: "2px 8px 0" }}>
           {srcStatus === "error" ? (
-            <>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <span style={{ fontSize: 11, color: "var(--terracotta)" }}>Upload failed.</span>
               <button type="button" onClick={() => srcInputRef.current?.click()}
                 style={{ fontSize: 11, color: "var(--slate-secondary)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
@@ -487,9 +511,41 @@ function DocumentsTab({ initialAttachments, pipId, onAppAttachmentIdsChange, fro
                 style={{ fontSize: 11, color: "var(--ink-tertiary)", background: "none", border: "none", cursor: "pointer", padding: "0 0 0 2px" }}>
                 Clear
               </button>
-            </>
+            </div>
+          ) : addingUrl ? (
+            <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+              <input
+                autoFocus
+                type="url"
+                placeholder="https://…"
+                value={newUrl}
+                onChange={e => setNewUrl(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") addUrl()
+                  if (e.key === "Escape") { setAddingUrl(false); setNewUrl("") }
+                }}
+                style={{
+                  flex: 1, padding: "3px 7px", borderRadius: 6,
+                  border: "1px solid var(--slate-soft)", fontSize: 11, outline: "none",
+                  backgroundColor: "var(--canvas)", color: "var(--ink)", minWidth: 0,
+                }}
+              />
+              <button type="button" disabled={!newUrl.trim()} onClick={addUrl}
+                style={{
+                  padding: "3px 8px", borderRadius: 6, border: "none", fontSize: 11, fontWeight: 600,
+                  backgroundColor: newUrl.trim() ? "var(--slate-primary)" : "var(--hair-2)",
+                  color: newUrl.trim() ? "#fff" : "var(--ink-tertiary)",
+                  cursor: newUrl.trim() ? "pointer" : "default", flexShrink: 0,
+                }}>
+                Add
+              </button>
+              <button type="button" onClick={() => { setAddingUrl(false); setNewUrl("") }}
+                style={{ padding: "3px 5px", borderRadius: 6, border: "1px solid var(--hair-2)", backgroundColor: "transparent", color: "var(--ink-secondary)", fontSize: 11, cursor: "pointer", flexShrink: 0 }}>
+                <X size={11} />
+              </button>
+            </div>
           ) : (
-            <>
+            <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
               <button type="button" disabled={srcStatus === "uploading"} onClick={() => srcInputRef.current?.click()}
                 style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, border: "1px solid var(--hair-2)", backgroundColor: "transparent", fontSize: 11, color: srcStatus === "uploading" ? "var(--ink-tertiary)" : "var(--ink-secondary)", cursor: srcStatus === "uploading" ? "default" : "pointer", transition: "background-color 120ms" }}
                 onMouseEnter={e => { if (srcStatus === "idle") (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
@@ -505,7 +561,13 @@ function DocumentsTab({ initialAttachments, pipId, onAppAttachmentIdsChange, fro
                 </button>
                 {srcLibOpen && libDropdown("src")}
               </div>
-            </>
+              <button type="button" onClick={() => setAddingUrl(true)}
+                style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, border: "1px solid var(--hair-2)", backgroundColor: "transparent", fontSize: 11, color: "var(--ink-secondary)", cursor: "pointer", transition: "background-color 120ms" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}>
+                <LinkIcon size={10} />Add URL
+              </button>
+            </div>
           )}
         </div>
       </div>
