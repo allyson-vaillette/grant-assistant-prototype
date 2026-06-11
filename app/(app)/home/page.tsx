@@ -11,6 +11,7 @@ import {
   USER, TEAMMATES,
   PIPELINE_OPPORTUNITIES, OPPORTUNITIES, FUNDERS, TASKS,
 } from "@/lib/mock-data"
+import { IncompleteProfileBanner } from "@/components/IncompleteProfileBanner"
 import { useScope } from "@/lib/scope-context"
 import { phaseFromStatus } from "@/lib/types"
 import type { PipelineOpportunity, Opportunity, Funder, PipelinePhase } from "@/lib/types"
@@ -797,6 +798,8 @@ export default function HomePage() {
   return (
     <div style={{ flex: 1, overflowY: "auto", backgroundColor: "var(--canvas)" }}>
       <ContentContainer style={{ padding: "28px 40px 48px" }}>
+
+        <IncompleteProfileBanner />
 
         {/* Greeting */}
         <div style={{ marginBottom: 20 }}>

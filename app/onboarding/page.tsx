@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
+import { writeProfileComplete } from "@/lib/profile-context"
 
 type Fields = {
   orgName: string
@@ -26,6 +26,12 @@ export default function OnboardingPage() {
   }
 
   function finish() {
+    writeProfileComplete(true)
+    router.push("/discover")
+  }
+
+  function skipFlow() {
+    writeProfileComplete(false)
     router.push("/discover")
   }
 
@@ -78,23 +84,29 @@ export default function OnboardingPage() {
           </span>
         </div>
 
-        <Link
-          href="/discover"
+        <button
+          type="button"
+          onClick={skipFlow}
           style={{
+            background: "none",
+            border: "none",
+            padding: 0,
             fontSize: 13,
             color: "var(--ink-secondary)",
             textDecoration: "none",
             fontWeight: 400,
+            cursor: "pointer",
+            fontFamily: "var(--font-inter), system-ui, sans-serif",
           }}
           onMouseEnter={(e) => {
-            ;(e.currentTarget as HTMLAnchorElement).style.textDecoration = "underline"
+            ;(e.currentTarget as HTMLButtonElement).style.textDecoration = "underline"
           }}
           onMouseLeave={(e) => {
-            ;(e.currentTarget as HTMLAnchorElement).style.textDecoration = "none"
+            ;(e.currentTarget as HTMLButtonElement).style.textDecoration = "none"
           }}
         >
           Skip for now
-        </Link>
+        </button>
       </header>
 
       {/* Main content */}
@@ -181,10 +193,10 @@ export default function OnboardingPage() {
               fields={fields}
               onChange={update}
               onContinue={() => setStep(2)}
-              onSkip={() => setStep(2)}
+              onSkip={() => { writeProfileComplete(false); setStep(2) }}
             />
           ) : (
-            <Step2 onFinish={finish} onSkip={finish} onBack={() => setStep(1)} />
+            <Step2 onFinish={finish} onSkip={skipFlow} onBack={() => setStep(1)} />
           )}
         </div>
       </div>

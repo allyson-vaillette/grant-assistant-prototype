@@ -12,6 +12,7 @@ import { useScope } from "@/lib/scope-context"
 import type { Opportunity, FunderType, MatchStrength, Match } from "@/lib/types"
 import { OpportunityPeekPanel } from "./OpportunityPeekPanel"
 import { FiltersPanel, FUNDER_TYPE_LABELS, AWARD_RANGE_LABELS, DEADLINE_LABELS } from "./FiltersPanel"
+import { IncompleteProfileBanner } from "@/components/IncompleteProfileBanner"
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -606,6 +607,8 @@ function DiscoverPage() {
 
       <div ref={scrollContainerRef} style={{ height: "100%", overflowY: "auto" }}>
         <ContentContainer style={{ padding: "36px 40px 80px" }}>
+
+          <IncompleteProfileBanner />
 
           {/* Page header */}
           <div style={{ marginBottom: 28 }}>
