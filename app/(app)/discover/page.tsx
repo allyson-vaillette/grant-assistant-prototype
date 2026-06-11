@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ContentContainer } from "@/components/layout/content-container"
-import { Search, X, Check, ArrowRight, SlidersHorizontal } from "lucide-react"
+import { Search, X, Check, ArrowRight } from "lucide-react"
 import {
   OPPORTUNITIES, MATCHES, FUNDERS,
   getFunder, getMatchForOpportunity,
@@ -429,7 +429,6 @@ function DiscoverPage() {
   const [awardRangeFilter, setAwardRangeFilter] = useState("")
   const [deadlineFilter, setDeadlineFilter] = useState("")
   const [sortBy, setSortBy] = useState<"match" | "deadline" | "award">("match")
-  const [filterPanelOpen, setFilterPanelOpen] = useState(false)
 
   const browseRef = useRef<HTMLDivElement>(null)
   const lastFocusedRef = useRef<HTMLElement | null>(null)
@@ -562,8 +561,6 @@ function DiscoverPage() {
     awardRangeFilter  ? { key: "award",    label: `Award: ${AWARD_RANGE_LABELS[awardRangeFilter]}`,    onRemove: () => setAwardRangeFilter("") }  : null,
     deadlineFilter    ? { key: "deadline", label: DEADLINE_LABELS[deadlineFilter],                     onRemove: () => setDeadlineFilter("") }    : null,
   ].filter((c): c is NonNullable<typeof c> => c !== null)
-
-  const activeFilterCount = activeChips.length
 
   return (
     <div style={{ height: "100%", position: "relative", overflow: "hidden", backgroundColor: "var(--canvas)" }}>
@@ -759,39 +756,21 @@ function DiscoverPage() {
 
                 {/* Filters + Sort bar */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: activeChips.length > 0 ? 8 : 12 }}>
-                  <button
-                    type="button"
-                    onClick={() => setFilterPanelOpen(v => !v)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 6,
-                      padding: "7px 12px", borderRadius: "var(--radius-input)",
-                      border: "1px solid var(--hair-2)",
-                      backgroundColor: filterPanelOpen ? "var(--canvas)" : "var(--surface)",
-                      fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)",
-                      cursor: "pointer", transition: "background-color 120ms, border-color 120ms",
-                    }}
-                    onMouseEnter={(e) => {
-                      const el = e.currentTarget as HTMLButtonElement
-                      if (!filterPanelOpen) el.style.backgroundColor = "var(--canvas)"
-                    }}
-                    onMouseLeave={(e) => {
-                      const el = e.currentTarget as HTMLButtonElement
-                      if (!filterPanelOpen) el.style.backgroundColor = "var(--surface)"
-                    }}
-                  >
-                    <SlidersHorizontal size={13} style={{ color: "var(--ink-tertiary)" }} />
-                    Filters
-                    {activeFilterCount > 0 && (
-                      <span style={{
-                        display: "inline-flex", alignItems: "center", justifyContent: "center",
-                        minWidth: 18, height: 18, borderRadius: 9, padding: "0 4px",
-                        fontSize: 11, fontWeight: 700,
-                        backgroundColor: "var(--slate-primary)", color: "#fff",
-                      }}>
-                        {activeFilterCount}
-                      </span>
-                    )}
-                  </button>
+                  <FiltersPanel
+                    typeFilter={typeFilter}
+                    focusAreaFilter={focusAreaFilter}
+                    geographyFilter={geographyFilter}
+                    awardRangeFilter={awardRangeFilter}
+                    deadlineFilter={deadlineFilter}
+                    allFocusAreas={ALL_FOCUS_AREAS}
+                    allGeographies={ALL_GEOGRAPHIES}
+                    onTypeChange={setTypeFilter}
+                    onFocusAreaChange={setFocusAreaFilter}
+                    onGeographyChange={setGeographyFilter}
+                    onAwardRangeChange={setAwardRangeFilter}
+                    onDeadlineChange={setDeadlineFilter}
+                    onClearAll={clearFilters}
+                  />
 
                   <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>Sort</span>
@@ -846,23 +825,6 @@ function DiscoverPage() {
                     )}
                   </div>
                 )}
-
-                {/* Filters panel */}
-                <FiltersPanel
-                  open={filterPanelOpen}
-                  typeFilter={typeFilter}
-                  focusAreaFilter={focusAreaFilter}
-                  geographyFilter={geographyFilter}
-                  awardRangeFilter={awardRangeFilter}
-                  deadlineFilter={deadlineFilter}
-                  allFocusAreas={ALL_FOCUS_AREAS}
-                  allGeographies={ALL_GEOGRAPHIES}
-                  onTypeChange={setTypeFilter}
-                  onFocusAreaChange={setFocusAreaFilter}
-                  onGeographyChange={setGeographyFilter}
-                  onAwardRangeChange={setAwardRangeFilter}
-                  onDeadlineChange={setDeadlineFilter}
-                />
 
                 {sorted.length > 0 ? (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
