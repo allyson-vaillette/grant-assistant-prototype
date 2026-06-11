@@ -145,14 +145,14 @@ export function FiltersPanel({
       {open && (
         <div style={{
           position: "absolute", top: "calc(100% + 6px)", left: 0,
-          zIndex: 50, width: 272,
+          zIndex: 50, width: "min(700px, calc(100vw - 80px))",
           backgroundColor: "var(--surface)",
           border: "1px solid var(--hair-2)",
           borderRadius: 12,
           boxShadow: "0 8px 24px rgba(28,24,64,0.12)",
           padding: "16px 16px 12px",
         }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "0 16px" }}>
             <div>
               <FilterLabel>Funder type</FilterLabel>
               <PopoverSelect value={typeFilter} onChange={(v) => onTypeChange(v as FunderType | "")}>
