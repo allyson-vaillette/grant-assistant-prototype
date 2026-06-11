@@ -439,7 +439,7 @@ export default function TrackerPage() {
             value={activeTab}
             onChange={(v) => setActiveTab(v as TrackerTab)}
             options={[
-              { value: "prospecting",  label: "Prospecting",  count: tabCounts.prospecting  },
+              { value: "prospecting",  label: "Researching",  count: tabCounts.prospecting  },
               { value: "applications", label: "Applications", count: tabCounts.applications },
               { value: "awards",       label: "Awards",       count: tabCounts.awards       },
             ]}
