@@ -92,38 +92,6 @@ function MatchDots({ strength }: { strength: MatchStrength }) {
   )
 }
 
-// ── Lens toggle ────────────────────────────────────────────────────────────
-
-function LensToggle({ value, onChange }: {
-  value: "opportunities" | "funders"
-  onChange: (v: "opportunities" | "funders") => void
-}) {
-  return (
-    <div style={{
-      display: "inline-flex", borderRadius: 8,
-      border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
-      padding: 3,
-    }}>
-      {(["opportunities", "funders"] as const).map(l => (
-        <button
-          key={l}
-          type="button"
-          onClick={() => onChange(l)}
-          style={{
-            padding: "5px 16px", borderRadius: 6, border: "none",
-            fontSize: 13, fontWeight: value === l ? 600 : 400,
-            color: value === l ? "var(--ink)" : "var(--ink-tertiary)",
-            backgroundColor: value === l ? "var(--canvas)" : "transparent",
-            cursor: "pointer", transition: "all 120ms",
-          }}
-        >
-          {l === "opportunities" ? "Opportunities" : "Funders"}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 // ── Skeleton card ──────────────────────────────────────────────────────────
 
 function SkeletonMatchCard() {
@@ -419,65 +387,6 @@ function CatalogueCard({ opp, onOppClick, onFunderClick }: {
   )
 }
 
-// ── Funder card ────────────────────────────────────────────────────────────
-
-function FunderCard({ funder, onFunderClick }: {
-  funder: Funder
-  onFunderClick: (funderId: string, el: HTMLElement) => void
-}) {
-  const opps = OPPORTUNITIES.filter(o => o.funderId === funder.id)
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={(e) => onFunderClick(funder.id, e.currentTarget)}
-      onKeyDown={(e) => e.key === "Enter" && onFunderClick(funder.id, e.currentTarget as HTMLElement)}
-      style={{
-        padding: "16px 18px", backgroundColor: "var(--surface)",
-        border: "1px solid var(--hair)", borderRadius: 12,
-        cursor: "pointer", display: "flex", flexDirection: "column", gap: 0,
-        transition: "border-color 150ms, box-shadow 150ms",
-      }}
-      onMouseEnter={(e) => {
-        const el = e.currentTarget as HTMLDivElement
-        el.style.borderColor = "var(--slate-light)"
-        el.style.boxShadow = "var(--lift-2)"
-      }}
-      onMouseLeave={(e) => {
-        const el = e.currentTarget as HTMLDivElement
-        el.style.borderColor = "var(--hair)"
-        el.style.boxShadow = "none"
-      }}
-    >
-      <div style={{ marginBottom: 8 }}>
-        <span style={{
-          display: "inline-block", padding: "2px 8px", borderRadius: 20,
-          fontSize: 11, fontWeight: 500,
-          backgroundColor: "var(--slate-tint)", color: "var(--slate-secondary)",
-        }}>
-          {FUNDER_TYPE_LABELS[funder.type]}
-        </span>
-      </div>
-      <p style={{ margin: "0 0 3px", fontSize: 14, fontWeight: 700, color: "var(--ink)", lineHeight: "20px" }}>
-        {funder.name}
-      </p>
-      <p style={{ margin: "0 0 12px", fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "16px" }}>
-        {funder.geography}
-      </p>
-      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        {funder.fundingRange && (
-          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--slate-primary)" }}>{funder.fundingRange}</span>
-        )}
-        {opps.length > 0 && (
-          <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
-            {opps.length} open {opps.length === 1 ? "grant" : "grants"}
-          </span>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ── Filter select ──────────────────────────────────────────────────────────
 
 function FilterSelect({
@@ -512,10 +421,6 @@ function DiscoverPage() {
   const searchParams = useSearchParams()
   const { scopeLabel } = useScope()
   const [matchesLoaded, setMatchesLoaded] = useState(false)
-
-  // Lens
-  const [lens, setLens] = useState<"opportunities" | "funders">("opportunities")
-  const [funderQuery, setFunderQuery] = useState("")
 
   // Dismiss / hidden
   const [hiddenMatches, setHiddenMatches] = useState<Array<{ matchId: string; reason?: DismissReason }>>([])
@@ -593,14 +498,6 @@ function DiscoverPage() {
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-
-  // Funders lens
-  const filteredFunders = FUNDERS.filter(funder => {
-    if (!funderQuery.trim()) return true
-    const q = funderQuery.toLowerCase()
-    return [funder.name, funder.description ?? "", ...funder.focusAreas, funder.geography]
-      .join(" ").toLowerCase().includes(q)
-  })
 
   // Opportunities lens
   const filtered: Opportunity[] = OPPORTUNITIES.filter((opp) => {
@@ -680,21 +577,14 @@ function DiscoverPage() {
             </p>
           </div>
 
-          {/* Lens toggle */}
-          <div style={{ marginBottom: 24 }}>
-            <LensToggle value={lens} onChange={setLens} />
-          </div>
-
-          {/* ── Opportunities lens ──────────────────────────────────────── */}
-          {lens === "opportunities" && (
-            <>
+          <>
               {/* Matches */}
               <section style={{ marginBottom: 32 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
                   <span className="material-symbols-outlined" style={{ fontSize: 18, color: "var(--slate-primary)", userSelect: "none" }}>
                     auto_fix_high
                   </span>
-                  <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--ink-tertiary)" }}>
+                  <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
                     Matched for {scopeLabel}
                   </h2>
                   {matchesLoaded && visibleMatches.length > 0 && (
@@ -832,7 +722,7 @@ function DiscoverPage() {
               {/* Browse */}
               <section ref={browseRef}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                  <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--ink-tertiary)" }}>
+                  <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
                     Browse
                   </h2>
                   <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
@@ -960,60 +850,6 @@ function DiscoverPage() {
                 )}
               </section>
             </>
-          )}
-
-          {/* ── Funders lens ───────────────────────────────────────────── */}
-          {lens === "funders" && (
-            <section>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--ink-tertiary)" }}>
-                  Funders
-                </h2>
-                <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
-                  {filteredFunders.length} {filteredFunders.length === 1 ? "funder" : "funders"}
-                </span>
-              </div>
-
-              <div style={{
-                display: "flex", alignItems: "center", gap: 8,
-                padding: "8px 12px", borderRadius: "var(--radius-input)",
-                border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
-                marginBottom: 20,
-              }}>
-                <Search size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
-                <input
-                  type="text"
-                  value={funderQuery}
-                  onChange={(e) => setFunderQuery(e.target.value)}
-                  placeholder="Search by name, focus area, or geography"
-                  style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 13, color: "var(--ink)", lineHeight: "17px" }}
-                />
-                {funderQuery && (
-                  <button type="button" onClick={() => setFunderQuery("")}
-                    style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "var(--ink-tertiary)", padding: 0 }}
-                  >
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
-
-              {filteredFunders.length > 0 ? (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-                  {filteredFunders.map(funder => (
-                    <FunderCard
-                      key={funder.id}
-                      funder={funder}
-                      onFunderClick={handleFunderClick}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div style={{ padding: "56px 0", textAlign: "center" }}>
-                  <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>No funders match your search.</p>
-                </div>
-              )}
-            </section>
-          )}
 
         </ContentContainer>
       </div>
