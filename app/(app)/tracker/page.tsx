@@ -12,13 +12,15 @@ import { useScope } from "@/lib/scope-context"
 import type { PipelineOpportunity, PipelineStatus, PipelinePhase } from "@/lib/types"
 import { phaseFromStatus } from "@/lib/types"
 
-// ── Phase config ───────────────────────────────────────────────────────────
+type TrackerTab = "prospecting" | "applications" | "awards"
 
-const PHASES: { phase: PipelinePhase; label: string; alwaysShow: boolean }[] = [
-  { phase: "researching",  label: "Researching",  alwaysShow: true  },
-  { phase: "applications", label: "Applications", alwaysShow: true  },
-  { phase: "awards",       label: "Awards",       alwaysShow: false },
-]
+const TAB_TO_PHASE: Record<TrackerTab, PipelinePhase> = {
+  prospecting:  "researching",
+  applications: "applications",
+  awards:       "awards",
+}
+
+// ── Phase config ───────────────────────────────────────────────────────────
 
 const PHASE_COLOR: Record<PipelinePhase, { bg: string; color: string }> = {
   researching:  { bg: "var(--slate-tint)",     color: "var(--ink-tertiary)" },
@@ -251,7 +253,90 @@ function PursuitCard({
         ) : opp?.deadline ? (
           <span style={{ fontSize: 12, color: "var(--slate-primary)" }}>Due {opp.deadline}</span>
         ) : null}
+        {pip.status === "awarded-active" && (
+          <span style={{ fontSize: 12, color: "var(--evergreen)", fontWeight: 500 }}>Awaiting disbursement</span>
+        )}
       </div>
+
+      {pip.status === "researching" && (
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--hair)" }}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onStatusChange(pip.id, "application-in-progress")
+            }}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              padding: "5px 12px", borderRadius: 8,
+              backgroundColor: "var(--slate-tint)", border: "none",
+              fontSize: 12, fontWeight: 600, color: "var(--slate-primary)",
+              cursor: "pointer", transition: "background-color 120ms",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-light)" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-tint)" }}
+          >
+            Start applying
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Segmented control ──────────────────────────────────────────────────────
+
+function SegmentedControl({
+  value,
+  onChange,
+  options,
+}: {
+  value: string
+  onChange: (v: string) => void
+  options: { value: string; label: string; count: number }[]
+}) {
+  return (
+    <div style={{
+      display: "inline-flex",
+      gap: 2,
+      backgroundColor: "var(--surface-sunk)",
+      border: "1px solid var(--hair-2)",
+      borderRadius: 10,
+      padding: 3,
+    }}>
+      {options.map(opt => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onChange(opt.value)}
+          style={{
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "5px 12px",
+            borderRadius: 7,
+            border: "none",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: "pointer",
+            transition: "background-color 120ms, color 120ms, box-shadow 120ms",
+            backgroundColor: value === opt.value ? "var(--surface)" : "transparent",
+            color: value === opt.value ? "var(--ink)" : "var(--ink-tertiary)",
+            boxShadow: value === opt.value ? "0 1px 3px rgba(28,24,64,0.08)" : "none",
+          }}
+        >
+          {opt.label}
+          <span style={{
+            fontSize: 11,
+            fontWeight: 500,
+            color: value === opt.value ? "var(--ink-secondary)" : "var(--ink-tertiary)",
+            backgroundColor: value === opt.value ? "var(--slate-tint)" : "var(--hair)",
+            borderRadius: 10,
+            padding: "1px 6px",
+            lineHeight: "14px",
+          }}>
+            {opt.count}
+          </span>
+        </button>
+      ))}
     </div>
   )
 }
@@ -261,6 +346,7 @@ function PursuitCard({
 export default function TrackerPage() {
   const { scopeLabel, selectedProjectId } = useScope()
   const [pipelines, setPipelines] = useState(() => [...PIPELINE_OPPORTUNITIES])
+  const [activeTab, setActiveTab] = useState<TrackerTab>("applications")
 
   function handleStatusChange(id: string, status: PipelineStatus) {
     setPipelines(prev =>
@@ -273,6 +359,8 @@ export default function TrackerPage() {
         return next
       })
     )
+    // Automatically switch to Applications tab when "Start applying" is triggered
+    if (status === "application-in-progress") setActiveTab("applications")
   }
 
   const scopedPipelines = selectedProjectId
@@ -280,6 +368,14 @@ export default function TrackerPage() {
     : pipelines
 
   const stats = pipelineStats(scopedPipelines)
+
+  const tabCounts = {
+    prospecting:  scopedPipelines.filter(p => phaseFromStatus(p.status) === "researching").length,
+    applications: scopedPipelines.filter(p => phaseFromStatus(p.status) === "applications").length,
+    awards:       scopedPipelines.filter(p => phaseFromStatus(p.status) === "awards").length,
+  }
+
+  const activeItems = scopedPipelines.filter(p => phaseFromStatus(p.status) === TAB_TO_PHASE[activeTab])
 
   return (
     <div style={{ flex: 1, overflowY: "auto", backgroundColor: "var(--canvas)" }}>
@@ -337,46 +433,51 @@ export default function TrackerPage() {
           ))}
         </div>
 
-        {/* Pipeline grouped by phase */}
-        {PHASES.map(({ phase, label, alwaysShow }) => {
-          const items = scopedPipelines.filter(p => phaseFromStatus(p.status) === phase)
-          if (!alwaysShow && items.length === 0) return null
-          return (
-            <section key={phase} style={{ marginBottom: 20 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <span style={{
-                  fontSize: 11, fontWeight: 600,
-                  color: "var(--ink-tertiary)",
-                }}>
-                  {label}
-                </span>
-                <div style={{ flex: 1, height: 1, backgroundColor: "var(--hair)" }} />
-                <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>{items.length}</span>
-              </div>
+        {/* Segmented control */}
+        <div style={{ marginBottom: 20 }}>
+          <SegmentedControl
+            value={activeTab}
+            onChange={(v) => setActiveTab(v as TrackerTab)}
+            options={[
+              { value: "prospecting",  label: "Prospecting",  count: tabCounts.prospecting  },
+              { value: "applications", label: "Applications", count: tabCounts.applications },
+              { value: "awards",       label: "Awards",       count: tabCounts.awards       },
+            ]}
+          />
+        </div>
 
-              {items.length === 0 ? (
-                <div style={{
-                  backgroundColor: "var(--surface-sunk)", border: "1px dashed var(--hair-2)",
-                  borderRadius: 12, padding: "20px 24px",
-                  textAlign: "center",
-                }}>
-                  <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>
-                    No pursuits here yet.{" "}
-                    <Link href="/discover" style={{ color: "var(--slate-secondary)", textDecoration: "none", fontWeight: 500 }}>
-                      Discover opportunities →
-                    </Link>
-                  </p>
-                </div>
+        {/* Active tab items */}
+        {activeItems.length === 0 ? (
+          <div style={{
+            backgroundColor: "var(--surface-sunk)", border: "1px dashed var(--hair-2)",
+            borderRadius: 12, padding: "32px 24px",
+            textAlign: "center",
+          }}>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>
+              {activeTab === "prospecting" ? (
+                <>No pursuits being researched.{" "}
+                  <Link href="/discover" style={{ color: "var(--slate-secondary)", textDecoration: "none", fontWeight: 500 }}>
+                    Discover opportunities →
+                  </Link>
+                </>
+              ) : activeTab === "applications" ? (
+                <>No active applications.{" "}
+                  <Link href="/discover" style={{ color: "var(--slate-secondary)", textDecoration: "none", fontWeight: 500 }}>
+                    Discover opportunities →
+                  </Link>
+                </>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {items.map(pip => (
-                    <PursuitCard key={pip.id} pip={pip} onStatusChange={handleStatusChange} />
-                  ))}
-                </div>
+                "No awards yet."
               )}
-            </section>
-          )
-        })}
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {activeItems.map(pip => (
+              <PursuitCard key={pip.id} pip={pip} onStatusChange={handleStatusChange} />
+            ))}
+          </div>
+        )}
       </ContentContainer>
     </div>
   )
