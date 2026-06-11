@@ -352,18 +352,19 @@ function AttachmentFileIcon({ fileType }: { fileType: string }) {
 
 type UploadStatus = "idle" | "uploading" | "error"
 
-function DocumentsTab({ initialAttachments, pipId, onAppAttachmentIdsChange, frozenSubmission }: {
+function DocumentsTab({ initialAttachments, pipId, onAppAttachmentIdsChange, frozenSubmission, urlSources, onUrlAdd }: {
   initialAttachments: Attachment[]
   pipId: string
   onAppAttachmentIdsChange?: (ids: string[]) => void
   frozenSubmission?: { artifactName: string; submittedAt: string; attachmentIds: string[] } | null
+  urlSources: { id: string; url: string }[]
+  onUrlAdd: (entry: { id: string; url: string }) => void
 }) {
   const [atts,       setAtts]       = useState<Attachment[]>(initialAttachments)
   const [srcStatus,  setSrcStatus]  = useState<UploadStatus>("idle")
   const [appStatus,  setAppStatus]  = useState<UploadStatus>("idle")
   const [srcLibOpen, setSrcLibOpen] = useState(false)
   const [appLibOpen, setAppLibOpen] = useState(false)
-  const [urlSources, setUrlSources] = useState<{ id: string; url: string }[]>([])
   const [addingUrl,  setAddingUrl]  = useState(false)
   const [newUrl,     setNewUrl]     = useState("")
   const srcInputRef = useRef<HTMLInputElement>(null)
@@ -411,7 +412,7 @@ function DocumentsTab({ initialAttachments, pipId, onAppAttachmentIdsChange, fro
     const raw = newUrl.trim()
     if (!raw) return
     const url = raw.startsWith("http://") || raw.startsWith("https://") ? raw : `https://${raw}`
-    setUrlSources(prev => [...prev, { id: `url-${Math.random().toString(36).slice(2)}`, url }])
+    onUrlAdd({ id: `url-${Math.random().toString(36).slice(2)}`, url })
     setNewUrl("")
     setAddingUrl(false)
   }
@@ -851,6 +852,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
   })
   const [renamingArtifactId, setRenamingArtifactId] = useState<string | null>(null)
   const [renameText,         setRenameText]         = useState("")
+  const [urlSources,         setUrlSources]         = useState<{ id: string; url: string }[]>([])
 
   useEffect(() => {
     if (!draftPickerOpen) return
@@ -1561,6 +1563,8 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
                 pipId={pip.id}
                 onAppAttachmentIdsChange={(ids) => { appAttachmentIdsRef.current = ids }}
                 frozenSubmission={frozenSubmission}
+                urlSources={urlSources}
+                onUrlAdd={entry => setUrlSources(prev => [...prev, entry])}
               />
             )}
 
@@ -1712,14 +1716,22 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
         {/* Center: draft editor */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--surface)", borderRight: "1px solid var(--hair)" }}>
           {selectedArtifactId && (
-            <ArtifactEditorContent params={{ id: params.id, artifactId: selectedArtifactId }} mode="center" />
+            <ArtifactEditorContent
+              params={{ id: params.id, artifactId: selectedArtifactId }}
+              mode="center"
+              onAddUrlSource={url => setUrlSources(prev => [...prev, { id: `url-${Date.now().toString(36)}`, url }])}
+            />
           )}
         </div>
 
         {/* Right rail: AI assistant */}
         <div style={{ width: 280, flexShrink: 0, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--canvas)", borderLeft: "1px solid var(--hair)" }}>
           {selectedArtifactId ? (
-            <ArtifactEditorContent params={{ id: params.id, artifactId: selectedArtifactId }} mode="right-rail" />
+            <ArtifactEditorContent
+              params={{ id: params.id, artifactId: selectedArtifactId }}
+              mode="right-rail"
+              onAddUrlSource={url => setUrlSources(prev => [...prev, { id: `url-${Date.now().toString(36)}`, url }])}
+            />
           ) : (
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
               <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", textAlign: "center" }}>Select a draft to enable AI assistant.</p>

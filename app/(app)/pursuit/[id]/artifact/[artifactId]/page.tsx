@@ -12,7 +12,7 @@ import {
   List, BarChart2,
   CheckCircle, AlertTriangle, Circle,
   Search, Upload, FileText, Paperclip,
-  Send, Copy,
+  Send, Copy, Link as LinkIcon,
 } from "lucide-react"
 import {
   FUNDERS, OPPORTUNITIES, ORG, USER, TEAMMATES,
@@ -155,9 +155,11 @@ function mockAIChatReply(userMessage: string, sectionTitle?: string): string {
 export function ArtifactEditorContent({
   params,
   mode = "standalone",
+  onAddUrlSource,
 }: {
   params: { id: string; artifactId: string }
   mode?: "standalone" | "center" | "right-rail"
+  onAddUrlSource?: (url: string) => void
 }) {
   const pip             = getPipelineForOpportunity(params.id)
   const artifact        = getArtifact(params.artifactId)
@@ -172,7 +174,7 @@ export function ArtifactEditorContent({
 
   // ── On-ramp state ────────────────────────────────────────────────────
   const [onrampStep,         setOnrampStep]         = useState<OnrampStep>("source")
-  const [selectedSource,     setSelectedSource]     = useState<"existing" | "upload" | "none" | null>(null)
+  const [selectedSource,     setSelectedSource]     = useState<"existing" | "upload" | "none" | "url" | null>(null)
   const [draftReqs,          setDraftReqs]          = useState<Requirement[]>([])
   const [editingReqId,         setEditingReqId]         = useState<string | null>(null)
   const [editingReqText,       setEditingReqText]       = useState("")
@@ -180,6 +182,8 @@ export function ArtifactEditorContent({
   const [editingCharLimit,     setEditingCharLimit]     = useState("")
   const [editingAttachmentNote, setEditingAttachmentNote] = useState("")
   const [selectedContextIds,   setSelectedContextIds]   = useState<Set<string>>(new Set(["att-2"]))
+  const [showOnrampUrlInput,   setShowOnrampUrlInput]   = useState(false)
+  const [onrampUrlInput,       setOnrampUrlInput]       = useState("")
 
   // ── Working state: document ──────────────────────────────────────────
   const [requirements,  setRequirements]  = useState<Requirement[]>(existingSession?.requirements ?? [])
@@ -359,6 +363,18 @@ export function ArtifactEditorContent({
       else next.add(attachmentId)
       return next
     })
+  }
+
+  function handleOnrampUrlConfirm() {
+    const raw = onrampUrlInput.trim()
+    if (!raw) return
+    const url = raw.startsWith("http://") || raw.startsWith("https://") ? raw : `https://${raw}`
+    onAddUrlSource?.(url)
+    setSelectedSource("url")
+    setDraftReqs([])
+    setOnrampStep("requirements")
+    setOnrampUrlInput("")
+    setShowOnrampUrlInput(false)
   }
 
   async function handleGenerateDraft() {
@@ -922,6 +938,103 @@ export function ArtifactEditorContent({
                     <ChevronRight size={16} />
                   </div>
                 </button>
+
+                {/* Option 4 — Add a URL */}
+                {!showOnrampUrlInput ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowOnrampUrlInput(true)}
+                    style={{
+                      width: "100%", padding: "16px 20px", borderRadius: "var(--radius-card)",
+                      border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
+                      textAlign: "left", cursor: "pointer",
+                      display: "flex", alignItems: "flex-start", gap: 14,
+                      transition: "background-color 120ms",
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--canvas)")}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = "var(--surface)")}
+                  >
+                    <div style={{
+                      width: 36, height: 36, borderRadius: "var(--radius-button)",
+                      backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)",
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    }}>
+                      <LinkIcon size={16} color="var(--ink-tertiary)" />
+                    </div>
+                    <div>
+                      <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
+                        Add a URL
+                      </p>
+                      <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)" }}>
+                        Funder page, online RFP, or your organization&rsquo;s website
+                      </p>
+                    </div>
+                    <div style={{ marginLeft: "auto", flexShrink: 0, color: "var(--ink-tertiary)" }}>
+                      <ChevronRight size={16} />
+                    </div>
+                  </button>
+                ) : (
+                  <div style={{
+                    width: "100%", padding: "14px 20px", borderRadius: "var(--radius-card)",
+                    border: "1px solid var(--slate-soft)", backgroundColor: "var(--slate-tint)",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                      <div style={{
+                        width: 28, height: 28, borderRadius: "var(--radius-button)",
+                        backgroundColor: "var(--slate-primary)",
+                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      }}>
+                        <LinkIcon size={14} color="#fff" />
+                      </div>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Add a URL</p>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <input
+                        autoFocus
+                        type="url"
+                        placeholder="https://…"
+                        value={onrampUrlInput}
+                        onChange={e => setOnrampUrlInput(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") handleOnrampUrlConfirm()
+                          if (e.key === "Escape") { setShowOnrampUrlInput(false); setOnrampUrlInput("") }
+                        }}
+                        style={{
+                          flex: 1, padding: "6px 10px", borderRadius: "var(--radius-button)",
+                          border: "1px solid var(--slate-soft)", fontSize: 12,
+                          backgroundColor: "var(--surface)", color: "var(--ink)",
+                          outline: "none",
+                        }}
+                      />
+                      <button
+                        type="button"
+                        disabled={!onrampUrlInput.trim()}
+                        onClick={handleOnrampUrlConfirm}
+                        style={{
+                          padding: "6px 14px", borderRadius: "var(--radius-button)", border: "none",
+                          backgroundColor: onrampUrlInput.trim() ? "var(--slate-primary)" : "var(--hair-2)",
+                          color: onrampUrlInput.trim() ? "#fff" : "var(--ink-tertiary)",
+                          fontSize: 12, fontWeight: 600,
+                          cursor: onrampUrlInput.trim() ? "pointer" : "default", flexShrink: 0,
+                        }}
+                      >
+                        Add
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowOnrampUrlInput(false); setOnrampUrlInput("") }}
+                        style={{
+                          padding: "6px 8px", borderRadius: "var(--radius-button)",
+                          border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+                          color: "var(--ink-secondary)", cursor: "pointer", flexShrink: 0,
+                          display: "flex", alignItems: "center",
+                        }}
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -963,7 +1076,7 @@ export function ArtifactEditorContent({
                   Review requirements
                 </h1>
                 <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)", lineHeight: "19px" }}>
-                  {selectedSource === "none"
+                  {selectedSource === "none" || selectedSource === "url"
                     ? "Add the sections and constraints the funder requires."
                     : "Extracted from the RFP. Edit, add, or remove before generating."}
                 </p>
