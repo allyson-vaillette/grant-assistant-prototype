@@ -9,6 +9,7 @@ import {
   FUNDERS, OPPORTUNITIES, USER, TEAMMATES,
   getArtifactsForPipeline, getAttachmentsForPipeline, getTasksForPipeline,
   getPipelineForOpportunity, createArtifact, getWritingSession, submitPursuitApplication,
+  updatePipelineStatus,
 } from "@/lib/mock-data"
 import type { PipelineStatus, PipelinePhase, ArtifactStage, AttachmentCategory, Attachment, Task, Requirement, DraftSection, Artifact } from "@/lib/types"
 import { phaseFromStatus } from "@/lib/types"
@@ -888,6 +889,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
     if (s === "application-submitted" && !submittedAt) {
       setSubmittedAt(todayStr())
     }
+    updatePipelineStatus(pip!.id, s)
   }
 
   function handleSubmitClick() {

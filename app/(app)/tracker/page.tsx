@@ -6,7 +6,7 @@ import { ContentContainer } from "@/components/layout/content-container"
 import { useRouter } from "next/navigation"
 import { Telescope, ChevronDown } from "lucide-react"
 import {
-  FUNDERS, OPPORTUNITIES, PIPELINE_OPPORTUNITIES,
+  FUNDERS, OPPORTUNITIES, PIPELINE_OPPORTUNITIES, updatePipelineStatus,
 } from "@/lib/mock-data"
 import { useScope } from "@/lib/scope-context"
 import type { PipelineOpportunity, PipelineStatus, PipelinePhase } from "@/lib/types"
@@ -359,7 +359,7 @@ export default function TrackerPage() {
         return next
       })
     )
-    // Automatically switch to Applications tab when "Start applying" is triggered
+    updatePipelineStatus(id, status)
     if (status === "application-in-progress") setActiveTab("applications")
   }
 

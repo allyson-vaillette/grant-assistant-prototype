@@ -1,6 +1,6 @@
 import type {
   Account, Organization, User, Membership, Project,
-  Funder, Opportunity, PipelineOpportunity,
+  Funder, Opportunity, PipelineOpportunity, PipelineStatus,
   Artifact, Attachment, Task, Match,
   WritingSession, Snippet, CommentThread, RecentGrant,
 } from "./types"
@@ -853,6 +853,15 @@ export const COMMENT_THREADS: CommentThread[] = [
 
 export function getCommentThreadsForArtifact(artifactId: string): CommentThread[] {
   return COMMENT_THREADS.filter((t) => t.artifactId === artifactId)
+}
+
+export function updatePipelineStatus(pipId: string, status: PipelineStatus): void {
+  const pip = PIPELINE_OPPORTUNITIES.find(p => p.id === pipId)
+  if (!pip) return
+  pip.status = status
+  if (status === "application-submitted" && !pip.submittedAt) {
+    pip.submittedAt = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+  }
 }
 
 export function submitPursuitApplication(

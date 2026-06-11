@@ -81,8 +81,8 @@ function buildFeed(scopedPipelineIds: Set<string>): FeedItem[] {
   TASKS
     .filter(t => !t.completed && t.assigneeId === USER.id)
     .forEach(t => {
-      if (!scopedPipelineIds.has(t.pipelineOpportunityId)) return
-      const pip = PIPELINE_OPPORTUNITIES.find(p => p.id === t.pipelineOpportunityId)
+      if (t.pipelineOpportunityId && !scopedPipelineIds.has(t.pipelineOpportunityId)) return
+      const pip = t.pipelineOpportunityId ? PIPELINE_OPPORTUNITIES.find(p => p.id === t.pipelineOpportunityId) : undefined
       const funder = pip ? getFunder(pip.funderId) : undefined
       const d = t.dueDate ? parseDate(t.dueDate) : null
       if (d) d.setHours(0, 0, 0, 0)
@@ -103,7 +103,7 @@ function buildFeed(scopedPipelineIds: Set<string>): FeedItem[] {
   TASKS
     .filter(t => !t.completed && !!t.assigneeId && t.assigneeId !== USER.id)
     .forEach(t => {
-      if (!scopedPipelineIds.has(t.pipelineOpportunityId)) return
+      if (t.pipelineOpportunityId && !scopedPipelineIds.has(t.pipelineOpportunityId)) return
       const teammate = getTeammate(t.assigneeId!)
       if (!teammate) return
       const pip = PIPELINE_OPPORTUNITIES.find(p => p.id === t.pipelineOpportunityId)
@@ -791,6 +791,12 @@ export default function HomePage() {
   function nudge(name: string) { showToast(`Reminder sent to ${name}`) }
 
   function handleAddTask(title: string) {
+    TASKS.push({
+      id: `task-home-${Date.now()}`,
+      title,
+      assigneeId: USER.id,
+      completed: false,
+    })
     setShowAddTask(false)
     showToast(`Task "${title}" added`)
   }

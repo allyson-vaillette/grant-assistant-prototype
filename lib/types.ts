@@ -158,7 +158,7 @@ export interface Attachment {
 
 export interface Task {
   id: string
-  pipelineOpportunityId: string
+  pipelineOpportunityId?: string
   title: string
   assigneeId?: string
   dueDate?: string
