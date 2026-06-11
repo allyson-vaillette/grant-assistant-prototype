@@ -853,6 +853,11 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
   const [renamingArtifactId, setRenamingArtifactId] = useState<string | null>(null)
   const [renameText,         setRenameText]         = useState("")
   const [urlSources,         setUrlSources]         = useState<{ id: string; url: string }[]>([])
+  const [seededOnramp, setSeededOnramp] = useState<{
+    requirements: Requirement[]; sections: DraftSection[]
+  } | null>(null)
+
+  useEffect(() => { setSeededOnramp(null) }, [selectedArtifactId])
 
   useEffect(() => {
     if (!draftPickerOpen) return
@@ -957,8 +962,9 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
   const openTasks      = tasks.filter(t => !t.completed)
   const doneTasks      = tasks.filter(t => t.completed)
   const selectedArtifact = artifacts.find(a => a.id === selectedArtifactId) ?? null
-  const writingSession = selectedArtifact ? getWritingSession(selectedArtifact.id) : null
-  const allReqs        = [...(writingSession?.requirements ?? []), ...localUserReqs]
+  const writingSession   = selectedArtifact ? getWritingSession(selectedArtifact.id) : null
+  const effectiveSections = writingSession?.sections ?? seededOnramp?.sections ?? []
+  const allReqs           = [...(writingSession?.requirements ?? seededOnramp?.requirements ?? []), ...localUserReqs]
   const ALL_USERS      = [USER, ...TEAMMATES]
   const currentPhase   = phaseFromStatus(currentStatus)
   const _phaseCfg      = PHASE_COLOR[currentPhase]
@@ -1346,7 +1352,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
                         </p>
                       )}
                       {allReqs.map((req, idx) => {
-                        const section = writingSession?.sections.find(s => s.requirementId === req.id)
+                        const section = effectiveSections.find(s => s.requirementId === req.id)
                         const status  = section ? sectionCompliance(section, req) : "uncovered"
                         return (
                           <div
@@ -1511,7 +1517,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
                         No requirements to audit yet.
                       </p>
                     ) : allReqs.map(req => {
-                      const section = writingSession?.sections.find(s => s.requirementId === req.id)
+                      const section = effectiveSections.find(s => s.requirementId === req.id)
                       const status  = section ? sectionCompliance(section, req) : "uncovered"
                       const words   = section ? countWords(section.content) : 0
                       const chars   = section ? countChars(section.content) : 0
@@ -1720,6 +1726,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
               params={{ id: params.id, artifactId: selectedArtifactId }}
               mode="center"
               onAddUrlSource={url => setUrlSources(prev => [...prev, { id: `url-${Date.now().toString(36)}`, url }])}
+              onOnrampComplete={(reqs, secs) => setSeededOnramp({ requirements: reqs, sections: secs })}
             />
           )}
         </div>
@@ -1731,6 +1738,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
               params={{ id: params.id, artifactId: selectedArtifactId }}
               mode="right-rail"
               onAddUrlSource={url => setUrlSources(prev => [...prev, { id: `url-${Date.now().toString(36)}`, url }])}
+              onrampCompleted={!!seededOnramp}
             />
           ) : (
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>

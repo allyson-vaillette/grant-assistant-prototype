@@ -156,10 +156,14 @@ export function ArtifactEditorContent({
   params,
   mode = "standalone",
   onAddUrlSource,
+  onOnrampComplete,
+  onrampCompleted = false,
 }: {
   params: { id: string; artifactId: string }
   mode?: "standalone" | "center" | "right-rail"
   onAddUrlSource?: (url: string) => void
+  onOnrampComplete?: (requirements: Requirement[], sections: DraftSection[]) => void
+  onrampCompleted?: boolean
 }) {
   const pip             = getPipelineForOpportunity(params.id)
   const artifact        = getArtifact(params.artifactId)
@@ -381,7 +385,10 @@ export function ArtifactEditorContent({
     if (editingReqId) handleSaveReqEdit()
     setOnrampStep("generating")
     await new Promise(r => setTimeout(r, 3000))
-    const finalReqs = draftReqs.filter(r => r.text.trim())
+    const reqSource: Requirement["source"] = selectedSource === "none" ? "user-entered" : "rfp-extracted"
+    const finalReqs = draftReqs
+      .filter(r => r.text.trim())
+      .map(r => ({ ...r, source: r.source ?? reqSource }))
     const newSections: DraftSection[] = finalReqs.map(req => ({
       id:            `sec-${req.id}`,
       requirementId: req.id,
@@ -391,6 +398,7 @@ export function ArtifactEditorContent({
     setRequirements(finalReqs)
     setSections(newSections)
     setView("working")
+    onOnrampComplete?.(finalReqs, newSections)
   }
 
   // ── Working state: document handlers ─────────────────────────────────
@@ -680,6 +688,10 @@ export function ArtifactEditorContent({
 
   const stageCfg = STAGE_BADGE[artifact.stage]
 
+  // When the outer page signals that onramp has completed (e.g. in the right-rail
+  // instance which never ran the wizard itself), treat this component as working.
+  const effectiveView = (onrampCompleted && view === "onramp") ? "working" : view
+
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────────────────────────────────
@@ -767,13 +779,13 @@ export function ArtifactEditorContent({
 
       {/* ══ CONTENT ══════════════════════════════════════════════════════════ */}
 
-      {view === "onramp" && mode === "right-rail" ? (
+      {effectiveView === "onramp" && mode === "right-rail" ? (
         <div style={{ flex: 1, backgroundColor: "var(--surface)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
             <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", textAlign: "center", lineHeight: "18px" }}>AI assistant will be ready after draft setup.</p>
           </div>
         </div>
-      ) : view === "onramp" ? (
+      ) : effectiveView === "onramp" ? (
 
         // ── ON-RAMP WIZARD ──────────────────────────────────────────────────
         <div
