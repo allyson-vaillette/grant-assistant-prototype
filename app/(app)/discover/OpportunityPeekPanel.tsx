@@ -19,6 +19,19 @@ const FUNDER_TYPE_LABELS: Record<FunderType, string> = {
   public_charity:       "Public charity",
 }
 
+function formatCurrency(amount: number): string {
+  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`
+  if (amount >= 1_000) return `$${Math.round(amount / 1_000)}K`
+  return `$${amount}`
+}
+
+function getTypicalAwardRange(grants: Array<{ grantee: string; year: number; amount: number }>): string {
+  const amounts = grants.map(g => g.amount)
+  const min = Math.min(...amounts)
+  const max = Math.max(...amounts)
+  return min === max ? formatCurrency(min) : `${formatCurrency(min)} to ${formatCurrency(max)}`
+}
+
 const MATCH_CONFIG: Record<MatchStrength, { label: string; color: string; dots: number }> = {
   strong:  { label: "Strong match",  color: "var(--evergreen)",     dots: 5 },
   good:    { label: "Good match",    color: "var(--slate-primary)", dots: 4 },
@@ -52,6 +65,7 @@ export function OpportunityPeekPanel({ oppId, onClose, onFunderClick }: Props) {
   const [visible, setVisible] = useState(false)
   const [localTracked, setLocalTracked] = useState(false)
   const [trackPhase, setTrackPhase] = useState<"idle" | "loading">("idle")
+  const [descExpanded, setDescExpanded] = useState(false)
 
   const opp = OPPORTUNITIES.find(o => o.id === oppId)
   const funder = opp ? FUNDERS.find(f => f.id === opp.funderId) : null
@@ -74,6 +88,7 @@ export function OpportunityPeekPanel({ oppId, onClose, onFunderClick }: Props) {
   useEffect(() => {
     setLocalTracked(false)
     setTrackPhase("idle")
+    setDescExpanded(false)
   }, [oppId])
 
   // Escape to close
@@ -266,6 +281,137 @@ export function OpportunityPeekPanel({ oppId, onClose, onFunderClick }: Props) {
             </div>
           )}
 
+          {/* Funder */}
+          <div style={{ marginBottom: 20, paddingTop: 20, borderTop: "1px solid var(--hair)" }}>
+            <h3 style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>Funder</h3>
+
+            {/* Identity */}
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
+              <div>
+                <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 700, color: "var(--ink)", lineHeight: "20px" }}>{funder.name}</p>
+                <p style={{ margin: 0, fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px" }}>
+                  {FUNDER_TYPE_LABELS[funder.type]}{funder.location ? ` · ${funder.location}` : ""}
+                </p>
+                {funder.ein && (
+                  <p style={{ margin: "3px 0 0", fontSize: 11, color: "var(--ink-tertiary)" }}>EIN {funder.ein}</p>
+                )}
+              </div>
+              {funder.website && (
+                <a
+                  href={funder.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "var(--ink-tertiary)", display: "flex", alignItems: "center", flexShrink: 0, padding: "2px 0" }}
+                  aria-label={`Visit ${funder.name} website`}
+                >
+                  <ExternalLink size={13} />
+                </a>
+              )}
+            </div>
+
+            {/* Profile */}
+            {funder.description && (
+              <div style={{ marginBottom: 14 }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 12,
+                    color: "var(--ink-secondary)",
+                    lineHeight: "18px",
+                    ...(descExpanded ? {} : {
+                      overflow: "hidden",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical" as any,
+                    }),
+                  }}
+                >
+                  {funder.description}
+                </p>
+                {funder.description.length > 100 && (
+                  <button
+                    type="button"
+                    onClick={() => setDescExpanded(v => !v)}
+                    style={{
+                      background: "none", border: "none", padding: "4px 0 0",
+                      fontSize: 11, fontWeight: 500, color: "var(--slate-secondary)", cursor: "pointer",
+                    }}
+                  >
+                    {descExpanded ? "Show less" : "Show more"}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* What they fund */}
+            {!!(funder.programAreas?.length || funder.orgTypesFunded?.length || funder.locationsFunded?.length) && (
+              <div style={{ marginBottom: 14 }}>
+                <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: "var(--ink)" }}>What they fund</p>
+                {!!funder.programAreas?.length && (
+                  <div style={{ marginBottom: 10 }}>
+                    <p style={{ margin: "0 0 5px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Program areas</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                      {funder.programAreas.map((area, i) => (
+                        <span key={i} style={{
+                          padding: "2px 8px", borderRadius: 20,
+                          fontSize: 11, fontWeight: 500,
+                          backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)",
+                          color: "var(--ink-secondary)",
+                        }}>{area}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {!!funder.orgTypesFunded?.length && (
+                  <div style={{ marginBottom: 10 }}>
+                    <p style={{ margin: "0 0 5px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Organizations funded</p>
+                    <ul style={{ margin: 0, padding: "0 0 0 14px", display: "flex", flexDirection: "column", gap: 3 }}>
+                      {funder.orgTypesFunded.map((orgType, i) => (
+                        <li key={i} style={{ fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px" }}>{orgType}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {!!funder.locationsFunded?.length && (
+                  <div>
+                    <p style={{ margin: "0 0 5px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Locations funded</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                      {funder.locationsFunded.map((loc, i) => (
+                        <span key={i} style={{
+                          padding: "2px 8px", borderRadius: 20,
+                          fontSize: 11, fontWeight: 500,
+                          backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)",
+                          color: "var(--ink-secondary)",
+                        }}>{loc}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Track record */}
+            {!!funder.recentGrants?.length && (
+              <div>
+                <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: "var(--ink)" }}>Track record</p>
+                <p style={{ margin: "0 0 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Recent grants</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 10 }}>
+                  {funder.recentGrants.slice(0, 3).map((grant, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: "var(--ink-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{grant.grantee}</span>
+                      <span style={{ flexShrink: 0, fontSize: 11, color: "var(--ink-tertiary)" }}>{grant.year}</span>
+                      <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 600, color: "var(--ink)", minWidth: 52, textAlign: "right" }}>{formatCurrency(grant.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                  <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>Typical award</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)" }}>{getTypicalAwardRange(funder.recentGrants.slice(0, 3))}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Eligibility */}
           {opp.eligibility && (
             <div style={{ marginBottom: 20, padding: "12px 14px", borderRadius: 10, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)" }}>
@@ -273,14 +419,6 @@ export function OpportunityPeekPanel({ oppId, onClose, onFunderClick }: Props) {
                 Eligibility requirements
               </p>
               <p style={{ margin: 0, fontSize: 12, color: "var(--ink-secondary)", lineHeight: "18px" }}>{opp.eligibility}</p>
-            </div>
-          )}
-
-          {/* About funder */}
-          {funder.description && (
-            <div style={{ marginBottom: 24 }}>
-              <h3 style={{ margin: "0 0 7px", fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>About {funder.name}</h3>
-              <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "19px" }}>{funder.description}</p>
             </div>
           )}
         </div>

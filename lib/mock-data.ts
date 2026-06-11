@@ -2,7 +2,7 @@ import type {
   Account, Organization, User, Membership, Project,
   Funder, Opportunity, PipelineOpportunity,
   Artifact, Attachment, Task, Match,
-  WritingSession, Snippet, CommentThread,
+  WritingSession, Snippet, CommentThread, RecentGrant,
 } from "./types"
 
 // ── Account & Org ─────────────────────────────────────────────────────────
@@ -88,10 +88,20 @@ export const FUNDERS: Funder[] = [
     website: "https://petcolove.org",
     focusAreas: ["Animal Welfare", "Pet Adoption", "Community Programs"],
     geography: "National (U.S.)",
+    location: "San Diego, CA",
+    ein: "33-0845930",
     fundingRange: "$5,000 – $50,000",
     description:
       "Petco Love invests in organizations working to create communities where no pet is unnecessarily euthanized. They fund shelters, rescues, and organizations that reduce pet overpopulation, increase adoptions, and support spay/neuter programs.",
     acceptsUnsolicited: true,
+    programAreas: ["Animal Welfare", "Pet Adoption", "Shelter Support", "Spay/Neuter", "Community Cat Programs"],
+    orgTypesFunded: ["Animal Shelters", "Rescue Organizations", "Spay/Neuter Clinics", "Community Animal Programs"],
+    locationsFunded: ["United States"],
+    recentGrants: [
+      { grantee: "San Diego Humane Society", year: 2023, amount: 75000 },
+      { grantee: "Austin Pets Alive", year: 2023, amount: 50000 },
+      { grantee: "Nevada Humane Society", year: 2022, amount: 40000 },
+    ],
   },
   {
     id: "funder-aspca",
@@ -100,10 +110,20 @@ export const FUNDERS: Funder[] = [
     website: "https://www.aspca.org/grants",
     focusAreas: ["Animal Welfare", "Shelter Support", "Anti-Cruelty", "Spay/Neuter"],
     geography: "National (U.S.)",
+    location: "New York, NY",
+    ein: "13-1623829",
     fundingRange: "$5,000 – $75,000",
     description:
       "The ASPCA's grantmaking focuses on reducing the number of animals euthanized in shelters and improving the lives of animals at risk. Programs support intake reduction, foster networks, community cat management, and spay/neuter services.",
     acceptsUnsolicited: true,
+    programAreas: ["Shelter Intake Reduction", "Spay/Neuter", "Community Cat Management", "Foster Network Expansion", "Anti-Cruelty Enforcement"],
+    orgTypesFunded: ["Animal Shelters", "Rescue Organizations", "Municipal Animal Control Agencies", "Veterinary Clinics"],
+    locationsFunded: ["United States"],
+    recentGrants: [
+      { grantee: "Humane Rescue Alliance", year: 2023, amount: 65000 },
+      { grantee: "Animal Rescue League of Boston", year: 2023, amount: 50000 },
+      { grantee: "Kentucky Humane Society", year: 2022, amount: 45000 },
+    ],
   },
   {
     id: "funder-maddies",
@@ -112,10 +132,20 @@ export const FUNDERS: Funder[] = [
     website: "https://www.maddiesfund.org",
     focusAreas: ["Animal Welfare", "No-Kill Initiatives", "Shelter Medicine", "Community Programs"],
     geography: "National (U.S.)",
+    location: "Pleasanton, CA",
+    ein: "94-3362163",
     fundingRange: "$25,000 – $200,000",
     description:
       "Maddie's Fund supports the no-kill movement by funding shelters, rescues, and coalitions working to achieve no-kill community status. Grants prioritize collaborative approaches, data-driven programs, and innovative models that improve lifesaving rates.",
     acceptsUnsolicited: false,
+    programAreas: ["No-Kill Community Initiatives", "Shelter Medicine", "Foster Program Expansion", "Data-Driven Lifesaving", "Community Coalitions"],
+    orgTypesFunded: ["Animal Shelters", "Rescue Coalitions", "Veterinary Schools", "Community Organizations"],
+    locationsFunded: ["United States"],
+    recentGrants: [
+      { grantee: "Best Friends Animal Society", year: 2023, amount: 150000 },
+      { grantee: "Oregon Humane Society", year: 2023, amount: 100000 },
+      { grantee: "Pima Animal Care Center", year: 2022, amount: 75000 },
+    ],
   },
   {
     id: "funder-found-animals",
@@ -124,10 +154,20 @@ export const FUNDERS: Funder[] = [
     website: "https://www.foundanimals.org/grants",
     focusAreas: ["Animal Welfare", "Spay/Neuter", "Microchipping", "Pet Retention"],
     geography: "Los Angeles County + Southern California",
+    location: "Los Angeles, CA",
+    ein: "26-2028686",
     fundingRange: "$10,000 – $75,000",
     description:
       "Found Animals Foundation focuses on reducing pet homelessness in Southern California through free and low-cost spay/neuter, microchipping, and community education.",
     acceptsUnsolicited: true,
+    programAreas: ["Spay/Neuter", "Microchipping and ID", "Pet Retention", "Community Education", "Low-Cost Veterinary Services"],
+    orgTypesFunded: ["Animal Shelters", "Community Clinics", "Rescue Organizations", "Veterinary Practices"],
+    locationsFunded: ["Los Angeles County", "Southern California"],
+    recentGrants: [
+      { grantee: "Downtown Dog Rescue", year: 2023, amount: 60000 },
+      { grantee: "L.A. Animal Services", year: 2022, amount: 75000 },
+      { grantee: "Lange Foundation", year: 2022, amount: 35000 },
+    ],
   },
   {
     id: "funder-petsmart",
@@ -136,10 +176,20 @@ export const FUNDERS: Funder[] = [
     website: "https://petsmartcharities.org",
     focusAreas: ["Animal Welfare", "Cat & Kitten Programs", "Spay/Neuter", "Adoption"],
     geography: "National (U.S.) + Canada",
+    location: "Phoenix, AZ",
+    ein: "86-0687979",
     fundingRange: "$10,000 – $100,000",
     description:
       "PetSmart Charities funds organizations working to end pet homelessness through adoption programs, spay/neuter services, and foster networks.",
     acceptsUnsolicited: true,
+    programAreas: ["Cat and Kitten Programs", "Spay/Neuter", "Foster Network Expansion", "Adoption Events", "TNR Programs"],
+    orgTypesFunded: ["Animal Shelters", "Rescue Organizations", "Community Cat Programs", "Foster Networks"],
+    locationsFunded: ["United States", "Canada"],
+    recentGrants: [
+      { grantee: "North Shore Animal League", year: 2023, amount: 90000 },
+      { grantee: "Kitten Lady Foundation", year: 2023, amount: 45000 },
+      { grantee: "Tree House Humane Society", year: 2022, amount: 40000 },
+    ],
   },
 ]
 

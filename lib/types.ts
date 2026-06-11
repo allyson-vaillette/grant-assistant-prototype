@@ -83,6 +83,12 @@ export type FunderType =
   | "corporate_foundation"
   | "public_charity"
 
+export interface RecentGrant {
+  grantee: string
+  year: number
+  amount: number
+}
+
 export interface Funder {
   id: string
   name: string
@@ -90,9 +96,15 @@ export interface Funder {
   website?: string
   focusAreas: string[]
   geography: string
+  location?: string
+  ein?: string
   fundingRange?: string
   description?: string
   acceptsUnsolicited: boolean
+  programAreas?: string[]
+  orgTypesFunded?: string[]
+  locationsFunded?: string[]
+  recentGrants?: RecentGrant[]
 }
 
 export interface Opportunity {
