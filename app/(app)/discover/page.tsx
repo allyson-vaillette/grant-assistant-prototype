@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ContentContainer } from "@/components/layout/content-container"
-import { Search, X, Check, ArrowRight } from "lucide-react"
+import { Search, X, Check, ArrowRight, SlidersHorizontal } from "lucide-react"
 import {
   OPPORTUNITIES, MATCHES, FUNDERS,
   getFunder, getMatchForOpportunity,
@@ -12,16 +12,9 @@ import { useScope } from "@/lib/scope-context"
 import type { Opportunity, Funder, FunderType, MatchStrength, Match } from "@/lib/types"
 import { OpportunityPeekPanel } from "./OpportunityPeekPanel"
 import { FunderPeekPanel } from "./FunderPeekPanel"
+import { FiltersPanel, FUNDER_TYPE_LABELS, AWARD_RANGE_LABELS, DEADLINE_LABELS } from "./FiltersPanel"
 
 // ── Constants ──────────────────────────────────────────────────────────────
-
-const FUNDER_TYPE_LABELS: Record<FunderType, string> = {
-  private_foundation:   "Private foundation",
-  community_foundation: "Community foundation",
-  government:           "Government",
-  corporate_foundation: "Corporate foundation",
-  public_charity:       "Public charity",
-}
 
 const MATCH_CONFIG: Record<MatchStrength, { label: string; color: string; bg: string; dots: number }> = {
   strong:  { label: "Strong match",  color: "var(--evergreen)",     bg: "var(--evergreen-tint)",  dots: 5 },
@@ -436,6 +429,7 @@ function DiscoverPage() {
   const [awardRangeFilter, setAwardRangeFilter] = useState("")
   const [deadlineFilter, setDeadlineFilter] = useState("")
   const [sortBy, setSortBy] = useState<"match" | "deadline" | "award">("match")
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false)
 
   const browseRef = useRef<HTMLDivElement>(null)
   const lastFocusedRef = useRef<HTMLElement | null>(null)
@@ -560,6 +554,16 @@ function DiscoverPage() {
     setTypeFilter(""); setFocusAreaFilter(""); setGeographyFilter("")
     setAwardRangeFilter(""); setDeadlineFilter("")
   }
+
+  const activeChips: { key: string; label: string; onRemove: () => void }[] = [
+    typeFilter        ? { key: "type",     label: `Funder type: ${FUNDER_TYPE_LABELS[typeFilter]}`,   onRemove: () => setTypeFilter("") }       : null,
+    focusAreaFilter   ? { key: "focus",    label: `Focus area: ${focusAreaFilter}`,                    onRemove: () => setFocusAreaFilter("") }   : null,
+    geographyFilter   ? { key: "geo",      label: `Geography: ${geographyFilter}`,                     onRemove: () => setGeographyFilter("") }   : null,
+    awardRangeFilter  ? { key: "award",    label: `Award: ${AWARD_RANGE_LABELS[awardRangeFilter]}`,    onRemove: () => setAwardRangeFilter("") }  : null,
+    deadlineFilter    ? { key: "deadline", label: DEADLINE_LABELS[deadlineFilter],                     onRemove: () => setDeadlineFilter("") }    : null,
+  ].filter((c): c is NonNullable<typeof c> => c !== null)
+
+  const activeFilterCount = activeChips.length
 
   return (
     <div style={{ height: "100%", position: "relative", overflow: "hidden", backgroundColor: "var(--canvas)" }}>
@@ -753,77 +757,112 @@ function DiscoverPage() {
                   )}
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
-                  <FilterSelect value={typeFilter} onChange={(v) => setTypeFilter(v as FunderType | "")}>
-                    <option value="">All funder types</option>
-                    {(Object.keys(FUNDER_TYPE_LABELS) as FunderType[]).map(t => (
-                      <option key={t} value={t}>{FUNDER_TYPE_LABELS[t]}</option>
-                    ))}
-                  </FilterSelect>
-
-                  <FilterSelect value={focusAreaFilter} onChange={setFocusAreaFilter}>
-                    <option value="">All focus areas</option>
-                    {ALL_FOCUS_AREAS.map(fa => (
-                      <option key={fa} value={fa}>{fa}</option>
-                    ))}
-                  </FilterSelect>
-
-                  <FilterSelect value={geographyFilter} onChange={setGeographyFilter}>
-                    <option value="">All geographies</option>
-                    {ALL_GEOGRAPHIES.map(g => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </FilterSelect>
-
-                  <FilterSelect value={awardRangeFilter} onChange={setAwardRangeFilter}>
-                    <option value="">Any award size</option>
-                    <option value="under-25k">Up to $25k</option>
-                    <option value="25k-50k">$25k – $50k</option>
-                    <option value="over-50k">Over $50k</option>
-                  </FilterSelect>
-
-                  <FilterSelect value={deadlineFilter} onChange={setDeadlineFilter}>
-                    <option value="">Any deadline</option>
-                    <option value="30">Within 30 days</option>
-                    <option value="60">Within 60 days</option>
-                    <option value="90">Within 90 days</option>
-                  </FilterSelect>
-
-                  {hasActiveFilters && (
-                    <button
-                      type="button"
-                      onClick={clearFilters}
-                      style={{
-                        display: "flex", alignItems: "center", gap: 4,
-                        padding: "7px 10px", borderRadius: "var(--radius-input)",
-                        border: "1px solid var(--hair-2)", backgroundColor: "transparent",
-                        fontSize: 12, color: "var(--ink-tertiary)", cursor: "pointer",
-                        transition: "background-color 120ms, color 120ms",
-                      }}
-                      onMouseEnter={(e) => {
-                        const el = e.currentTarget as HTMLButtonElement
-                        el.style.backgroundColor = "var(--canvas)"
-                        el.style.color = "var(--ink-secondary)"
-                      }}
-                      onMouseLeave={(e) => {
-                        const el = e.currentTarget as HTMLButtonElement
-                        el.style.backgroundColor = "transparent"
-                        el.style.color = "var(--ink-tertiary)"
-                      }}
-                    >
-                      <X size={11} /> Clear
-                    </button>
-                  )}
+                {/* Filters + Sort bar */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: activeChips.length > 0 ? 8 : 12 }}>
+                  <button
+                    type="button"
+                    onClick={() => setFilterPanelOpen(v => !v)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "7px 12px", borderRadius: "var(--radius-input)",
+                      border: "1px solid var(--hair-2)",
+                      backgroundColor: filterPanelOpen ? "var(--canvas)" : "var(--surface)",
+                      fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)",
+                      cursor: "pointer", transition: "background-color 120ms, border-color 120ms",
+                    }}
+                    onMouseEnter={(e) => {
+                      const el = e.currentTarget as HTMLButtonElement
+                      if (!filterPanelOpen) el.style.backgroundColor = "var(--canvas)"
+                    }}
+                    onMouseLeave={(e) => {
+                      const el = e.currentTarget as HTMLButtonElement
+                      if (!filterPanelOpen) el.style.backgroundColor = "var(--surface)"
+                    }}
+                  >
+                    <SlidersHorizontal size={13} style={{ color: "var(--ink-tertiary)" }} />
+                    Filters
+                    {activeFilterCount > 0 && (
+                      <span style={{
+                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                        minWidth: 18, height: 18, borderRadius: 9, padding: "0 4px",
+                        fontSize: 11, fontWeight: 700,
+                        backgroundColor: "var(--slate-primary)", color: "#fff",
+                      }}>
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
 
                   <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>Sort</span>
                     <FilterSelect value={sortBy} onChange={(v) => setSortBy(v as "match" | "deadline" | "award")}>
-                      <option value="match">Best match</option>
+                      <option value="match">Best fit</option>
                       <option value="deadline">Soonest deadline</option>
-                      <option value="award">Award size</option>
+                      <option value="award">Largest award</option>
                     </FilterSelect>
                   </div>
                 </div>
+
+                {/* Active filter chips */}
+                {activeChips.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                    {activeChips.map(chip => (
+                      <button
+                        key={chip.key}
+                        type="button"
+                        onClick={chip.onRemove}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 5,
+                          padding: "4px 8px 4px 10px", borderRadius: 20,
+                          backgroundColor: "var(--slate-tint)", border: "1px solid var(--hair-2)",
+                          fontSize: 12, color: "var(--slate-secondary)",
+                          cursor: "pointer", transition: "background-color 120ms",
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--hair-2)"
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-tint)"
+                        }}
+                      >
+                        {chip.label}
+                        <X size={11} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
+                      </button>
+                    ))}
+                    {activeChips.length >= 2 && (
+                      <button
+                        type="button"
+                        onClick={clearFilters}
+                        style={{
+                          background: "none", border: "none", cursor: "pointer", padding: "4px 6px",
+                          fontSize: 12, color: "var(--ink-tertiary)",
+                          transition: "color 120ms",
+                        }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
+                      >
+                        Clear all
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Filters panel */}
+                <FiltersPanel
+                  open={filterPanelOpen}
+                  typeFilter={typeFilter}
+                  focusAreaFilter={focusAreaFilter}
+                  geographyFilter={geographyFilter}
+                  awardRangeFilter={awardRangeFilter}
+                  deadlineFilter={deadlineFilter}
+                  allFocusAreas={ALL_FOCUS_AREAS}
+                  allGeographies={ALL_GEOGRAPHIES}
+                  onTypeChange={setTypeFilter}
+                  onFocusAreaChange={setFocusAreaFilter}
+                  onGeographyChange={setGeographyFilter}
+                  onAwardRangeChange={setAwardRangeFilter}
+                  onDeadlineChange={setDeadlineFilter}
+                />
 
                 {sorted.length > 0 ? (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
