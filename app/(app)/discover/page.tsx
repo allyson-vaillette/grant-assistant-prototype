@@ -619,13 +619,17 @@ function DiscoverPage() {
 
           <>
               {/* Matches — AI surface with gradient band */}
-              <section style={{
-                marginBottom: 40,
-                padding: "20px",
-                borderRadius: 14,
-                background: "linear-gradient(135deg, rgba(91,69,200,0.07) 0%, rgba(107,168,164,0.07) 100%)",
-                border: "1px solid rgba(91,69,200,0.1)",
-              }}>
+              <section
+                className="ai-band"
+                style={{
+                  marginBottom: 40,
+                  padding: "20px",
+                  borderRadius: 14,
+                  background: "linear-gradient(135deg, rgba(91,69,200,0.07) 0%, rgba(107,168,164,0.07) 100%)",
+                  backgroundSize: "250% 250%",
+                  border: "1px solid rgba(91,69,200,0.1)",
+                }}
+              >
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
                   <span
                     className="material-symbols-outlined"

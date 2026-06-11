@@ -124,3 +124,20 @@
     font-family: var(--font-lora), Georgia, "Times New Roman", serif;
   }
 }
+
+/* ── AI gradient band drift ── */
+@keyframes ai-gradient-drift {
+  from { background-position: 0% 50%; }
+  to   { background-position: 100% 50%; }
+}
+
+.ai-band {
+  animation: ai-gradient-drift 15s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-band {
+    animation: none;
+    background-position: 0% 50%;
+  }
+}
