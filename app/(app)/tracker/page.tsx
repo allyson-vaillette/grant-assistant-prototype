@@ -379,39 +379,36 @@ export default function TrackerPage() {
 
   return (
     <div style={{ flex: 1, overflowY: "auto", backgroundColor: "var(--canvas)" }}>
-      {/* Top bar */}
-      <div style={{
-        position: "sticky", top: 0, zIndex: 10,
-        backgroundColor: "var(--canvas)",
-        borderBottom: "1px solid var(--hair)",
-        padding: "0 32px",
-        height: 52,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-      }}>
-        <div>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Tracker</span>
-          <span style={{ fontSize: 13, color: "var(--ink-tertiary)", marginLeft: 8 }}>{scopeLabel}</span>
+      <ContentContainer style={{ padding: "36px 40px 64px" }}>
+        {/* Page header */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
+          <div>
+            <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700, color: "var(--ink)" }}>
+              Tracker
+            </h1>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>
+              Your grant pipeline for {scopeLabel}
+            </p>
+          </div>
+          <Link href="/discover" style={{ textDecoration: "none" }}>
+            <button
+              type="button"
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "6px 14px", borderRadius: 8,
+                backgroundColor: "var(--slate-primary)", border: "none",
+                fontSize: 12, fontWeight: 600, color: "#FFFFFF", cursor: "pointer",
+                transition: "background-color 150ms",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
+            >
+              <Telescope size={13} />
+              Discover opportunities
+            </button>
+          </Link>
         </div>
-        <Link href="/discover" style={{ textDecoration: "none" }}>
-          <button
-            type="button"
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "6px 14px", borderRadius: 8,
-              backgroundColor: "var(--slate-primary)", border: "none",
-              fontSize: 12, fontWeight: 600, color: "#FFFFFF", cursor: "pointer",
-              transition: "background-color 150ms",
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
-          >
-            <Telescope size={13} />
-            Discover opportunities
-          </button>
-        </Link>
-      </div>
 
-      <ContentContainer style={{ padding: "32px 40px 64px" }}>
         {/* Stats */}
         <div style={{
           display: "flex", gap: 1,
