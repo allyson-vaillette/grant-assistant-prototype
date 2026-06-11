@@ -2056,7 +2056,7 @@ export function ArtifactEditorContent({
 
                 {/* ── AI CHAT TAB ── */}
                 {rightTab === "chat" && (
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--gradient-ai-wash), var(--canvas)" }}>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
                     {/* Scope indicator */}
                     {activeSection && (
@@ -2101,7 +2101,7 @@ export function ArtifactEditorContent({
                           {msg.role === "assistant" ? (
                             <div style={{
                               padding: "10px 12px", borderRadius: "var(--radius-button)",
-                              backgroundColor: "var(--surface)", border: "1px solid var(--hair)",
+                              backgroundColor: "var(--canvas)", border: "1px solid var(--hair)",
                               fontSize: 12, color: "var(--ink)", lineHeight: "18px",
                             }}>
                               {msg.content}
