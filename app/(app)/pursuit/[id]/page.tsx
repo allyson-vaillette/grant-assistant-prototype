@@ -1311,7 +1311,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
         <div style={{
           width: 240, flexShrink: 0,
           display: "flex", flexDirection: "column",
-          backgroundColor: "var(--canvas)",
+          backgroundColor: "var(--surface-sunk)",
           borderRight: "1px solid var(--hair)",
         }}>
           <TabBar active={activeTab} onChange={setActiveTab} />
@@ -1734,7 +1734,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
         </div>
 
         {/* Right rail: AI assistant */}
-        <div style={{ width: 280, flexShrink: 0, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--canvas)", borderLeft: "1px solid var(--hair)" }}>
+        <div style={{ width: 280, flexShrink: 0, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--gradient-ai-wash), var(--canvas)", borderLeft: "1px solid var(--hair)" }}>
           {selectedArtifactId ? (
             <ArtifactEditorContent
               params={{ id: params.id, artifactId: selectedArtifactId }}
