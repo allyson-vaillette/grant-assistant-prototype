@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, FileText, FileSpreadsheet, Paperclip, ChevronDown, Plus, Download, CheckCircle, AlertTriangle, Circle, Check, Lock, Trash2, X, Pencil } from "lucide-react"
+import { ArrowLeft, FileText, FileSpreadsheet, ChevronDown, Plus, Download, CheckCircle, AlertTriangle, Circle, Check, Lock, Trash2, X, Pencil } from "lucide-react"
 import { ArtifactEditorContent } from "./artifact/[artifactId]/page"
 import {
   FUNDERS, OPPORTUNITIES, USER, TEAMMATES,
@@ -68,13 +68,13 @@ const STATUS_GROUPS_FOR_DROPDOWN: { phase: PipelinePhase; label: string; statuse
   },
 ]
 
-const STAGE_BADGE: Record<ArtifactStage, { label: string; bg: string; color: string }> = {
+const _STAGE_BADGE: Record<ArtifactStage, { label: string; bg: string; color: string }> = {
   "pre-apply":  { label: "Pre-apply",  bg: "var(--terracotta-tint)", color: "var(--terracotta)"      },
   "apply":      { label: "Apply",      bg: "var(--slate-tint)",      color: "var(--slate-secondary)" },
   "post-apply": { label: "Post-apply", bg: "var(--evergreen-tint)",  color: "var(--evergreen)"       },
 }
 
-const ARTIFACT_TYPE_LABEL: Record<string, string> = {
+const _ARTIFACT_TYPE_LABEL: Record<string, string> = {
   proposal: "Proposal",
   loi:      "Letter of inquiry",
   report:   "Report",
@@ -93,7 +93,7 @@ const CATEGORY_LABEL: Record<AttachmentCategory, string> = {
 
 // ── Phase indicator ────────────────────────────────────────────────────────
 
-function PhaseIndicator({ current }: { current: PipelinePhase }) {
+function _PhaseIndicator({ current }: { current: PipelinePhase }) {
   const currentIdx = PHASES_ORDER.indexOf(current)
 
   return (
@@ -897,7 +897,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
   const allReqs        = [...(writingSession?.requirements ?? []), ...localUserReqs]
   const ALL_USERS      = [USER, ...TEAMMATES]
   const currentPhase   = phaseFromStatus(currentStatus)
-  const phaseCfg       = PHASE_COLOR[currentPhase]
+  const _phaseCfg      = PHASE_COLOR[currentPhase]
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--canvas)" }}>
