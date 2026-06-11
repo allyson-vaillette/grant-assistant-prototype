@@ -758,11 +758,11 @@ function DiscoverPage() {
                 )}
               </section>
 
-              {/* Browse */}
+              {/* All opportunities */}
               <section ref={browseRef}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                   <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
-                    Browse
+                    All opportunities
                   </h2>
                   <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
                     {sorted.length} {sorted.length === 1 ? "opportunity" : "opportunities"}
