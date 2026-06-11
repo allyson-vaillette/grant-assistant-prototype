@@ -463,12 +463,12 @@ export const MATCHES: Match[] = [
     matchScore: 5,
     reasons: {
       positive: [
-        "Focus areas align — Animal Welfare, pet adoption, and spay/neuter directly match your Rescue & Intake and Foster programs",
-        "Geography — Petco Love funds nationally; your San Diego work is eligible",
-        "Eligibility — 501(c)(3) required, your org size fits the grant range",
+        "Funds shelters and spay/neuter programs, a close fit for your rescue and foster work.",
+        "Geography: Petco Love funds nationally, so your San Diego work is eligible.",
+        "Eligibility: 501(c)(3) required; your org size fits the grant range.",
       ],
       cautions: [
-        "Competitive — Petco Love receives high application volume; strong outcome data will differentiate your proposal",
+        "Competitive: Petco Love gets a high volume of applications; strong outcome data will help your proposal stand out.",
       ],
     },
   },
@@ -481,12 +481,12 @@ export const MATCHES: Match[] = [
     matchScore: 5,
     reasons: {
       positive: [
-        "Focus areas align — Animal Welfare is ASPCA's core mission; your programs are precisely in scope",
-        "Geography — ASPCA funds nationally; California organizations are eligible",
-        "Spay/neuter alignment — your program directly matches ASPCA's community cat and population management priorities",
+        "Animal welfare is their core focus, and your rescue work fits squarely.",
+        "Geography: ASPCA funds nationally, and California organizations are eligible.",
+        "Spay/neuter: your program targets the same community cat and population management priorities they fund.",
       ],
       cautions: [
-        "Data requirements — ASPCA grants require demonstrated intake and live release rate metrics",
+        "Data requirements: ASPCA grants require demonstrated intake and live release rate metrics.",
       ],
     },
   },
@@ -499,12 +499,12 @@ export const MATCHES: Match[] = [
     matchScore: 4,
     reasons: {
       positive: [
-        "Mission alignment — your rescue, foster, and intake reduction work directly supports no-kill community goals",
-        "Foster program — Maddie's Fund has historically prioritized foster expansion as a key lifesaving lever",
-        "Geography — national funder; California organizations are strongly represented in their portfolio",
+        "Backs lifesaving shelter and rescue work, right where Whisker Haven operates.",
+        "Foster: Maddie's Fund has prioritized foster expansion as a key lifesaving lever.",
+        "Geography: national funder; California organizations are well-represented in their portfolio.",
       ],
       cautions: [
-        "Invite-only — Maddie's Fund does not accept unsolicited applications; LOI required through program staff relationship",
+        "Invite-only: Maddie's Fund does not accept unsolicited applications; an LOI through program staff is required.",
       ],
     },
   },
@@ -517,12 +517,12 @@ export const MATCHES: Match[] = [
     matchScore: 5,
     reasons: {
       positive: [
-        "Spay/neuter alignment — your program is a direct match for their primary focus",
-        "Foster alignment — foster programs support their pet retention goals",
-        "California eligibility — San Diego may qualify; confirm service area with program staff",
+        "Built for spay/neuter programs, one of your core services.",
+        "Foster: foster programs support their pet retention goals.",
+        "California eligibility: San Diego may qualify; confirm the service area with program staff.",
       ],
       cautions: [
-        "Geographic restriction — grants limited to Los Angeles County and surrounding areas; verify San Diego eligibility",
+        "Geographic restriction: grants are limited to Los Angeles County and surrounding areas; verify San Diego eligibility.",
       ],
     },
   },
@@ -535,12 +535,12 @@ export const MATCHES: Match[] = [
     matchScore: 4,
     reasons: {
       positive: [
-        "Foster alignment — PetSmart Charities has invested heavily in foster program expansion nationally",
-        "Spay/neuter match — your program aligns with their TNR and community cat funding priorities",
-        "Geography — national funder; California organizations are eligible",
+        "Focused on cat and kitten rescue, which is your whole mission.",
+        "Spay/neuter: your TNR and community cat work matches their funding priorities.",
+        "Geography: national funder; California organizations are eligible.",
       ],
       cautions: [
-        "Cat-specific preference — grants with demonstrated cat and kitten program focus are prioritized; highlight this in your proposal",
+        "Cat-specific preference: proposals with a clear cat and kitten program focus are prioritized; lead with that.",
       ],
     },
   },

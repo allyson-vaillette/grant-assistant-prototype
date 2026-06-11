@@ -179,7 +179,7 @@ function MatchCard({ match, opp, onDismiss, onOppClick }: {
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLDivElement
         el.style.borderColor = "var(--slate-light)"
-        el.style.boxShadow = "var(--lift-2)"
+        el.style.boxShadow = "var(--shadow-sm)"
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLDivElement
@@ -362,7 +362,7 @@ function CatalogueCard({ opp, onOppClick }: {
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLDivElement
         el.style.borderColor = "var(--slate-light)"
-        el.style.boxShadow = "var(--lift-2)"
+        el.style.boxShadow = "var(--shadow-sm)"
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLDivElement
@@ -618,10 +618,25 @@ function DiscoverPage() {
           </div>
 
           <>
-              {/* Matches */}
-              <section style={{ marginBottom: 32 }}>
+              {/* Matches — AI surface with gradient band */}
+              <section style={{
+                marginBottom: 40,
+                padding: "20px",
+                borderRadius: 14,
+                background: "linear-gradient(135deg, rgba(91,69,200,0.07) 0%, rgba(107,168,164,0.07) 100%)",
+                border: "1px solid rgba(91,69,200,0.1)",
+              }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 18, color: "var(--slate-primary)", userSelect: "none" }}>
+                  <span
+                    className="material-symbols-outlined"
+                    style={{
+                      fontSize: 18, userSelect: "none",
+                      background: "linear-gradient(135deg, rgb(91,69,200) 0%, rgb(107,168,164) 100%)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                    }}
+                  >
                     auto_fix_high
                   </span>
                   <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
