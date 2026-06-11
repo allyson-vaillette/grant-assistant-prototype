@@ -9,9 +9,8 @@ import {
   getFunder, getMatchForOpportunity,
 } from "@/lib/mock-data"
 import { useScope } from "@/lib/scope-context"
-import type { Opportunity, Funder, FunderType, MatchStrength, Match } from "@/lib/types"
+import type { Opportunity, FunderType, MatchStrength, Match } from "@/lib/types"
 import { OpportunityPeekPanel } from "./OpportunityPeekPanel"
-import { FunderPeekPanel } from "./FunderPeekPanel"
 import { FiltersPanel, FUNDER_TYPE_LABELS, AWARD_RANGE_LABELS, DEADLINE_LABELS } from "./FiltersPanel"
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -113,12 +112,11 @@ function SkeletonMatchCard() {
 
 // ── Match card ─────────────────────────────────────────────────────────────
 
-function MatchCard({ match, opp, onDismiss, onOppClick, onFunderClick }: {
+function MatchCard({ match, opp, onDismiss, onOppClick }: {
   match: Match
   opp: Opportunity
   onDismiss: () => void
   onOppClick: (oppId: string, el: HTMLElement) => void
-  onFunderClick: (funderId: string, el: HTMLElement) => void
 }) {
   const funder = getFunder(opp.funderId)
   const cfg = MATCH_CONFIG[match.matchStrength]
@@ -193,21 +191,9 @@ function MatchCard({ match, opp, onDismiss, onOppClick, onFunderClick }: {
 
       {/* Funder name — primary headline, clickable */}
       {funder && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onFunderClick(funder.id, e.currentTarget) }}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onFunderClick(funder.id, e.currentTarget as HTMLElement) } }}
-          style={{
-            background: "none", border: "none", padding: 0, margin: "0 0 2px", cursor: "pointer",
-            fontSize: 13, fontWeight: 700, color: "var(--ink)", textAlign: "left",
-            lineHeight: "19px", paddingRight: 24,
-            transition: "color 120ms",
-          }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink)" }}
-        >
+        <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: "var(--ink)", lineHeight: "19px", paddingRight: 24 }}>
           {funder.name}
-        </button>
+        </p>
       )}
 
       {/* Opp name — secondary */}
@@ -297,10 +283,9 @@ function EmptyMatches({ scopeLabel, onBrowseAll }: { scopeLabel: string; onBrows
 
 // ── Catalogue card ─────────────────────────────────────────────────────────
 
-function CatalogueCard({ opp, onOppClick, onFunderClick }: {
+function CatalogueCard({ opp, onOppClick }: {
   opp: Opportunity
   onOppClick: (oppId: string, el: HTMLElement) => void
-  onFunderClick: (funderId: string, el: HTMLElement) => void
 }) {
   const funder = getFunder(opp.funderId)
   const match = getMatchForOpportunity(opp.id)
@@ -345,21 +330,9 @@ function CatalogueCard({ opp, onOppClick, onFunderClick }: {
       </div>
 
       {funder && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onFunderClick(funder.id, e.currentTarget) }}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onFunderClick(funder.id, e.currentTarget as HTMLElement) } }}
-          style={{
-            background: "none", border: "none", padding: 0, margin: "0 0 2px", cursor: "pointer",
-            fontSize: 13, fontWeight: 700, color: "var(--ink)", textAlign: "left",
-            lineHeight: "18px",
-            transition: "color 120ms",
-          }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink)" }}
-        >
+        <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: "var(--ink)", lineHeight: "18px" }}>
           {funder.name}
-        </button>
+        </p>
       )}
 
       <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 400, color: "var(--slate-primary)", lineHeight: "17px" }}>
@@ -434,7 +407,6 @@ function DiscoverPage() {
   const lastFocusedRef = useRef<HTMLElement | null>(null)
 
   const selectedOppId = searchParams.get("opp")
-  const selectedFunderId = searchParams.get("funder")
 
   useEffect(() => {
     const t = setTimeout(() => setMatchesLoaded(true), 1200)
@@ -442,24 +414,14 @@ function DiscoverPage() {
   }, [])
 
   const prevOppIdRef = useRef<string | null>(null)
-  const prevFunderIdRef = useRef<string | null>(null)
   useEffect(() => {
     if (prevOppIdRef.current && !selectedOppId) lastFocusedRef.current?.focus()
     prevOppIdRef.current = selectedOppId
   }, [selectedOppId])
-  useEffect(() => {
-    if (prevFunderIdRef.current && !selectedFunderId) lastFocusedRef.current?.focus()
-    prevFunderIdRef.current = selectedFunderId
-  }, [selectedFunderId])
 
   const handleOppClick = useCallback((oppId: string, el: HTMLElement) => {
     lastFocusedRef.current = el
     router.push(`/discover?opp=${oppId}`)
-  }, [router])
-
-  const handleFunderClick = useCallback((funderId: string, el: HTMLElement) => {
-    lastFocusedRef.current = el
-    router.push(`/discover?funder=${funderId}`)
   }, [router])
 
   const handleClose = useCallback(() => {
@@ -663,7 +625,6 @@ function DiscoverPage() {
                         opp={opp}
                         onDismiss={() => handleDismiss(match.id)}
                         onOppClick={handleOppClick}
-                        onFunderClick={handleFunderClick}
                       />
                     ))}
                   </div>
@@ -833,7 +794,6 @@ function DiscoverPage() {
                         key={opp.id}
                         opp={opp}
                         onOppClick={handleOppClick}
-                        onFunderClick={handleFunderClick}
                       />
                     ))}
                   </div>
@@ -860,16 +820,6 @@ function DiscoverPage() {
           key={selectedOppId}
           oppId={selectedOppId}
           onClose={handleClose}
-          onFunderClick={(funderId) => router.push(`/discover?funder=${funderId}`)}
-        />
-      )}
-
-      {selectedFunderId && (
-        <FunderPeekPanel
-          key={selectedFunderId}
-          funderId={selectedFunderId}
-          onClose={handleClose}
-          onOppClick={(oppId) => router.push(`/discover?opp=${oppId}`)}
         />
       )}
     </div>
