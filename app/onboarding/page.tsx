@@ -184,7 +184,7 @@ export default function OnboardingPage() {
               onSkip={() => setStep(2)}
             />
           ) : (
-            <Step2 onFinish={finish} onSkip={finish} />
+            <Step2 onFinish={finish} onSkip={finish} onBack={() => setStep(1)} />
           )}
         </div>
       </div>
@@ -302,15 +302,55 @@ function Step1({
   )
 }
 
-// ── Step 2 (stub) ─────────────────────────────────────────────────────────
+// ── Step 2 ────────────────────────────────────────────────────────────────
+
+const SUGGESTED_AREAS = ["Animal Welfare", "Spay/Neuter", "Foster Care", "Rescue & Intake", "Community Cats"]
 
 function Step2({
   onFinish,
   onSkip,
+  onBack,
 }: {
   onFinish: () => void
   onSkip: () => void
+  onBack: () => void
 }) {
+  const [programAreas, setProgramAreas] = useState<string[]>([])
+  const [programInput, setProgramInput] = useState("")
+  const [whoServe, setWhoServe] = useState("")
+  const [whereWork, setWhereWork] = useState("")
+  const [budget, setBudget] = useState("")
+
+  function addArea(value: string) {
+    const trimmed = value.trim()
+    if (trimmed && !programAreas.includes(trimmed)) {
+      setProgramAreas(prev => [...prev, trimmed])
+    }
+  }
+
+  function removeArea(area: string) {
+    setProgramAreas(prev => prev.filter(a => a !== area))
+  }
+
+  function handleProgramKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault()
+      addArea(programInput)
+      setProgramInput("")
+    }
+  }
+
+  function handleProgramChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value
+    // Auto-split on comma as user types
+    if (val.endsWith(",")) {
+      addArea(val.slice(0, -1))
+      setProgramInput("")
+    } else {
+      setProgramInput(val)
+    }
+  }
+
   return (
     <div
       style={{
@@ -321,7 +361,7 @@ function Step2({
         boxShadow: "var(--lift-2)",
       }}
     >
-      <div style={{ marginBottom: 40 }}>
+      <div style={{ marginBottom: 24 }}>
         <h2
           style={{
             margin: "0 0 6px",
@@ -341,14 +381,191 @@ function Step2({
             lineHeight: "18px",
           }}
         >
-          Coming up next.
+          This is what we use to find funding that fits. Add what you can.
         </p>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        {/* Program areas */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+            <label style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", lineHeight: "16px" }}>
+              Program areas
+            </label>
+            <span style={{ fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "16px" }}>
+              Type to add your own, or pick from the suggestions.
+            </span>
+          </div>
+
+          {/* Tag input container */}
+          <div
+            style={{
+              minHeight: 40,
+              borderRadius: "var(--radius-input)",
+              border: "1px solid var(--hair-2)",
+              backgroundColor: "var(--surface)",
+              padding: programAreas.length > 0 ? "6px 8px" : "0 12px",
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 6,
+              cursor: "text",
+              boxSizing: "border-box",
+            }}
+            onClick={(e) => {
+              const input = (e.currentTarget as HTMLDivElement).querySelector("input")
+              input?.focus()
+            }}
+          >
+            {programAreas.map(area => (
+              <span
+                key={area}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  height: 26,
+                  paddingLeft: 10,
+                  paddingRight: 6,
+                  borderRadius: 6,
+                  backgroundColor: "var(--slate-tint, color-mix(in srgb, var(--slate-primary) 12%, transparent))",
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: "var(--slate-primary)",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                }}
+              >
+                {area}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); removeArea(area) }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    color: "var(--slate-primary)",
+                    opacity: 0.7,
+                    lineHeight: 1,
+                  }}
+                  aria-label={`Remove ${area}`}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+                </button>
+              </span>
+            ))}
+            <input
+              type="text"
+              value={programInput}
+              onChange={handleProgramChange}
+              onKeyDown={handleProgramKeyDown}
+              placeholder={programAreas.length === 0 ? "e.g. Animal Welfare" : ""}
+              style={{
+                flex: 1,
+                minWidth: 80,
+                height: programAreas.length > 0 ? 26 : 38,
+                border: "none",
+                outline: "none",
+                background: "transparent",
+                fontSize: 14,
+                color: "var(--ink)",
+                padding: programAreas.length > 0 ? "0 4px" : "0",
+                fontFamily: "var(--font-inter), system-ui, sans-serif",
+              }}
+            />
+          </div>
+
+          {/* Suggestion chips */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {SUGGESTED_AREAS.filter(s => !programAreas.includes(s)).map(s => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => addArea(s)}
+                style={{
+                  height: 28,
+                  paddingLeft: 10,
+                  paddingRight: 10,
+                  borderRadius: 6,
+                  border: "1px solid var(--hair-2)",
+                  backgroundColor: "var(--surface)",
+                  fontSize: 12,
+                  fontWeight: 400,
+                  color: "var(--ink-secondary)",
+                  cursor: "pointer",
+                  fontFamily: "var(--font-inter), system-ui, sans-serif",
+                  transition: "border-color 150ms, color 150ms",
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.borderColor = "var(--slate-primary)"
+                  el.style.color = "var(--slate-primary)"
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.borderColor = "var(--hair-2)"
+                  el.style.color = "var(--ink-secondary)"
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Who you serve */}
+        <FieldGroup label="Who you serve" helper="Optional. People, communities, or animals your work supports.">
+          <input
+            type="text"
+            value={whoServe}
+            onChange={(e) => setWhoServe(e.target.value)}
+            style={inputStyle}
+          />
+        </FieldGroup>
+
+        {/* Where you work */}
+        <FieldGroup label="Where you work" helper="Optional.">
+          <input
+            type="text"
+            value={whereWork}
+            onChange={(e) => setWhereWork(e.target.value)}
+            placeholder="City, state, or region"
+            style={inputStyle}
+          />
+        </FieldGroup>
+
+        {/* Annual budget */}
+        <FieldGroup label="Annual budget" helper="Optional. A rough range is fine.">
+          <select
+            value={budget}
+            onChange={(e) => setBudget(e.target.value)}
+            style={{
+              ...inputStyle,
+              color: budget ? "var(--ink)" : "var(--ink-tertiary)",
+              appearance: "none",
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%231C2E26' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right 12px center",
+              paddingRight: 36,
+            }}
+          >
+            <option value="" disabled>Select a range</option>
+            <option value="under-100k">Under $100K</option>
+            <option value="100k-500k">$100K to $500K</option>
+            <option value="500k-1m">$500K to $1M</option>
+            <option value="1m-5m">$1M to $5M</option>
+            <option value="over-5m">Over $5M</option>
+          </select>
+        </FieldGroup>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 32 }}>
         <button
           type="button"
-          onClick={onSkip}
+          onClick={onBack}
           style={skipLinkStyle}
           onMouseEnter={(e) => {
             ;(e.currentTarget as HTMLButtonElement).style.textDecoration = "underline"
@@ -357,11 +574,26 @@ function Step2({
             ;(e.currentTarget as HTMLButtonElement).style.textDecoration = "none"
           }}
         >
-          Skip this step
+          Back
         </button>
-        <button type="button" onClick={onFinish} style={primaryButtonStyle}>
-          Finish
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <button
+            type="button"
+            onClick={onSkip}
+            style={skipLinkStyle}
+            onMouseEnter={(e) => {
+              ;(e.currentTarget as HTMLButtonElement).style.textDecoration = "underline"
+            }}
+            onMouseLeave={(e) => {
+              ;(e.currentTarget as HTMLButtonElement).style.textDecoration = "none"
+            }}
+          >
+            Skip this step
+          </button>
+          <button type="button" onClick={onFinish} style={primaryButtonStyle}>
+            Finish
+          </button>
+        </div>
       </div>
     </div>
   )
