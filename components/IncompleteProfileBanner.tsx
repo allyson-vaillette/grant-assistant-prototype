@@ -16,11 +16,12 @@ export function IncompleteProfileBanner() {
         display: "flex",
         alignItems: "center",
         gap: 12,
-        padding: "10px 14px 10px 16px",
-        marginBottom: 20,
+        padding: "14px 16px",
+        marginBottom: 24,
         borderRadius: 10,
         backgroundColor: "var(--slate-tint)",
-        border: "1px solid rgba(91,69,200,0.15)",
+        border: "1px solid rgba(91,69,200,0.25)",
+        boxShadow: "0 1px 3px rgba(91,69,200,0.08)",
       }}
     >
       <p
