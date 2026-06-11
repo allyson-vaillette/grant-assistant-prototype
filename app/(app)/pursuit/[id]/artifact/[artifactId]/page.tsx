@@ -1287,7 +1287,7 @@ export function ArtifactEditorContent({
               width: leftCollapsed ? 40 : 252,
               flexShrink: 0, transition: "width 200ms ease",
               borderRight: "1px solid var(--hair)",
-              backgroundColor: "var(--surface)",
+              backgroundColor: "var(--canvas)",
               display: "flex", flexDirection: "column",
               overflow: "hidden",
             }}
@@ -1834,7 +1834,7 @@ export function ArtifactEditorContent({
               flexShrink: mode === "right-rail" ? undefined : 0,
               transition: "width 200ms ease",
               borderLeft: mode === "right-rail" ? "none" : "1px solid var(--hair)",
-              backgroundColor: "var(--surface)",
+              backgroundColor: "var(--canvas)",
               display: "flex", flexDirection: "column",
               overflow: "hidden",
               boxShadow: mode === "right-rail" ? "none" : "var(--shadow-panel)",
@@ -1896,28 +1896,32 @@ export function ArtifactEditorContent({
                     >
                       <ChevronRight size={14} />
                     </button>
-                    <div style={{ display: "flex", flex: 1 }}>
+                    <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
                       {(["chat", "snippets", "voice", "comments"] as const).map(tab => {
                         const active = rightTab === tab
-                        const icon   = tab === "chat" ? <Sparkles size={11} /> : tab === "snippets" ? <BookOpen size={11} /> : tab === "voice" ? <Sliders size={11} /> : <Users size={11} />
+                        const icon   = tab === "chat" ? <Sparkles size={13} /> : tab === "snippets" ? <BookOpen size={13} /> : tab === "voice" ? <Sliders size={13} /> : <Users size={13} />
                         const label  = tab === "chat" ? "Chat" : tab === "snippets" ? "Snippets" : tab === "voice" ? "Voice" : "Comments"
                         const badge  = tab === "comments" && openThreads.length > 0
                         return (
                           <button
                             key={tab}
                             type="button"
+                            title={label}
+                            aria-label={label}
                             onClick={() => setRightTab(tab)}
                             style={{
-                              display: "flex", alignItems: "center", gap: 3,
-                              padding: "10px 6px", background: "none", border: "none", cursor: "pointer",
+                              flex: 1, minWidth: 0,
+                              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+                              padding: "10px 4px", background: "none", border: "none", cursor: "pointer",
                               fontSize: 11, fontWeight: active ? 600 : 400,
                               color: active ? "var(--ink)" : badge ? "var(--amber)" : "var(--ink-tertiary)",
                               borderBottom: `2px solid ${active ? "var(--slate-primary)" : "transparent"}`,
                               transition: "all 120ms",
-                              whiteSpace: "nowrap",
+                              position: "relative",
                             }}
                           >
-                            {icon}{label}{badge && <span style={{ fontSize: 9, fontWeight: 700, backgroundColor: "var(--amber)", color: "#fff", borderRadius: 9, padding: "1px 4px", lineHeight: 1 }}>{openThreads.length}</span>}
+                            {icon}
+                            {badge && <span style={{ position: "absolute", top: 6, right: 4, width: 6, height: 6, borderRadius: "50%", backgroundColor: "var(--amber)", border: "1.5px solid var(--canvas)" }} />}
                           </button>
                         )
                       })}

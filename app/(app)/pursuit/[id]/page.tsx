@@ -1239,7 +1239,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
         <div style={{
           width: 240, flexShrink: 0,
           display: "flex", flexDirection: "column",
-          backgroundColor: "var(--surface)",
+          backgroundColor: "var(--canvas)",
           borderRight: "1px solid var(--hair)",
         }}>
           <TabBar active={activeTab} onChange={setActiveTab} />
@@ -1249,24 +1249,27 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
             {activeTab === "requirements" && (
               <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-                {/* Sub-tab bar: Requirements list | Compliance matrix */}
-                <div style={{ flexShrink: 0, borderBottom: "1px solid var(--hair)", display: "flex" }}>
-                  {(["list", "compliance"] as const).map(st => (
-                    <button
-                      key={st}
-                      type="button"
-                      onClick={() => setReqSubTab(st)}
-                      style={{
-                        padding: "9px 10px", background: "none", border: "none", cursor: "pointer",
-                        fontSize: 11, fontWeight: reqSubTab === st ? 600 : 400,
-                        color: reqSubTab === st ? "var(--ink)" : "var(--ink-tertiary)",
-                        borderBottom: `2px solid ${reqSubTab === st ? "var(--slate-primary)" : "transparent"}`,
-                        transition: "all 120ms",
-                      }}
-                    >
-                      {st === "list" ? "Requirements" : "Compliance"}
-                    </button>
-                  ))}
+                {/* List / Compliance segmented toggle */}
+                <div style={{ flexShrink: 0, padding: "10px 12px 8px" }}>
+                  <div style={{ display: "inline-flex", backgroundColor: "var(--hair)", borderRadius: 6, padding: 2 }}>
+                    {(["list", "compliance"] as const).map(st => (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => setReqSubTab(st)}
+                        style={{
+                          padding: "4px 10px", borderRadius: 4, border: "none", cursor: "pointer",
+                          fontSize: 11, fontWeight: reqSubTab === st ? 600 : 400,
+                          backgroundColor: reqSubTab === st ? "var(--surface)" : "transparent",
+                          color: reqSubTab === st ? "var(--ink)" : "var(--ink-tertiary)",
+                          transition: "all 120ms",
+                          boxShadow: reqSubTab === st ? "0 1px 2px rgba(28,24,64,0.08)" : "none",
+                        }}
+                      >
+                        {st === "list" ? "List" : "Compliance"}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Requirements list */}
@@ -1645,14 +1648,14 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
         </div>
 
         {/* Center: draft editor */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", borderRight: "1px solid var(--hair)" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--surface)", borderRight: "1px solid var(--hair)" }}>
           {selectedArtifactId && (
             <ArtifactEditorContent params={{ id: params.id, artifactId: selectedArtifactId }} mode="center" />
           )}
         </div>
 
         {/* Right rail: AI assistant */}
-        <div style={{ width: 280, flexShrink: 0, display: "flex", flexDirection: "column", overflow: "hidden", borderLeft: "1px solid var(--hair)" }}>
+        <div style={{ width: 280, flexShrink: 0, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--canvas)", borderLeft: "1px solid var(--hair)" }}>
           {selectedArtifactId ? (
             <ArtifactEditorContent params={{ id: params.id, artifactId: selectedArtifactId }} mode="right-rail" />
           ) : (
