@@ -84,6 +84,44 @@ function MatchDots({ strength }: { strength: MatchStrength }) {
   )
 }
 
+// ── Funder avatar ─────────────────────────────────────────────────────────
+
+const AVATAR_PALETTE = [
+  { bg: "#EDE9F7", fg: "#5B45C8" },
+  { bg: "#DBF0FA", fg: "#2472A4" },
+  { bg: "#E0F5EB", fg: "#1F7A4C" },
+  { bg: "#FEF3E7", fg: "#AF5200" },
+  { bg: "#FCE8EA", fg: "#BF2B45" },
+  { bg: "#F0F4E8", fg: "#4A6B22" },
+]
+
+function funderPaletteIndex(name: string): number {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff
+  return h % AVATAR_PALETTE.length
+}
+
+function FunderAvatar({ name, size = 26 }: { name: string; size?: number }) {
+  const { bg, fg } = AVATAR_PALETTE[funderPaletteIndex(name)]
+  const initials = name
+    .split(/\s+/)
+    .filter(w => /[A-Za-z]/.test(w.charAt(0)))
+    .slice(0, 2)
+    .map(w => w.charAt(0).toUpperCase())
+    .join("")
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", justifyContent: "center",
+      width: size, height: size, borderRadius: "50%",
+      backgroundColor: bg, color: fg,
+      fontSize: Math.round(size * 0.38), fontWeight: 700, lineHeight: 1,
+      flexShrink: 0, userSelect: "none",
+    }}>
+      {initials}
+    </span>
+  )
+}
+
 // ── Skeleton card ──────────────────────────────────────────────────────────
 
 function SkeletonMatchCard() {
@@ -177,32 +215,39 @@ function MatchCard({ match, opp, onDismiss, onOppClick }: {
         <X size={13} />
       </button>
 
-      {/* Match badge + dots */}
-      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8, paddingRight: 24 }}>
-        <span style={{
-          display: "inline-block", padding: "2px 8px", borderRadius: 20,
-          fontSize: 11, fontWeight: 500,
-          backgroundColor: cfg.bg, color: cfg.color,
-        }}>
-          {cfg.label}
-        </span>
-        <MatchDots strength={match.matchStrength} />
+      {/* Funder row: avatar + name + match dots + match label */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, paddingRight: 32 }}>
+        {funder && <FunderAvatar name={funder.name} size={26} />}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
+          <span style={{
+            fontSize: 13, fontWeight: 700, color: "var(--ink)",
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>
+            {funder?.name}
+          </span>
+          <MatchDots strength={match.matchStrength} />
+          <span style={{
+            fontSize: 10, fontWeight: 600, color: cfg.color,
+            flexShrink: 0, lineHeight: 1,
+          }}>
+            {cfg.label}
+          </span>
+        </div>
       </div>
 
-      {/* Funder name — primary headline, clickable */}
-      {funder && (
-        <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: "var(--ink)", lineHeight: "19px", paddingRight: 24 }}>
-          {funder.name}
-        </p>
-      )}
-
-      {/* Opp name — secondary */}
-      <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 400, color: "var(--slate-primary)", lineHeight: "17px", paddingRight: 24 }}>
+      {/* Opp name — indented under avatar */}
+      <p style={{
+        margin: "0 0 8px", paddingLeft: 34,
+        fontSize: 12, fontWeight: 400, color: "var(--slate-primary)", lineHeight: "17px",
+      }}>
         {opp.name}
       </p>
 
-      {/* Amount + deadline */}
-      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
+      {/* Meta row: amount + deadline + type tag */}
+      <div style={{
+        display: "flex", gap: 8, alignItems: "center", paddingLeft: 34, flexWrap: "wrap",
+        marginBottom: primaryReason ? 8 : 0,
+      }}>
         {opp.amount && (
           <span style={{ fontSize: 12, fontWeight: 700, color: "var(--slate-primary)" }}>{opp.amount}</span>
         )}
@@ -211,11 +256,20 @@ function MatchCard({ match, opp, onDismiss, onOppClick }: {
             {opp.deadline === "Rolling" ? "Rolling deadline" : `Due ${opp.deadline}`}
           </span>
         )}
+        {funder && (
+          <span style={{
+            fontSize: 10, fontWeight: 500, color: "var(--ink-tertiary)",
+            padding: "1px 7px", borderRadius: 20,
+            backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)",
+          }}>
+            {FUNDER_TYPE_LABELS[funder.type]}
+          </span>
+        )}
       </div>
 
-      {/* Top reason */}
+      {/* Top reason — indented */}
       {primaryReason && (
-        <div style={{ display: "flex", gap: 7, alignItems: "flex-start" }}>
+        <div style={{ display: "flex", gap: 7, alignItems: "flex-start", paddingLeft: 34 }}>
           <Check size={12} style={{ color: "var(--evergreen)", flexShrink: 0, marginTop: 2 }} />
           <span style={{ fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px" }}>{primaryReason}</span>
         </div>
@@ -316,36 +370,44 @@ function CatalogueCard({ opp, onOppClick }: {
         el.style.boxShadow = "none"
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        {funder && (
-          <span style={{
-            display: "inline-block", padding: "2px 8px", borderRadius: 20,
-            fontSize: 11, fontWeight: 500,
-            backgroundColor: "var(--slate-tint)", color: "var(--slate-secondary)",
-          }}>
-            {FUNDER_TYPE_LABELS[funder.type]}
-          </span>
-        )}
+      {/* Funder row: avatar + name + match dots if matched */}
+      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4 }}>
+        {funder && <FunderAvatar name={funder.name} size={24} />}
+        <span style={{
+          flex: 1, minWidth: 0,
+          fontSize: 13, fontWeight: 700, color: "var(--ink)",
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>
+          {funder?.name}
+        </span>
         {match && <MatchDots strength={match.matchStrength} />}
       </div>
 
-      {funder && (
-        <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: "var(--ink)", lineHeight: "18px" }}>
-          {funder.name}
-        </p>
-      )}
-
-      <p style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 400, color: "var(--slate-primary)", lineHeight: "17px" }}>
+      {/* Opp name — indented under avatar */}
+      <p style={{
+        margin: "0 0 8px", paddingLeft: 31,
+        fontSize: 12, fontWeight: 400, color: "var(--slate-primary)", lineHeight: "17px",
+      }}>
         {opp.name}
       </p>
 
-      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+      {/* Meta row: amount + deadline + type tag */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", paddingLeft: 31, flexWrap: "wrap" }}>
         {opp.amount && (
           <span style={{ fontSize: 12, fontWeight: 700, color: "var(--slate-primary)" }}>{opp.amount}</span>
         )}
         {opp.deadline && (
           <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
             {opp.deadline === "Rolling" ? "Rolling deadline" : `Due ${opp.deadline}`}
+          </span>
+        )}
+        {funder && (
+          <span style={{
+            fontSize: 10, fontWeight: 500, color: "var(--ink-tertiary)",
+            padding: "1px 7px", borderRadius: 20,
+            backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)",
+          }}>
+            {FUNDER_TYPE_LABELS[funder.type]}
           </span>
         )}
       </div>
@@ -405,6 +467,9 @@ function DiscoverPage() {
 
   const browseRef = useRef<HTMLDivElement>(null)
   const lastFocusedRef = useRef<HTMLElement | null>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const browseToolbarSentinelRef = useRef<HTMLDivElement>(null)
+  const [browseToolbarStuck, setBrowseToolbarStuck] = useState(false)
 
   const selectedOppId = searchParams.get("opp")
 
@@ -418,6 +483,18 @@ function DiscoverPage() {
     if (prevOppIdRef.current && !selectedOppId) lastFocusedRef.current?.focus()
     prevOppIdRef.current = selectedOppId
   }, [selectedOppId])
+
+  useEffect(() => {
+    const sentinel = browseToolbarSentinelRef.current
+    const root = scrollContainerRef.current
+    if (!sentinel || !root) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setBrowseToolbarStuck(!entry.isIntersecting),
+      { root, threshold: 0 },
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [])
 
   const handleOppClick = useCallback((oppId: string, el: HTMLElement) => {
     lastFocusedRef.current = el
@@ -527,7 +604,7 @@ function DiscoverPage() {
   return (
     <div style={{ height: "100%", position: "relative", overflow: "hidden", backgroundColor: "var(--canvas)" }}>
 
-      <div style={{ height: "100%", overflowY: "auto" }}>
+      <div ref={scrollContainerRef} style={{ height: "100%", overflowY: "auto" }}>
         <ContentContainer style={{ padding: "36px 40px 80px" }}>
 
           {/* Page header */}
@@ -683,7 +760,7 @@ function DiscoverPage() {
 
               {/* Browse */}
               <section ref={browseRef}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                   <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
                     Browse
                   </h2>
@@ -692,100 +769,119 @@ function DiscoverPage() {
                   </span>
                 </div>
 
+                {/* Sentinel — signals when the toolbar has scrolled to the sticky position */}
+                <div ref={browseToolbarSentinelRef} aria-hidden="true" style={{ height: 1, marginBottom: -1 }} />
+
+                {/* Sticky toolbar: search bar + filters/sort + active chips */}
                 <div style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "8px 12px", borderRadius: "var(--radius-input)",
-                  border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
-                  marginBottom: 10,
+                  position: "sticky", top: 0, zIndex: 10,
+                  backgroundColor: "var(--canvas)",
+                  marginLeft: -40, marginRight: -40,
+                  paddingLeft: 40, paddingRight: 40,
+                  paddingTop: 8, paddingBottom: browseToolbarStuck ? 10 : 8,
+                  transition: "box-shadow 150ms",
+                  boxShadow: browseToolbarStuck
+                    ? "0 1px 0 var(--hair), 0 2px 12px rgba(28,24,64,0.06)"
+                    : "none",
                 }}>
-                  <Search size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
-                  <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search opportunities and funders"
-                    style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 13, color: "var(--ink)", lineHeight: "17px" }}
-                  />
-                  {query && (
-                    <button type="button" onClick={() => setQuery("")}
-                      style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "var(--ink-tertiary)", padding: 0 }}
-                    >
-                      <X size={12} />
-                    </button>
-                  )}
-                </div>
-
-                {/* Filters + Sort bar */}
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: activeChips.length > 0 ? 8 : 12 }}>
-                  <FiltersPanel
-                    typeFilter={typeFilter}
-                    focusAreaFilter={focusAreaFilter}
-                    geographyFilter={geographyFilter}
-                    awardRangeFilter={awardRangeFilter}
-                    deadlineFilter={deadlineFilter}
-                    allFocusAreas={ALL_FOCUS_AREAS}
-                    allGeographies={ALL_GEOGRAPHIES}
-                    onTypeChange={setTypeFilter}
-                    onFocusAreaChange={setFocusAreaFilter}
-                    onGeographyChange={setGeographyFilter}
-                    onAwardRangeChange={setAwardRangeFilter}
-                    onDeadlineChange={setDeadlineFilter}
-                    onClearAll={clearFilters}
-                  />
-
-                  <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>Sort</span>
-                    <FilterSelect value={sortBy} onChange={(v) => setSortBy(v as "match" | "deadline" | "award")}>
-                      <option value="match">Best fit</option>
-                      <option value="deadline">Soonest deadline</option>
-                      <option value="award">Largest award</option>
-                    </FilterSelect>
-                  </div>
-                </div>
-
-                {/* Active filter chips */}
-                {activeChips.length > 0 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
-                    {activeChips.map(chip => (
-                      <button
-                        key={chip.key}
-                        type="button"
-                        onClick={chip.onRemove}
-                        style={{
-                          display: "inline-flex", alignItems: "center", gap: 5,
-                          padding: "4px 8px 4px 10px", borderRadius: 20,
-                          backgroundColor: "var(--slate-tint)", border: "1px solid var(--hair-2)",
-                          fontSize: 12, color: "var(--slate-secondary)",
-                          cursor: "pointer", transition: "background-color 120ms",
-                        }}
-                        onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--hair-2)"
-                        }}
-                        onMouseLeave={(e) => {
-                          (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-tint)"
-                        }}
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "8px 12px", borderRadius: "var(--radius-input)",
+                    border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
+                    marginBottom: 8,
+                  }}>
+                    <Search size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
+                    <input
+                      type="text"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Search opportunities and funders"
+                      style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 13, color: "var(--ink)", lineHeight: "17px" }}
+                    />
+                    {query && (
+                      <button type="button" onClick={() => setQuery("")}
+                        style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "var(--ink-tertiary)", padding: 0 }}
                       >
-                        {chip.label}
-                        <X size={11} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
-                      </button>
-                    ))}
-                    {activeChips.length >= 2 && (
-                      <button
-                        type="button"
-                        onClick={clearFilters}
-                        style={{
-                          background: "none", border: "none", cursor: "pointer", padding: "4px 6px",
-                          fontSize: 12, color: "var(--ink-tertiary)",
-                          transition: "color 120ms",
-                        }}
-                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
-                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
-                      >
-                        Clear all
+                        <X size={12} />
                       </button>
                     )}
                   </div>
-                )}
+
+                  {/* Filters + Sort bar */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: activeChips.length > 0 ? 8 : 0 }}>
+                    <FiltersPanel
+                      typeFilter={typeFilter}
+                      focusAreaFilter={focusAreaFilter}
+                      geographyFilter={geographyFilter}
+                      awardRangeFilter={awardRangeFilter}
+                      deadlineFilter={deadlineFilter}
+                      allFocusAreas={ALL_FOCUS_AREAS}
+                      allGeographies={ALL_GEOGRAPHIES}
+                      onTypeChange={setTypeFilter}
+                      onFocusAreaChange={setFocusAreaFilter}
+                      onGeographyChange={setGeographyFilter}
+                      onAwardRangeChange={setAwardRangeFilter}
+                      onDeadlineChange={setDeadlineFilter}
+                      onClearAll={clearFilters}
+                    />
+
+                    <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>Sort</span>
+                      <FilterSelect value={sortBy} onChange={(v) => setSortBy(v as "match" | "deadline" | "award")}>
+                        <option value="match">Best fit</option>
+                        <option value="deadline">Soonest deadline</option>
+                        <option value="award">Largest award</option>
+                      </FilterSelect>
+                    </div>
+                  </div>
+
+                  {/* Active filter chips */}
+                  {activeChips.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      {activeChips.map(chip => (
+                        <button
+                          key={chip.key}
+                          type="button"
+                          onClick={chip.onRemove}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 5,
+                            padding: "4px 8px 4px 10px", borderRadius: 20,
+                            backgroundColor: "var(--slate-tint)", border: "1px solid var(--hair-2)",
+                            fontSize: 12, color: "var(--slate-secondary)",
+                            cursor: "pointer", transition: "background-color 120ms",
+                          }}
+                          onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--hair-2)"
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-tint)"
+                          }}
+                        >
+                          {chip.label}
+                          <X size={11} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
+                        </button>
+                      ))}
+                      {activeChips.length >= 2 && (
+                        <button
+                          type="button"
+                          onClick={clearFilters}
+                          style={{
+                            background: "none", border: "none", cursor: "pointer", padding: "4px 6px",
+                            fontSize: 12, color: "var(--ink-tertiary)",
+                            transition: "color 120ms",
+                          }}
+                          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
+                        >
+                          Clear all
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Results */}
+                <div style={{ marginTop: 12 }}>
 
                 {sorted.length > 0 ? (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
@@ -809,6 +905,7 @@ function DiscoverPage() {
                     )}
                   </div>
                 )}
+                </div>
               </section>
             </>
 
