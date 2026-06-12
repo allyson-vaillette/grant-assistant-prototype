@@ -205,6 +205,7 @@ export const OPPORTUNITIES: Opportunity[] = [
     description:
       "Supports organizations with proven track records in animal rescue, adoption, and community outreach. Eligible organizations must be 501(c)(3) nonprofits operating active rescue or shelter programs.",
     eligibility: "501(c)(3) required · Active rescue/shelter program · Annual budget under $2M",
+    eligibilityLabel: "Likely eligible",
     focusAreas: ["Animal Welfare", "Pet Adoption", "Rescue Operations"],
   },
   {
@@ -216,6 +217,7 @@ export const OPPORTUNITIES: Opportunity[] = [
     description:
       "Focused on organizations with data-driven approaches to reducing shelter euthanasia. Strong preference for applicants who can demonstrate measurable outcomes in live release rates.",
     eligibility: "501(c)(3) required · Demonstrable intake and live release rate data",
+    eligibilityLabel: "Likely eligible",
     focusAreas: ["Animal Welfare", "Shelter Reform", "Spay/Neuter"],
   },
   {
@@ -227,6 +229,7 @@ export const OPPORTUNITIES: Opportunity[] = [
     description:
       "Recognizes and funds organizations demonstrating exceptional lifesaving outcomes. Invite-only via LOI process — contact program staff before applying.",
     eligibility: "Invitation required via LOI · Demonstrated no-kill outcomes",
+    eligibilityLabel: "Invitation required",
     focusAreas: ["No-Kill Initiatives", "Animal Welfare"],
   },
   {
@@ -238,6 +241,7 @@ export const OPPORTUNITIES: Opportunity[] = [
     description:
       "Supports spay/neuter programs serving underserved communities in Southern California. Priority given to organizations with mobile or community-based delivery models.",
     eligibility: "501(c)(3) · Southern California service area · Spay/neuter programming",
+    eligibilityLabel: "Confirm eligibility",
     focusAreas: ["Spay/Neuter", "Community Programs"],
   },
   {
@@ -249,6 +253,7 @@ export const OPPORTUNITIES: Opportunity[] = [
     description:
       "Funds organizations with demonstrated cat and kitten-specific programs including TNR, foster networks, and kitten nurseries.",
     eligibility: "501(c)(3) required · Active cat/kitten program · Adoption outcomes data",
+    eligibilityLabel: "Likely eligible",
     focusAreas: ["Cat & Kitten Programs", "Foster Networks", "TNR"],
   },
 ]

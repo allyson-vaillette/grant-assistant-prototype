@@ -2,14 +2,16 @@
 
 import React, { useState, useRef } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ContentContainer } from "@/components/layout/content-container"
 import {
   ChevronRight, Bell, Telescope, Plus, FilePlus,
-  CheckSquare, Clock, CalendarDays, AlertTriangle, Check,
+  CheckSquare, Clock, CalendarDays, AlertTriangle, Check, MapPin,
 } from "lucide-react"
 import {
   USER, TEAMMATES, ORG,
   PIPELINE_OPPORTUNITIES, OPPORTUNITIES, FUNDERS, TASKS, MATCHES,
+  getPipelineForOpportunity, createPipelineOpportunity,
 } from "@/lib/mock-data"
 import { IncompleteProfileBanner } from "@/components/IncompleteProfileBanner"
 import { useScope } from "@/lib/scope-context"
@@ -82,6 +84,19 @@ function HomeMatchDots({ strength }: { strength: MatchStrength }) {
   )
 }
 
+function homeMatchDaysLabel(deadline: string | undefined): string {
+  if (!deadline) return ""
+  if (deadline === "Rolling") return "Rolling"
+  const date = parseDate(deadline)
+  if (!date) return deadline
+  const now = new Date(); now.setHours(0, 0, 0, 0)
+  date.setHours(0, 0, 0, 0)
+  const days = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+  const short = deadline.replace(/,\s*\d{4}$/, "")
+  if (days < 0) return short
+  return `${short} · ${days}d left`
+}
+
 const HOME_STRONG_MATCHES = MATCHES
   .filter(m => m.matchStrength === "strong" && m.opportunityId)
   .map(m => ({
@@ -92,76 +107,195 @@ const HOME_STRONG_MATCHES = MATCHES
   .slice(0, 3)
 
 function HomeMatchCard({ match, opp }: { match: Match; opp: Opportunity }) {
+  const router = useRouter()
   const funder = FUNDERS.find(f => f.id === opp.funderId)
   const cfg = HOME_MATCH_CONFIG[match.matchStrength]
   const primaryReason = match.reasons.positive[0]
+  const pipeline = getPipelineForOpportunity(opp.id)
+  const tags = (opp.focusAreas ?? []).slice(0, 3)
+
+  const eligColor = opp.eligibilityLabel === "Likely eligible"
+    ? "var(--evergreen)"
+    : opp.eligibilityLabel === "Invitation required"
+    ? "var(--amber)"
+    : "var(--ink-tertiary)"
+
+  const geoShort = funder?.geography === "National (U.S.)" || funder?.geography === "National (U.S.) + Canada"
+    ? "National"
+    : funder?.geography ?? ""
 
   return (
-    <Link href={`/discover?opp=${opp.id}`} style={{ textDecoration: "none", display: "block", flex: 1 }}>
-      <div
-        style={{
-          height: "100%",
-          padding: "12px 16px",
-          backgroundColor: "var(--surface)",
-          border: "1px solid var(--hair)",
-          borderRadius: 12,
-          cursor: "pointer",
-          display: "flex", flexDirection: "column", gap: 0,
-          transition: "border-color 150ms, box-shadow 150ms",
-          boxSizing: "border-box",
-        }}
-        onMouseEnter={(e) => {
-          const el = e.currentTarget as HTMLDivElement
-          el.style.borderColor = "var(--slate-light)"
-          el.style.boxShadow = "var(--shadow-sm)"
-        }}
-        onMouseLeave={(e) => {
-          const el = e.currentTarget as HTMLDivElement
-          el.style.borderColor = "var(--hair)"
-          el.style.boxShadow = "none"
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-          <HomeFunderAvatar name={funder?.name ?? ""} size={26} />
-          <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {funder?.name}
-            </span>
-            <HomeMatchDots strength={match.matchStrength} />
-            <span style={{ fontSize: 10, fontWeight: 600, color: cfg.color, flexShrink: 0, lineHeight: 1 }}>
-              {cfg.label}
-            </span>
-          </div>
-        </div>
-
-        <p style={{ margin: "0 0 8px", paddingLeft: 34, fontSize: 12, fontWeight: 400, color: "var(--slate-primary)", lineHeight: "17px" }}>
-          {opp.name}
-        </p>
-
-        <div style={{ display: "flex", gap: 8, alignItems: "center", paddingLeft: 34, flexWrap: "wrap", marginBottom: primaryReason ? 8 : 0 }}>
-          {opp.amount && (
-            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--slate-primary)" }}>{opp.amount}</span>
-          )}
-          {opp.deadline && (
-            <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
-              {opp.deadline === "Rolling" ? "Rolling deadline" : `Due ${opp.deadline}`}
-            </span>
-          )}
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => router.push(`/discover?opp=${opp.id}`)}
+      onKeyDown={(e) => e.key === "Enter" && router.push(`/discover?opp=${opp.id}`)}
+      style={{
+        flex: 1,
+        padding: "14px 16px",
+        backgroundColor: "var(--surface)",
+        border: "1px solid var(--hair)",
+        borderRadius: 12,
+        cursor: "pointer",
+        display: "flex", flexDirection: "column",
+        transition: "border-color 150ms, box-shadow 150ms",
+        boxSizing: "border-box",
+      }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = "var(--slate-light)"
+        el.style.boxShadow = "var(--shadow-sm)"
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = "var(--hair)"
+        el.style.boxShadow = "none"
+      }}
+    >
+      {/* Header: avatar + funder name/type/location + match dots */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <HomeFunderAvatar name={funder?.name ?? ""} size={32} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{
+            margin: 0,
+            fontSize: 13, fontWeight: 700, color: "var(--ink)",
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>
+            {funder?.name}
+          </p>
           {funder && (
-            <span style={{ fontSize: 10, fontWeight: 500, color: "var(--ink-tertiary)", padding: "1px 7px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)" }}>
-              {HOME_FUNDER_TYPE_LABELS[funder.type] ?? funder.type}
-            </span>
+            <p style={{
+              margin: 0,
+              fontSize: 11, color: "var(--ink-tertiary)",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+              {HOME_FUNDER_TYPE_LABELS[funder.type] ?? funder.type}{funder.location ? ` · ${funder.location}` : ""}
+            </p>
           )}
         </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+          <HomeMatchDots strength={match.matchStrength} />
+          <span style={{ fontSize: 10, fontWeight: 600, color: cfg.color, whiteSpace: "nowrap" }}>
+            {cfg.label}
+          </span>
+        </div>
+      </div>
 
-        {primaryReason && (
-          <div style={{ display: "flex", gap: 7, alignItems: "flex-start", paddingLeft: 34 }}>
-            <Check size={12} style={{ color: "var(--evergreen)", flexShrink: 0, marginTop: 2 }} />
-            <span style={{ fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px" }}>{primaryReason}</span>
-          </div>
+      {/* Grant name */}
+      <p style={{
+        margin: "0 0 6px",
+        fontSize: 13, fontWeight: 600, color: "var(--ink)", lineHeight: "18px",
+        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+      }}>
+        {opp.name}
+      </p>
+
+      {/* Why-it-matches reason */}
+      {primaryReason && (
+        <div style={{ display: "flex", gap: 6, alignItems: "flex-start", marginBottom: 10 }}>
+          <Check size={12} style={{ color: "var(--evergreen)", flexShrink: 0, marginTop: 2 }} />
+          <span style={{
+            fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px",
+            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+          }}>
+            {primaryReason}
+          </span>
+        </div>
+      )}
+
+      {/* Divider */}
+      <div style={{ borderTop: "0.5px solid var(--hair)", margin: "0 0 10px" }} />
+
+      {/* Meta row */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 8 }}>
+        {opp.amount && (
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
+            {opp.amount}
+          </span>
+        )}
+        {opp.deadline && (
+          <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--ink-tertiary)" }}>
+            <CalendarDays size={12} />
+            {homeMatchDaysLabel(opp.deadline)}
+          </span>
+        )}
+        {opp.eligibilityLabel && (
+          <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: eligColor }}>
+            <Check size={12} />
+            {opp.eligibilityLabel}
+          </span>
+        )}
+        {geoShort && (
+          <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--ink-tertiary)" }}>
+            <MapPin size={12} />
+            {geoShort}
+          </span>
         )}
       </div>
-    </Link>
+
+      {/* Program-area tags */}
+      {tags.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 12 }}>
+          {tags.map(tag => (
+            <span key={tag} style={{
+              fontSize: 11, fontWeight: 500, color: "var(--ink-tertiary)",
+              padding: "2px 8px", borderRadius: 20,
+              backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)",
+            }}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Footer actions */}
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: "auto" }}>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); router.push(`/discover?opp=${opp.id}`) }}
+          style={{
+            padding: "5px 12px", borderRadius: 6,
+            border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+            fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)",
+            cursor: "pointer", transition: "background-color 120ms",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+        >
+          View details
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (pipeline) {
+              router.push(`/pursuit/${opp.id}`)
+            } else {
+              const pip = createPipelineOpportunity(opp.id, "proj-general")
+              router.push(`/pursuit/${pip.opportunityId}`)
+            }
+          }}
+          style={{
+            padding: "5px 14px", borderRadius: 6,
+            border: "1px solid var(--slate-primary)", backgroundColor: "var(--slate-primary)",
+            fontSize: 12, fontWeight: 600, color: "#ffffff",
+            cursor: "pointer", transition: "background-color 120ms, border-color 120ms",
+          }}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            el.style.backgroundColor = "var(--slate-secondary)"
+            el.style.borderColor = "var(--slate-secondary)"
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            el.style.backgroundColor = "var(--slate-primary)"
+            el.style.borderColor = "var(--slate-primary)"
+          }}
+        >
+          {pipeline ? "Open workspace" : "Track"}
+        </button>
+      </div>
+    </div>
   )
 }
 

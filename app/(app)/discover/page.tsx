@@ -3,10 +3,10 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ContentContainer } from "@/components/layout/content-container"
-import { Search, X, Check } from "lucide-react"
+import { Search, X, Check, CalendarDays, MapPin } from "lucide-react"
 import {
   OPPORTUNITIES, MATCHES, FUNDERS,
-  getFunder, getMatchForOpportunity, createPipelineOpportunity,
+  getFunder, getMatchForOpportunity, createPipelineOpportunity, getPipelineForOpportunity,
 } from "@/lib/mock-data"
 import { useScope } from "@/lib/scope-context"
 import type { Opportunity, FunderType, MatchStrength, Match } from "@/lib/types"
@@ -213,12 +213,28 @@ function MatchRow({ match, opp, isFirst, onOppClick, onTrack }: {
 
 // ── Catalogue card ─────────────────────────────────────────────────────────
 
-function CatalogueCard({ opp, onOppClick }: {
+function CatalogueCard({ opp, onOppClick, onTrack }: {
   opp: Opportunity
   onOppClick: (oppId: string, el: HTMLElement) => void
+  onTrack: (oppId: string) => void
 }) {
+  const router = useRouter()
   const funder = getFunder(opp.funderId)
   const match = getMatchForOpportunity(opp.id)
+  const pipeline = getPipelineForOpportunity(opp.id)
+  const cfg = match ? MATCH_CONFIG[match.matchStrength] : null
+  const primaryReason = match?.reasons.positive[0]
+  const tags = (opp.focusAreas ?? []).slice(0, 3)
+
+  const eligColor = opp.eligibilityLabel === "Likely eligible"
+    ? "var(--evergreen)"
+    : opp.eligibilityLabel === "Invitation required"
+    ? "var(--amber)"
+    : "var(--ink-tertiary)"
+
+  const geoShort = funder?.geography === "National (U.S.)" || funder?.geography === "National (U.S.) + Canada"
+    ? "National"
+    : funder?.geography ?? ""
 
   return (
     <div
@@ -227,12 +243,12 @@ function CatalogueCard({ opp, onOppClick }: {
       onClick={(e) => onOppClick(opp.id, e.currentTarget)}
       onKeyDown={(e) => e.key === "Enter" && onOppClick(opp.id, e.currentTarget as HTMLElement)}
       style={{
-        padding: "10px 14px",
+        padding: "14px 16px",
         backgroundColor: "var(--surface)",
         border: "1px solid var(--hair)",
         borderRadius: 12,
         cursor: "pointer",
-        display: "flex", flexDirection: "column", gap: 0,
+        display: "flex", flexDirection: "column",
         transition: "border-color 150ms, box-shadow 150ms",
       }}
       onMouseEnter={(e) => {
@@ -246,46 +262,145 @@ function CatalogueCard({ opp, onOppClick }: {
         el.style.boxShadow = "none"
       }}
     >
-      {/* Funder row: avatar + name + match dots if matched */}
-      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4 }}>
-        {funder && <FunderAvatar name={funder.name} size={24} />}
-        <span style={{
-          flex: 1, minWidth: 0,
-          fontSize: 13, fontWeight: 700, color: "var(--ink)",
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        }}>
-          {funder?.name}
-        </span>
-        {match && <MatchDots strength={match.matchStrength} />}
+      {/* Header: avatar + funder name/type/location + match dots */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        {funder && <FunderAvatar name={funder.name} size={32} />}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{
+            margin: 0,
+            fontSize: 13, fontWeight: 700, color: "var(--ink)",
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>
+            {funder?.name}
+          </p>
+          {funder && (
+            <p style={{
+              margin: 0,
+              fontSize: 11, color: "var(--ink-tertiary)",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+              {FUNDER_TYPE_LABELS[funder.type]}{funder.location ? ` · ${funder.location}` : ""}
+            </p>
+          )}
+        </div>
+        {match && cfg && (
+          <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+            <MatchDots strength={match.matchStrength} />
+            <span style={{ fontSize: 10, fontWeight: 600, color: cfg.color, whiteSpace: "nowrap" }}>
+              {cfg.label}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Opp name — indented under avatar */}
+      {/* Grant name */}
       <p style={{
-        margin: "0 0 8px", paddingLeft: 31,
-        fontSize: 12, fontWeight: 400, color: "var(--slate-primary)", lineHeight: "17px",
+        margin: "0 0 6px",
+        fontSize: 13, fontWeight: 600, color: "var(--ink)", lineHeight: "18px",
+        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
       }}>
         {opp.name}
       </p>
 
-      {/* Meta row: amount + deadline + type tag */}
-      <div style={{ display: "flex", gap: 8, alignItems: "center", paddingLeft: 31, flexWrap: "wrap" }}>
+      {/* Why-it-matches reason (matched opportunities only) */}
+      {match && primaryReason && (
+        <div style={{ display: "flex", gap: 6, alignItems: "flex-start", marginBottom: 10 }}>
+          <Check size={12} style={{ color: "var(--evergreen)", flexShrink: 0, marginTop: 2 }} />
+          <span style={{
+            fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px",
+            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+          }}>
+            {primaryReason}
+          </span>
+        </div>
+      )}
+
+      {/* Divider */}
+      <div style={{ borderTop: "0.5px solid var(--hair)", margin: `${match && primaryReason ? 0 : 10}px 0 10px` }} />
+
+      {/* Meta row */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 8 }}>
         {opp.amount && (
-          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--slate-primary)" }}>{opp.amount}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
+            {opp.amount}
+          </span>
         )}
         {opp.deadline && (
-          <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
-            {opp.deadline === "Rolling" ? "Rolling deadline" : `Due ${opp.deadline}`}
+          <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--ink-tertiary)" }}>
+            <CalendarDays size={12} />
+            {daysLabel(opp.deadline)}
           </span>
         )}
-        {funder && (
-          <span style={{
-            fontSize: 10, fontWeight: 500, color: "var(--ink-tertiary)",
-            padding: "1px 7px", borderRadius: 20,
-            backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)",
-          }}>
-            {FUNDER_TYPE_LABELS[funder.type]}
+        {opp.eligibilityLabel && (
+          <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: eligColor }}>
+            <Check size={12} />
+            {opp.eligibilityLabel}
           </span>
         )}
+        {geoShort && (
+          <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--ink-tertiary)" }}>
+            <MapPin size={12} />
+            {geoShort}
+          </span>
+        )}
+      </div>
+
+      {/* Program-area tags */}
+      {tags.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 12 }}>
+          {tags.map(tag => (
+            <span key={tag} style={{
+              fontSize: 11, fontWeight: 500, color: "var(--ink-tertiary)",
+              padding: "2px 8px", borderRadius: 20,
+              backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)",
+            }}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Footer actions */}
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: "auto" }}>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onOppClick(opp.id, e.currentTarget as HTMLElement) }}
+          style={{
+            padding: "5px 12px", borderRadius: 6,
+            border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+            fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)",
+            cursor: "pointer", transition: "background-color 120ms",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+        >
+          View details
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (pipeline) { router.push(`/pursuit/${opp.id}`) } else { onTrack(opp.id) }
+          }}
+          style={{
+            padding: "5px 14px", borderRadius: 6,
+            border: "1px solid var(--slate-primary)", backgroundColor: "var(--slate-primary)",
+            fontSize: 12, fontWeight: 600, color: "#ffffff",
+            cursor: "pointer", transition: "background-color 120ms, border-color 120ms",
+          }}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            el.style.backgroundColor = "var(--slate-secondary)"
+            el.style.borderColor = "var(--slate-secondary)"
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            el.style.backgroundColor = "var(--slate-primary)"
+            el.style.borderColor = "var(--slate-primary)"
+          }}
+        >
+          {pipeline ? "Open workspace" : "Track"}
+        </button>
       </div>
     </div>
   )
@@ -733,6 +848,7 @@ function DiscoverPage() {
                         key={opp.id}
                         opp={opp}
                         onOppClick={handleOppClick}
+                        onTrack={handleTrack}
                       />
                     ))}
                   </div>

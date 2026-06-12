@@ -115,6 +115,7 @@ export interface Opportunity {
   deadline?: string
   description?: string
   eligibility?: string
+  eligibilityLabel?: string
   focusAreas?: string[]
 }
 
