@@ -442,9 +442,6 @@ export function OpportunityPeekPanel({ oppId, onClose, onFunderClick }: Props) {
               >
                 Track
               </button>
-              <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "var(--evergreen)", fontWeight: 500 }}>
-                <Check size={13} /> Tracking
-              </span>
             </>
           ) : (
             <button
