@@ -399,7 +399,7 @@ function CatalogueCard({ opp, onOppClick, onTrack }: {
             el.style.borderColor = "var(--slate-primary)"
           }}
         >
-          {pipeline ? "Add to tracker" : "Track"}
+          Track
         </button>
       </div>
     </div>
