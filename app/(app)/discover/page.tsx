@@ -443,6 +443,16 @@ function FilterSelect({
   )
 }
 
+// ── Tab stub placeholder ───────────────────────────────────────────────────
+
+function TabStub({ message }: { message: string }) {
+  return (
+    <div style={{ padding: "64px 0", display: "flex", justifyContent: "center" }}>
+      <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>{message}</p>
+    </div>
+  )
+}
+
 // ── Discover page (inner) ──────────────────────────────────────────────────
 
 function DiscoverPage() {
@@ -450,6 +460,10 @@ function DiscoverPage() {
   const searchParams = useSearchParams()
   const { scopeLabel } = useScope()
   const [matchesLoaded, setMatchesLoaded] = useState(false)
+
+  // Tab state
+  const [primaryTab, setPrimaryTab] = useState<"matches" | "explore">("matches")
+  const [subTab, setSubTab] = useState<"opportunities" | "funders">("opportunities")
 
   // Dismiss / hidden
   const [hiddenMatches, setHiddenMatches] = useState<Array<{ matchId: string; reason?: DismissReason }>>([])
@@ -466,7 +480,6 @@ function DiscoverPage() {
   const [deadlineFilter, setDeadlineFilter] = useState("")
   const [sortBy, setSortBy] = useState<"match" | "deadline" | "award">("match")
 
-  const browseRef = useRef<HTMLDivElement>(null)
   const lastFocusedRef = useRef<HTMLElement | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const browseToolbarSentinelRef = useRef<HTMLDivElement>(null)
@@ -495,7 +508,7 @@ function DiscoverPage() {
     )
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [])
+  }, [primaryTab, subTab])
 
   const handleOppClick = useCallback((oppId: string, el: HTMLElement) => {
     lastFocusedRef.current = el
@@ -525,8 +538,14 @@ function DiscoverPage() {
     setHiddenMatches(prev => prev.filter(m => m.matchId !== matchId))
   }
 
-  const scrollToBrowse = () => {
-    browseRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+  const handlePrimaryTab = (tab: "matches" | "explore") => {
+    setPrimaryTab(tab)
+    setSubTab("opportunities")
+  }
+
+  const switchToExplore = () => {
+    setPrimaryTab("explore")
+    setSubTab("opportunities")
   }
 
   const today = new Date()
@@ -611,7 +630,7 @@ function DiscoverPage() {
           <IncompleteProfileBanner />
 
           {/* Page header */}
-          <div style={{ marginBottom: 28 }}>
+          <div style={{ marginBottom: 20 }}>
             <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700, color: "var(--ink)" }}>
               Discover
             </h1>
@@ -620,293 +639,342 @@ function DiscoverPage() {
             </p>
           </div>
 
-          <>
-              {/* Matches — AI surface with gradient band */}
-              <section
+          {/* Primary tabs */}
+          <div style={{ display: "flex", gap: 24, borderBottom: "1px solid var(--hair)", marginBottom: 0 }}>
+            {(["matches", "explore"] as const).map(tab => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => handlePrimaryTab(tab)}
                 style={{
-                  position: "relative",
-                  isolation: "isolate",
-                  overflow: "hidden",
-                  marginBottom: 40,
-                  padding: "20px",
-                  borderRadius: 14,
-                  background: "linear-gradient(135deg, rgba(91,69,200,0.07) 0%, rgba(107,168,164,0.07) 100%)",
-                  border: "1px solid rgba(91,69,200,0.1)",
+                  background: "none", border: "none", cursor: "pointer",
+                  padding: "0 0 10px",
+                  fontSize: 14, fontWeight: primaryTab === tab ? 600 : 400,
+                  color: primaryTab === tab ? "var(--ink)" : "var(--ink-tertiary)",
+                  borderBottom: primaryTab === tab ? "2px solid var(--ink)" : "2px solid transparent",
+                  marginBottom: -1,
+                  transition: "color 120ms",
                 }}
               >
-                <div className="ai-blob" aria-hidden="true" />
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                  <span
-                    className="material-symbols-outlined"
+                {tab === "matches" ? "Matches" : "Explore"}
+              </button>
+            ))}
+          </div>
+
+          {/* Sub-tabs */}
+          <div style={{ display: "flex", gap: 20, borderBottom: "1px solid var(--hair)", marginBottom: 24 }}>
+            {(["opportunities", "funders"] as const).map(sub => (
+              <button
+                key={sub}
+                type="button"
+                onClick={() => setSubTab(sub)}
+                style={{
+                  background: "none", border: "none", cursor: "pointer",
+                  padding: "8px 0",
+                  fontSize: 12, fontWeight: subTab === sub ? 500 : 400,
+                  color: subTab === sub ? "var(--ink-secondary)" : "var(--ink-tertiary)",
+                  borderBottom: subTab === sub ? "1.5px solid var(--ink-secondary)" : "1.5px solid transparent",
+                  marginBottom: -1,
+                  transition: "color 120ms",
+                }}
+              >
+                {sub === "opportunities" ? "Opportunities" : "Funders"}
+              </button>
+            ))}
+          </div>
+
+          {/* Matches > Opportunities */}
+          {primaryTab === "matches" && subTab === "opportunities" && (
+            <section
+              style={{
+                position: "relative",
+                isolation: "isolate",
+                overflow: "hidden",
+                padding: "20px",
+                borderRadius: 14,
+                background: "linear-gradient(135deg, rgba(91,69,200,0.07) 0%, rgba(107,168,164,0.07) 100%)",
+                border: "1px solid rgba(91,69,200,0.1)",
+              }}
+            >
+              <div className="ai-blob" aria-hidden="true" />
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                <span
+                  className="material-symbols-outlined"
+                  style={{
+                    fontSize: 18, userSelect: "none",
+                    background: "linear-gradient(135deg, rgb(91,69,200) 0%, rgb(107,168,164) 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
+                >
+                  auto_fix_high
+                </span>
+                <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+                  Matched for {scopeLabel}
+                </h2>
+                {matchesLoaded && visibleMatches.length > 0 && (
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    minWidth: 20, height: 20, padding: "0 6px", borderRadius: 10,
+                    fontSize: 11, fontWeight: 700,
+                    backgroundColor: "var(--evergreen-tint)", color: "var(--evergreen)",
+                  }}>
+                    {visibleMatches.length}
+                  </span>
+                )}
+              </div>
+
+              {/* Dismiss reason bar */}
+              {dismissToast && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+                  padding: "8px 14px", borderRadius: 8,
+                  backgroundColor: "var(--surface)", border: "1px solid var(--hair)",
+                  marginBottom: 12,
+                }}>
+                  <span style={{ fontSize: 12, color: "var(--ink-tertiary)", flexShrink: 0 }}>Why?</span>
+                  {DISMISS_REASONS.map(r => (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => handleSetReason(dismissToast.matchId, r.value)}
+                      style={{
+                        padding: "3px 10px", borderRadius: 20,
+                        border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+                        fontSize: 11, color: "var(--ink-secondary)", cursor: "pointer",
+                        transition: "background-color 120ms, border-color 120ms",
+                      }}
+                      onMouseEnter={(e) => {
+                        const el = e.currentTarget as HTMLButtonElement
+                        el.style.backgroundColor = "var(--canvas)"
+                        el.style.borderColor = "var(--ink-tertiary)"
+                      }}
+                      onMouseLeave={(e) => {
+                        const el = e.currentTarget as HTMLButtonElement
+                        el.style.backgroundColor = "transparent"
+                        el.style.borderColor = "var(--hair-2)"
+                      }}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setDismissToast(null)}
                     style={{
-                      fontSize: 18, userSelect: "none",
-                      background: "linear-gradient(135deg, rgb(91,69,200) 0%, rgb(107,168,164) 100%)",
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      backgroundClip: "text",
+                      marginLeft: "auto", background: "none", border: "none",
+                      cursor: "pointer", color: "var(--ink-tertiary)",
+                      display: "flex", alignItems: "center", padding: 2,
                     }}
                   >
-                    auto_fix_high
-                  </span>
-                  <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
-                    Matched for {scopeLabel}
-                  </h2>
-                  {matchesLoaded && visibleMatches.length > 0 && (
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", justifyContent: "center",
-                      minWidth: 20, height: 20, padding: "0 6px", borderRadius: 10,
-                      fontSize: 11, fontWeight: 700,
-                      backgroundColor: "var(--evergreen-tint)", color: "var(--evergreen)",
-                    }}>
-                      {visibleMatches.length}
-                    </span>
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
+
+              {!matchesLoaded ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+                  <SkeletonMatchCard /><SkeletonMatchCard /><SkeletonMatchCard />
+                </div>
+              ) : visibleMatches.length === 0 ? (
+                <EmptyMatches scopeLabel={scopeLabel} onBrowseAll={switchToExplore} />
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+                  {visibleMatches.map(({ match, opp }) => (
+                    <MatchCard
+                      key={match.id}
+                      match={match}
+                      opp={opp}
+                      onDismiss={() => handleDismiss(match.id)}
+                      onOppClick={handleOppClick}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Hidden matches */}
+              {hiddenMatches.length > 0 && (
+                <div style={{ marginTop: 14 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowHidden(s => !s)}
+                    style={{
+                      background: "none", border: "none", cursor: "pointer", padding: 0,
+                      fontSize: 12, color: "var(--ink-tertiary)",
+                    }}
+                  >
+                    {hiddenMatches.length} hidden · {showHidden ? "Hide" : "Show"}
+                  </button>
+                  {showHidden && (
+                    <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+                      {hiddenMatches.map(({ matchId, reason }) => {
+                        const sm = STRONG_MATCHES.find(m => m.match.id === matchId)
+                        if (!sm) return null
+                        return (
+                          <div key={matchId} style={{
+                            display: "flex", alignItems: "center", gap: 12,
+                            padding: "9px 14px", borderRadius: 9,
+                            backgroundColor: "var(--surface)", border: "1px solid var(--hair)",
+                          }}>
+                            <span style={{ flex: 1, fontSize: 12, color: "var(--ink-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {sm.opp.name}
+                            </span>
+                            {reason && (
+                              <span style={{ fontSize: 11, color: "var(--ink-tertiary)", flexShrink: 0 }}>
+                                {DISMISS_REASONS.find(r => r.value === reason)?.label}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleUnhide(matchId)}
+                              style={{
+                                background: "none", border: "none", cursor: "pointer",
+                                fontSize: 12, color: "var(--slate-secondary)", padding: 0, flexShrink: 0,
+                              }}
+                            >
+                              Unhide
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
                   )}
                 </div>
+              )}
+            </section>
+          )}
 
-                {/* Dismiss reason bar */}
-                {dismissToast && (
-                  <div style={{
-                    display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
-                    padding: "8px 14px", borderRadius: 8,
-                    backgroundColor: "var(--surface)", border: "1px solid var(--hair)",
-                    marginBottom: 12,
-                  }}>
-                    <span style={{ fontSize: 12, color: "var(--ink-tertiary)", flexShrink: 0 }}>Why?</span>
-                    {DISMISS_REASONS.map(r => (
-                      <button
-                        key={r.value}
-                        type="button"
-                        onClick={() => handleSetReason(dismissToast.matchId, r.value)}
-                        style={{
-                          padding: "3px 10px", borderRadius: 20,
-                          border: "1px solid var(--hair-2)", backgroundColor: "transparent",
-                          fontSize: 11, color: "var(--ink-secondary)", cursor: "pointer",
-                          transition: "background-color 120ms, border-color 120ms",
-                        }}
-                        onMouseEnter={(e) => {
-                          const el = e.currentTarget as HTMLButtonElement
-                          el.style.backgroundColor = "var(--canvas)"
-                          el.style.borderColor = "var(--ink-tertiary)"
-                        }}
-                        onMouseLeave={(e) => {
-                          const el = e.currentTarget as HTMLButtonElement
-                          el.style.backgroundColor = "transparent"
-                          el.style.borderColor = "var(--hair-2)"
-                        }}
-                      >
-                        {r.label}
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => setDismissToast(null)}
-                      style={{
-                        marginLeft: "auto", background: "none", border: "none",
-                        cursor: "pointer", color: "var(--ink-tertiary)",
-                        display: "flex", alignItems: "center", padding: 2,
-                      }}
+          {/* Matches > Funders */}
+          {primaryTab === "matches" && subTab === "funders" && (
+            <TabStub message="Curated funders coming next" />
+          )}
+
+          {/* Explore > Opportunities */}
+          {primaryTab === "explore" && subTab === "opportunities" && (
+            <section>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+                  All opportunities
+                </h2>
+                <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
+                  {sorted.length} {sorted.length === 1 ? "opportunity" : "opportunities"}
+                </span>
+              </div>
+
+              {/* Sentinel — signals when the toolbar has scrolled to the sticky position */}
+              <div ref={browseToolbarSentinelRef} aria-hidden="true" style={{ height: 1, marginBottom: -1 }} />
+
+              {/* Sticky toolbar: search bar + filters/sort + active chips */}
+              <div style={{
+                position: "sticky", top: 0, zIndex: 10,
+                backgroundColor: "var(--canvas)",
+                marginLeft: -40, marginRight: -40,
+                paddingLeft: 40, paddingRight: 40,
+                paddingTop: 8, paddingBottom: browseToolbarStuck ? 10 : 8,
+                transition: "box-shadow 150ms",
+                boxShadow: browseToolbarStuck
+                  ? "0 1px 0 var(--hair), 0 2px 12px rgba(28,24,64,0.06)"
+                  : "none",
+              }}>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  padding: "8px 12px", borderRadius: "var(--radius-input)",
+                  border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
+                  marginBottom: 8,
+                }}>
+                  <Search size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search opportunities and funders"
+                    style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 13, color: "var(--ink)", lineHeight: "17px" }}
+                  />
+                  {query && (
+                    <button type="button" onClick={() => setQuery("")}
+                      style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "var(--ink-tertiary)", padding: 0 }}
                     >
                       <X size={12} />
                     </button>
-                  </div>
-                )}
-
-                {!matchesLoaded ? (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-                    <SkeletonMatchCard /><SkeletonMatchCard /><SkeletonMatchCard />
-                  </div>
-                ) : visibleMatches.length === 0 ? (
-                  <EmptyMatches scopeLabel={scopeLabel} onBrowseAll={scrollToBrowse} />
-                ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-                    {visibleMatches.map(({ match, opp }) => (
-                      <MatchCard
-                        key={match.id}
-                        match={match}
-                        opp={opp}
-                        onDismiss={() => handleDismiss(match.id)}
-                        onOppClick={handleOppClick}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {/* Hidden matches */}
-                {hiddenMatches.length > 0 && (
-                  <div style={{ marginTop: 14 }}>
-                    <button
-                      type="button"
-                      onClick={() => setShowHidden(s => !s)}
-                      style={{
-                        background: "none", border: "none", cursor: "pointer", padding: 0,
-                        fontSize: 12, color: "var(--ink-tertiary)",
-                      }}
-                    >
-                      {hiddenMatches.length} hidden · {showHidden ? "Hide" : "Show"}
-                    </button>
-                    {showHidden && (
-                      <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
-                        {hiddenMatches.map(({ matchId, reason }) => {
-                          const sm = STRONG_MATCHES.find(m => m.match.id === matchId)
-                          if (!sm) return null
-                          return (
-                            <div key={matchId} style={{
-                              display: "flex", alignItems: "center", gap: 12,
-                              padding: "9px 14px", borderRadius: 9,
-                              backgroundColor: "var(--surface)", border: "1px solid var(--hair)",
-                            }}>
-                              <span style={{ flex: 1, fontSize: 12, color: "var(--ink-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {sm.opp.name}
-                              </span>
-                              {reason && (
-                                <span style={{ fontSize: 11, color: "var(--ink-tertiary)", flexShrink: 0 }}>
-                                  {DISMISS_REASONS.find(r => r.value === reason)?.label}
-                                </span>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => handleUnhide(matchId)}
-                                style={{
-                                  background: "none", border: "none", cursor: "pointer",
-                                  fontSize: 12, color: "var(--slate-secondary)", padding: 0, flexShrink: 0,
-                                }}
-                              >
-                                Unhide
-                              </button>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </section>
-
-              {/* All opportunities */}
-              <section ref={browseRef}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                  <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
-                    All opportunities
-                  </h2>
-                  <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
-                    {sorted.length} {sorted.length === 1 ? "opportunity" : "opportunities"}
-                  </span>
-                </div>
-
-                {/* Sentinel — signals when the toolbar has scrolled to the sticky position */}
-                <div ref={browseToolbarSentinelRef} aria-hidden="true" style={{ height: 1, marginBottom: -1 }} />
-
-                {/* Sticky toolbar: search bar + filters/sort + active chips */}
-                <div style={{
-                  position: "sticky", top: 0, zIndex: 10,
-                  backgroundColor: "var(--canvas)",
-                  marginLeft: -40, marginRight: -40,
-                  paddingLeft: 40, paddingRight: 40,
-                  paddingTop: 8, paddingBottom: browseToolbarStuck ? 10 : 8,
-                  transition: "box-shadow 150ms",
-                  boxShadow: browseToolbarStuck
-                    ? "0 1px 0 var(--hair), 0 2px 12px rgba(28,24,64,0.06)"
-                    : "none",
-                }}>
-                  <div style={{
-                    display: "flex", alignItems: "center", gap: 8,
-                    padding: "8px 12px", borderRadius: "var(--radius-input)",
-                    border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
-                    marginBottom: 8,
-                  }}>
-                    <Search size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
-                    <input
-                      type="text"
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      placeholder="Search opportunities and funders"
-                      style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 13, color: "var(--ink)", lineHeight: "17px" }}
-                    />
-                    {query && (
-                      <button type="button" onClick={() => setQuery("")}
-                        style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "var(--ink-tertiary)", padding: 0 }}
-                      >
-                        <X size={12} />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Filters + Sort bar */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: activeChips.length > 0 ? 8 : 0 }}>
-                    <FiltersPanel
-                      typeFilter={typeFilter}
-                      focusAreaFilter={focusAreaFilter}
-                      geographyFilter={geographyFilter}
-                      awardRangeFilter={awardRangeFilter}
-                      deadlineFilter={deadlineFilter}
-                      allFocusAreas={ALL_FOCUS_AREAS}
-                      allGeographies={ALL_GEOGRAPHIES}
-                      onTypeChange={setTypeFilter}
-                      onFocusAreaChange={setFocusAreaFilter}
-                      onGeographyChange={setGeographyFilter}
-                      onAwardRangeChange={setAwardRangeFilter}
-                      onDeadlineChange={setDeadlineFilter}
-                      onClearAll={clearFilters}
-                    />
-
-                    <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>Sort</span>
-                      <FilterSelect value={sortBy} onChange={(v) => setSortBy(v as "match" | "deadline" | "award")}>
-                        <option value="match">Best fit</option>
-                        <option value="deadline">Soonest deadline</option>
-                        <option value="award">Largest award</option>
-                      </FilterSelect>
-                    </div>
-                  </div>
-
-                  {/* Active filter chips */}
-                  {activeChips.length > 0 && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                      {activeChips.map(chip => (
-                        <button
-                          key={chip.key}
-                          type="button"
-                          onClick={chip.onRemove}
-                          style={{
-                            display: "inline-flex", alignItems: "center", gap: 5,
-                            padding: "4px 8px 4px 10px", borderRadius: 20,
-                            backgroundColor: "var(--slate-tint)", border: "1px solid var(--hair-2)",
-                            fontSize: 12, color: "var(--slate-secondary)",
-                            cursor: "pointer", transition: "background-color 120ms",
-                          }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--hair-2)"
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-tint)"
-                          }}
-                        >
-                          {chip.label}
-                          <X size={11} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
-                        </button>
-                      ))}
-                      {activeChips.length >= 2 && (
-                        <button
-                          type="button"
-                          onClick={clearFilters}
-                          style={{
-                            background: "none", border: "none", cursor: "pointer", padding: "4px 6px",
-                            fontSize: 12, color: "var(--ink-tertiary)",
-                            transition: "color 120ms",
-                          }}
-                          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
-                          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
-                        >
-                          Clear all
-                        </button>
-                      )}
-                    </div>
                   )}
                 </div>
 
-                {/* Results */}
-                <div style={{ marginTop: 12 }}>
+                {/* Filters + Sort bar */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: activeChips.length > 0 ? 8 : 0 }}>
+                  <FiltersPanel
+                    typeFilter={typeFilter}
+                    focusAreaFilter={focusAreaFilter}
+                    geographyFilter={geographyFilter}
+                    awardRangeFilter={awardRangeFilter}
+                    deadlineFilter={deadlineFilter}
+                    allFocusAreas={ALL_FOCUS_AREAS}
+                    allGeographies={ALL_GEOGRAPHIES}
+                    onTypeChange={setTypeFilter}
+                    onFocusAreaChange={setFocusAreaFilter}
+                    onGeographyChange={setGeographyFilter}
+                    onAwardRangeChange={setAwardRangeFilter}
+                    onDeadlineChange={setDeadlineFilter}
+                    onClearAll={clearFilters}
+                  />
 
+                  <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>Sort</span>
+                    <FilterSelect value={sortBy} onChange={(v) => setSortBy(v as "match" | "deadline" | "award")}>
+                      <option value="match">Best fit</option>
+                      <option value="deadline">Soonest deadline</option>
+                      <option value="award">Largest award</option>
+                    </FilterSelect>
+                  </div>
+                </div>
+
+                {/* Active filter chips */}
+                {activeChips.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    {activeChips.map(chip => (
+                      <button
+                        key={chip.key}
+                        type="button"
+                        onClick={chip.onRemove}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 5,
+                          padding: "4px 8px 4px 10px", borderRadius: 20,
+                          backgroundColor: "var(--slate-tint)", border: "1px solid var(--hair-2)",
+                          fontSize: 12, color: "var(--slate-secondary)",
+                          cursor: "pointer", transition: "background-color 120ms",
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--hair-2)"
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-tint)"
+                        }}
+                      >
+                        {chip.label}
+                        <X size={11} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
+                      </button>
+                    ))}
+                    {activeChips.length >= 2 && (
+                      <button
+                        type="button"
+                        onClick={clearFilters}
+                        style={{
+                          background: "none", border: "none", cursor: "pointer", padding: "4px 6px",
+                          fontSize: 12, color: "var(--ink-tertiary)",
+                          transition: "color 120ms",
+                        }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
+                      >
+                        Clear all
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Results */}
+              <div style={{ marginTop: 12 }}>
                 {sorted.length > 0 ? (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
                     {sorted.map(opp => (
@@ -929,9 +997,14 @@ function DiscoverPage() {
                     )}
                   </div>
                 )}
-                </div>
-              </section>
-            </>
+              </div>
+            </section>
+          )}
+
+          {/* Explore > Funders */}
+          {primaryTab === "explore" && subTab === "funders" && (
+            <TabStub message="Funder search coming next" />
+          )}
 
         </ContentContainer>
       </div>
