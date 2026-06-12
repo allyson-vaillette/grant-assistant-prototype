@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { X, Check, AlertTriangle, ChevronRight, Loader2, ExternalLink } from "lucide-react"
+import { X, Check, AlertTriangle, Loader2, ExternalLink } from "lucide-react"
 import {
   FUNDERS, OPPORTUNITIES, PROJECTS,
   getMatchForOpportunity,
@@ -440,7 +440,7 @@ export function OpportunityPeekPanel({ oppId, onClose, onFunderClick }: Props) {
                 onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
               >
-                Open workspace <ChevronRight size={14} />
+                Track
               </button>
               <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "var(--evergreen)", fontWeight: 500 }}>
                 <Check size={13} /> Tracking
