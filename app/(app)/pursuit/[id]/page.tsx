@@ -8,7 +8,7 @@ import { ArtifactEditorContent } from "./artifact/[artifactId]/page"
 import {
   FUNDERS, OPPORTUNITIES, USER, TEAMMATES,
   getArtifactsForPipeline, getAttachmentsForPipeline, getTasksForPipeline,
-  getPipelineForOpportunity, createArtifact, getWritingSession, submitPursuitApplication,
+  getPipelineForOpportunity, createPipelineOpportunity, createArtifact, getWritingSession, submitPursuitApplication,
   updatePipelineStatus,
 } from "@/lib/mock-data"
 import type { PipelineStatus, PipelinePhase, ArtifactStage, AttachmentCategory, Attachment, Task, Requirement, DraftSection, Artifact } from "@/lib/types"
@@ -800,6 +800,7 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
   const [activeTab, setActiveTab] = useState<Tab>("requirements")
 
   const initialPip = getPipelineForOpportunity(params.id)
+    ?? (OPPORTUNITIES.find(o => o.id === params.id) ? createPipelineOpportunity(params.id, "proj-general") : undefined)
   const initialArtifacts = initialPip ? getArtifactsForPipeline(initialPip.id) : []
   const [currentStatus, setCurrentStatus] = useState<PipelineStatus>(
     initialPip?.status ?? "researching"
