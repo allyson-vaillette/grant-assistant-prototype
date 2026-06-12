@@ -292,7 +292,7 @@ function HomeMatchCard({ match, opp }: { match: Match; opp: Opportunity }) {
             el.style.borderColor = "var(--slate-primary)"
           }}
         >
-          {pipeline ? "Open workspace" : "Track"}
+          {pipeline ? "Add to tracker" : "Track"}
         </button>
       </div>
     </div>
