@@ -11,7 +11,7 @@ import {
 import { useScope } from "@/lib/scope-context"
 import type { Opportunity, FunderType, MatchStrength, Match } from "@/lib/types"
 import { OpportunityPeekPanel } from "./OpportunityPeekPanel"
-import { FiltersPanel, FUNDER_TYPE_LABELS, AWARD_RANGE_LABELS, DEADLINE_LABELS } from "./FiltersPanel"
+import { FUNDER_TYPE_LABELS, AWARD_RANGE_LABELS, DEADLINE_LABELS } from "./FiltersPanel"
 import { IncompleteProfileBanner } from "@/components/IncompleteProfileBanner"
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -900,23 +900,42 @@ function DiscoverPage() {
                   )}
                 </div>
 
-                {/* Filters + Sort bar */}
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: activeChips.length > 0 ? 8 : 0 }}>
-                  <FiltersPanel
-                    typeFilter={typeFilter}
-                    focusAreaFilter={focusAreaFilter}
-                    geographyFilter={geographyFilter}
-                    awardRangeFilter={awardRangeFilter}
-                    deadlineFilter={deadlineFilter}
-                    allFocusAreas={ALL_FOCUS_AREAS}
-                    allGeographies={ALL_GEOGRAPHIES}
-                    onTypeChange={setTypeFilter}
-                    onFocusAreaChange={setFocusAreaFilter}
-                    onGeographyChange={setGeographyFilter}
-                    onAwardRangeChange={setAwardRangeFilter}
-                    onDeadlineChange={setDeadlineFilter}
-                    onClearAll={clearFilters}
-                  />
+                {/* Persistent filter bar: 5 always-visible controls + sort */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: activeChips.length > 0 ? 8 : 0 }}>
+                  <FilterSelect value={typeFilter} onChange={(v) => setTypeFilter(v as FunderType | "")}>
+                    <option value="">Funder type</option>
+                    {(Object.keys(FUNDER_TYPE_LABELS) as FunderType[]).map(t => (
+                      <option key={t} value={t}>{FUNDER_TYPE_LABELS[t]}</option>
+                    ))}
+                  </FilterSelect>
+
+                  <FilterSelect value={focusAreaFilter} onChange={setFocusAreaFilter}>
+                    <option value="">Focus area</option>
+                    {ALL_FOCUS_AREAS.map(fa => (
+                      <option key={fa} value={fa}>{fa}</option>
+                    ))}
+                  </FilterSelect>
+
+                  <FilterSelect value={geographyFilter} onChange={setGeographyFilter}>
+                    <option value="">Geography</option>
+                    {ALL_GEOGRAPHIES.map(g => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </FilterSelect>
+
+                  <FilterSelect value={awardRangeFilter} onChange={setAwardRangeFilter}>
+                    <option value="">Award size</option>
+                    <option value="under-25k">Up to $25k</option>
+                    <option value="25k-50k">$25k to $50k</option>
+                    <option value="over-50k">Over $50k</option>
+                  </FilterSelect>
+
+                  <FilterSelect value={deadlineFilter} onChange={setDeadlineFilter}>
+                    <option value="">Deadline</option>
+                    <option value="30">Within 30 days</option>
+                    <option value="60">Within 60 days</option>
+                    <option value="90">Within 90 days</option>
+                  </FilterSelect>
 
                   <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>Sort</span>
