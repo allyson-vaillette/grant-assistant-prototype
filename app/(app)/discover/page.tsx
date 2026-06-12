@@ -3,10 +3,10 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ContentContainer } from "@/components/layout/content-container"
-import { Search, X, Check, ArrowRight } from "lucide-react"
+import { Search, X, Check } from "lucide-react"
 import {
   OPPORTUNITIES, MATCHES, FUNDERS,
-  getFunder, getMatchForOpportunity,
+  getFunder, getMatchForOpportunity, createPipelineOpportunity,
 } from "@/lib/mock-data"
 import { useScope } from "@/lib/scope-context"
 import type { Opportunity, FunderType, MatchStrength, Match } from "@/lib/types"
@@ -54,17 +54,6 @@ const STRONG_MATCHES = MATCHES
   .filter(m => m.matchStrength === "strong" && m.opportunityId)
   .map(m => ({ match: m, opp: OPPORTUNITIES.find(o => o.id === m.opportunityId) }))
   .filter((item): item is { match: Match; opp: Opportunity } => !!item.opp)
-
-// ── Dismiss reasons ────────────────────────────────────────────────────────
-
-type DismissReason = "off_geography" | "wrong_size" | "not_eligible" | "not_relevant"
-
-const DISMISS_REASONS: { value: DismissReason; label: string }[] = [
-  { value: "off_geography", label: "Off geography" },
-  { value: "wrong_size",    label: "Wrong size"    },
-  { value: "not_eligible",  label: "Not eligible"  },
-  { value: "not_relevant",  label: "Not relevant"  },
-]
 
 // ── Match dots ─────────────────────────────────────────────────────────────
 
@@ -123,43 +112,30 @@ function FunderAvatar({ name, size = 26 }: { name: string; size?: number }) {
   )
 }
 
-// ── Skeleton card ──────────────────────────────────────────────────────────
+// ── Match row (compact list) ───────────────────────────────────────────────
 
-function SkeletonMatchCard() {
-  return (
-    <div style={{
-      padding: "16px 20px",
-      backgroundColor: "var(--surface)",
-      border: "1px solid var(--hair)",
-      borderRadius: 12,
-      display: "flex", flexDirection: "column", gap: 10,
-    }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div className="animate-pulse" style={{ width: 90, height: 20, borderRadius: 10, backgroundColor: "var(--hair-2)" }} />
-        <div className="animate-pulse" style={{ width: 22, height: 22, borderRadius: 6, backgroundColor: "var(--hair-2)" }} />
-      </div>
-      <div className="animate-pulse" style={{ width: "70%", height: 16, borderRadius: 4, backgroundColor: "var(--hair-2)" }} />
-      <div className="animate-pulse" style={{ width: "45%", height: 12, borderRadius: 4, backgroundColor: "var(--hair-2)" }} />
-      <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
-        <div className="animate-pulse" style={{ width: 56, height: 12, borderRadius: 4, backgroundColor: "var(--hair-2)" }} />
-        <div className="animate-pulse" style={{ width: 80, height: 12, borderRadius: 4, backgroundColor: "var(--hair-2)" }} />
-      </div>
-      <div className="animate-pulse" style={{ width: "90%", height: 12, borderRadius: 4, backgroundColor: "var(--hair-2)", marginTop: 4 }} />
-    </div>
-  )
+function daysLabel(deadline: string | undefined): string {
+  if (!deadline) return ""
+  if (deadline === "Rolling") return "Rolling"
+  const date = parseDeadlineDate(deadline)
+  if (!date) return deadline
+  const now = new Date(); now.setHours(0, 0, 0, 0)
+  date.setHours(0, 0, 0, 0)
+  const days = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+  const short = deadline.replace(/,\s*\d{4}$/, "")
+  if (days < 0) return short
+  return `${short} · ${days}d left`
 }
 
-// ── Match card ─────────────────────────────────────────────────────────────
-
-function MatchCard({ match, opp, onDismiss, onOppClick }: {
+function MatchRow({ match, opp, isFirst, onOppClick, onTrack }: {
   match: Match
   opp: Opportunity
-  onDismiss: () => void
+  isFirst: boolean
   onOppClick: (oppId: string, el: HTMLElement) => void
+  onTrack: (oppId: string) => void
 }) {
   const funder = getFunder(opp.funderId)
   const cfg = MATCH_CONFIG[match.matchStrength]
-  const primaryReason = match.reasons.positive[0]
 
   return (
     <div
@@ -168,170 +144,69 @@ function MatchCard({ match, opp, onDismiss, onOppClick }: {
       onClick={(e) => onOppClick(opp.id, e.currentTarget)}
       onKeyDown={(e) => e.key === "Enter" && onOppClick(opp.id, e.currentTarget as HTMLElement)}
       style={{
-        padding: "12px 16px",
-        backgroundColor: "var(--surface)",
-        border: "1px solid var(--hair)",
-        borderRadius: 12,
+        display: "flex", alignItems: "center", gap: 12,
+        padding: "11px 16px",
+        borderTop: !isFirst ? "0.5px solid var(--hair)" : "none",
         cursor: "pointer",
-        position: "relative",
-        transition: "border-color 150ms, box-shadow 150ms",
-        display: "flex", flexDirection: "column", gap: 0,
+        transition: "background-color 120ms",
       }}
-      onMouseEnter={(e) => {
-        const el = e.currentTarget as HTMLDivElement
-        el.style.borderColor = "var(--slate-light)"
-        el.style.boxShadow = "var(--shadow-sm)"
-      }}
-      onMouseLeave={(e) => {
-        const el = e.currentTarget as HTMLDivElement
-        el.style.borderColor = "var(--hair)"
-        el.style.boxShadow = "none"
-      }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--surface-sunk)" }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
     >
-      {/* Dismiss */}
+      {funder && <FunderAvatar name={funder.name} size={32} />}
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--ink)", lineHeight: "17px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {funder?.name}
+        </p>
+        <p style={{ margin: 0, fontSize: 12, color: "var(--slate-primary)", lineHeight: "16px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {opp.name}
+        </p>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+        <MatchDots strength={match.matchStrength} />
+        <span style={{ fontSize: 10, fontWeight: 600, color: cfg.color, whiteSpace: "nowrap" }}>{cfg.label}</span>
+      </div>
+
+      {opp.amount && (
+        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--slate-primary)", whiteSpace: "nowrap", flexShrink: 0 }}>
+          {opp.amount}
+        </span>
+      )}
+
+      <span style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap", flexShrink: 0, minWidth: 110 }}>
+        {daysLabel(opp.deadline)}
+      </span>
+
+      <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--evergreen)", whiteSpace: "nowrap", flexShrink: 0 }}>
+        <Check size={12} />
+        Eligible
+      </span>
+
       <button
         type="button"
-        aria-label="Dismiss this match"
-        onClick={(e) => { e.stopPropagation(); onDismiss() }}
+        onClick={(e) => { e.stopPropagation(); onTrack(opp.id) }}
         style={{
-          position: "absolute", top: 10, right: 10,
-          width: 26, height: 26, borderRadius: 6,
-          border: "none", backgroundColor: "transparent",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          cursor: "pointer", color: "var(--ink-tertiary)",
-          transition: "background-color 120ms, color 120ms",
-          flexShrink: 0,
+          padding: "5px 14px", borderRadius: 6,
+          border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+          fontSize: 12, fontWeight: 600, color: "var(--slate-secondary)",
+          cursor: "pointer", flexShrink: 0,
+          transition: "background-color 120ms, border-color 120ms",
         }}
         onMouseEnter={(e) => {
           const el = e.currentTarget as HTMLButtonElement
-          el.style.backgroundColor = "var(--canvas)"
-          el.style.color = "var(--ink-secondary)"
+          el.style.backgroundColor = "var(--slate-tint)"
+          el.style.borderColor = "var(--slate-light)"
         }}
         onMouseLeave={(e) => {
           const el = e.currentTarget as HTMLButtonElement
           el.style.backgroundColor = "transparent"
-          el.style.color = "var(--ink-tertiary)"
+          el.style.borderColor = "var(--hair-2)"
         }}
       >
-        <X size={13} />
+        Track
       </button>
-
-      {/* Funder row: avatar + name + match dots + match label */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, paddingRight: 32 }}>
-        {funder && <FunderAvatar name={funder.name} size={26} />}
-        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
-          <span style={{
-            fontSize: 13, fontWeight: 700, color: "var(--ink)",
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          }}>
-            {funder?.name}
-          </span>
-          <MatchDots strength={match.matchStrength} />
-          <span style={{
-            fontSize: 10, fontWeight: 600, color: cfg.color,
-            flexShrink: 0, lineHeight: 1,
-          }}>
-            {cfg.label}
-          </span>
-        </div>
-      </div>
-
-      {/* Opp name — indented under avatar */}
-      <p style={{
-        margin: "0 0 8px", paddingLeft: 34,
-        fontSize: 12, fontWeight: 400, color: "var(--slate-primary)", lineHeight: "17px",
-      }}>
-        {opp.name}
-      </p>
-
-      {/* Meta row: amount + deadline + type tag */}
-      <div style={{
-        display: "flex", gap: 8, alignItems: "center", paddingLeft: 34, flexWrap: "wrap",
-        marginBottom: primaryReason ? 8 : 0,
-      }}>
-        {opp.amount && (
-          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--slate-primary)" }}>{opp.amount}</span>
-        )}
-        {opp.deadline && (
-          <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
-            {opp.deadline === "Rolling" ? "Rolling deadline" : `Due ${opp.deadline}`}
-          </span>
-        )}
-        {funder && (
-          <span style={{
-            fontSize: 10, fontWeight: 500, color: "var(--ink-tertiary)",
-            padding: "1px 7px", borderRadius: 20,
-            backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)",
-          }}>
-            {FUNDER_TYPE_LABELS[funder.type]}
-          </span>
-        )}
-      </div>
-
-      {/* Top reason — indented */}
-      {primaryReason && (
-        <div style={{ display: "flex", gap: 7, alignItems: "flex-start", paddingLeft: 34 }}>
-          <Check size={12} style={{ color: "var(--evergreen)", flexShrink: 0, marginTop: 2 }} />
-          <span style={{ fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px" }}>{primaryReason}</span>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Empty matches ──────────────────────────────────────────────────────────
-
-function EmptyMatches({ scopeLabel, onBrowseAll }: { scopeLabel: string; onBrowseAll: () => void }) {
-  return (
-    <div style={{
-      padding: "28px 32px",
-      backgroundColor: "var(--surface)",
-      border: "1px solid var(--hair)",
-      borderRadius: 12,
-      display: "flex", flexDirection: "column", gap: 10,
-      alignItems: "flex-start",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span className="material-symbols-outlined" style={{ fontSize: 20, color: "var(--ink-tertiary)" }}>
-          auto_fix_high
-        </span>
-        <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>
-          Not enough to match on yet
-        </p>
-      </div>
-      <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "20px", maxWidth: 520 }}>
-        Add program details to {scopeLabel} — focus areas, geography, and eligibility criteria — so Grant Assistant can surface strong fits.
-      </p>
-      <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
-        <button
-          type="button"
-          style={{
-            display: "flex", alignItems: "center", gap: 6,
-            padding: "8px 16px", borderRadius: 8,
-            backgroundColor: "var(--slate-primary)", border: "none",
-            fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer",
-            transition: "background-color 150ms",
-          }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
-        >
-          Enrich project profile <ArrowRight size={13} />
-        </button>
-        <button
-          type="button"
-          onClick={onBrowseAll}
-          style={{
-            padding: "8px 16px", borderRadius: 8,
-            border: "1px solid var(--hair-2)", backgroundColor: "transparent",
-            fontSize: 13, color: "var(--ink-secondary)", cursor: "pointer",
-            transition: "background-color 150ms",
-          }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-tint)" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
-        >
-          Browse all
-        </button>
-      </div>
     </div>
   )
 }
@@ -458,18 +333,11 @@ function TabStub({ message }: { message: string }) {
 function DiscoverPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { scopeLabel } = useScope()
-  const [matchesLoaded, setMatchesLoaded] = useState(false)
+  const { scopeLabel, selectedProjectId } = useScope()
 
   // Tab state
   const [primaryTab, setPrimaryTab] = useState<"matches" | "explore">("matches")
   const [subTab, setSubTab] = useState<"opportunities" | "funders">("opportunities")
-
-  // Dismiss / hidden
-  const [hiddenMatches, setHiddenMatches] = useState<Array<{ matchId: string; reason?: DismissReason }>>([])
-  const [dismissToast, setDismissToast] = useState<{ matchId: string } | null>(null)
-  const [showHidden, setShowHidden] = useState(false)
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Browse filters
   const [query, setQuery] = useState("")
@@ -486,11 +354,6 @@ function DiscoverPage() {
   const [browseToolbarStuck, setBrowseToolbarStuck] = useState(false)
 
   const selectedOppId = searchParams.get("opp")
-
-  useEffect(() => {
-    const t = setTimeout(() => setMatchesLoaded(true), 1200)
-    return () => clearTimeout(t)
-  }, [])
 
   const prevOppIdRef = useRef<string | null>(null)
   useEffect(() => {
@@ -519,25 +382,6 @@ function DiscoverPage() {
     router.push("/discover")
   }, [router])
 
-  const hiddenIds = new Set(hiddenMatches.map(m => m.matchId))
-  const visibleMatches = STRONG_MATCHES.filter(({ match }) => !hiddenIds.has(match.id))
-
-  const handleDismiss = (matchId: string) => {
-    setHiddenMatches(prev => [...prev, { matchId }])
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
-    setDismissToast({ matchId })
-    toastTimerRef.current = setTimeout(() => setDismissToast(null), 6000)
-  }
-
-  const handleSetReason = (matchId: string, reason: DismissReason) => {
-    setHiddenMatches(prev => prev.map(m => m.matchId === matchId ? { ...m, reason } : m))
-    setDismissToast(null)
-  }
-
-  const handleUnhide = (matchId: string) => {
-    setHiddenMatches(prev => prev.filter(m => m.matchId !== matchId))
-  }
-
   const handlePrimaryTab = (tab: "matches" | "explore") => {
     setPrimaryTab(tab)
     setSubTab("opportunities")
@@ -547,6 +391,11 @@ function DiscoverPage() {
     setPrimaryTab("explore")
     setSubTab("opportunities")
   }
+
+  const handleTrack = useCallback((oppId: string) => {
+    const pip = createPipelineOpportunity(oppId, selectedProjectId ?? "proj-general")
+    router.push(`/pursuit/${pip.opportunityId}`)
+  }, [router, selectedProjectId])
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -685,161 +534,44 @@ function DiscoverPage() {
 
           {/* Matches > Opportunities */}
           {primaryTab === "matches" && subTab === "opportunities" && (
-            <section
-              style={{
-                position: "relative",
-                isolation: "isolate",
-                overflow: "hidden",
-                padding: "20px",
-                borderRadius: 14,
-                background: "linear-gradient(135deg, rgba(91,69,200,0.07) 0%, rgba(107,168,164,0.07) 100%)",
-                border: "1px solid rgba(91,69,200,0.1)",
-              }}
-            >
-              <div className="ai-blob" aria-hidden="true" />
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                <span
-                  className="material-symbols-outlined"
-                  style={{
-                    fontSize: 18, userSelect: "none",
-                    background: "linear-gradient(135deg, rgb(91,69,200) 0%, rgb(107,168,164) 100%)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                  }}
-                >
-                  auto_fix_high
-                </span>
+            <section>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
                 <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
                   Matched for {scopeLabel}
                 </h2>
-                {matchesLoaded && visibleMatches.length > 0 && (
+                {STRONG_MATCHES.length > 0 && (
                   <span style={{
                     display: "inline-flex", alignItems: "center", justifyContent: "center",
                     minWidth: 20, height: 20, padding: "0 6px", borderRadius: 10,
                     fontSize: 11, fontWeight: 700,
                     backgroundColor: "var(--evergreen-tint)", color: "var(--evergreen)",
                   }}>
-                    {visibleMatches.length}
+                    {STRONG_MATCHES.length}
                   </span>
                 )}
               </div>
 
-              {/* Dismiss reason bar */}
-              {dismissToast && (
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
-                  padding: "8px 14px", borderRadius: 8,
-                  backgroundColor: "var(--surface)", border: "1px solid var(--hair)",
-                  marginBottom: 12,
-                }}>
-                  <span style={{ fontSize: 12, color: "var(--ink-tertiary)", flexShrink: 0 }}>Why?</span>
-                  {DISMISS_REASONS.map(r => (
-                    <button
-                      key={r.value}
-                      type="button"
-                      onClick={() => handleSetReason(dismissToast.matchId, r.value)}
-                      style={{
-                        padding: "3px 10px", borderRadius: 20,
-                        border: "1px solid var(--hair-2)", backgroundColor: "transparent",
-                        fontSize: 11, color: "var(--ink-secondary)", cursor: "pointer",
-                        transition: "background-color 120ms, border-color 120ms",
-                      }}
-                      onMouseEnter={(e) => {
-                        const el = e.currentTarget as HTMLButtonElement
-                        el.style.backgroundColor = "var(--canvas)"
-                        el.style.borderColor = "var(--ink-tertiary)"
-                      }}
-                      onMouseLeave={(e) => {
-                        const el = e.currentTarget as HTMLButtonElement
-                        el.style.backgroundColor = "transparent"
-                        el.style.borderColor = "var(--hair-2)"
-                      }}
-                    >
-                      {r.label}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setDismissToast(null)}
-                    style={{
-                      marginLeft: "auto", background: "none", border: "none",
-                      cursor: "pointer", color: "var(--ink-tertiary)",
-                      display: "flex", alignItems: "center", padding: 2,
-                    }}
-                  >
-                    <X size={12} />
-                  </button>
+              {STRONG_MATCHES.length === 0 ? (
+                <div style={{ padding: "36px 0", textAlign: "center" }}>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>No matches yet.</p>
                 </div>
-              )}
-
-              {!matchesLoaded ? (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-                  <SkeletonMatchCard /><SkeletonMatchCard /><SkeletonMatchCard />
-                </div>
-              ) : visibleMatches.length === 0 ? (
-                <EmptyMatches scopeLabel={scopeLabel} onBrowseAll={switchToExplore} />
               ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-                  {visibleMatches.map(({ match, opp }) => (
-                    <MatchCard
+                <div style={{
+                  backgroundColor: "var(--surface)",
+                  border: "1px solid var(--hair-2)",
+                  borderRadius: 12,
+                  overflow: "hidden",
+                }}>
+                  {STRONG_MATCHES.map(({ match, opp }, i) => (
+                    <MatchRow
                       key={match.id}
                       match={match}
                       opp={opp}
-                      onDismiss={() => handleDismiss(match.id)}
+                      isFirst={i === 0}
                       onOppClick={handleOppClick}
+                      onTrack={handleTrack}
                     />
                   ))}
-                </div>
-              )}
-
-              {/* Hidden matches */}
-              {hiddenMatches.length > 0 && (
-                <div style={{ marginTop: 14 }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowHidden(s => !s)}
-                    style={{
-                      background: "none", border: "none", cursor: "pointer", padding: 0,
-                      fontSize: 12, color: "var(--ink-tertiary)",
-                    }}
-                  >
-                    {hiddenMatches.length} hidden · {showHidden ? "Hide" : "Show"}
-                  </button>
-                  {showHidden && (
-                    <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
-                      {hiddenMatches.map(({ matchId, reason }) => {
-                        const sm = STRONG_MATCHES.find(m => m.match.id === matchId)
-                        if (!sm) return null
-                        return (
-                          <div key={matchId} style={{
-                            display: "flex", alignItems: "center", gap: 12,
-                            padding: "9px 14px", borderRadius: 9,
-                            backgroundColor: "var(--surface)", border: "1px solid var(--hair)",
-                          }}>
-                            <span style={{ flex: 1, fontSize: 12, color: "var(--ink-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {sm.opp.name}
-                            </span>
-                            {reason && (
-                              <span style={{ fontSize: 11, color: "var(--ink-tertiary)", flexShrink: 0 }}>
-                                {DISMISS_REASONS.find(r => r.value === reason)?.label}
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => handleUnhide(matchId)}
-                              style={{
-                                background: "none", border: "none", cursor: "pointer",
-                                fontSize: 12, color: "var(--slate-secondary)", padding: 0, flexShrink: 0,
-                              }}
-                            >
-                              Unhide
-                            </button>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
                 </div>
               )}
             </section>

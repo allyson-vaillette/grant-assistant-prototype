@@ -5,16 +5,233 @@ import Link from "next/link"
 import { ContentContainer } from "@/components/layout/content-container"
 import {
   ChevronRight, Bell, Telescope, Plus, FilePlus,
-  CheckSquare, Clock, CalendarDays, AlertTriangle,
+  CheckSquare, Clock, CalendarDays, AlertTriangle, Check,
 } from "lucide-react"
 import {
-  USER, TEAMMATES,
-  PIPELINE_OPPORTUNITIES, OPPORTUNITIES, FUNDERS, TASKS,
+  USER, TEAMMATES, ORG,
+  PIPELINE_OPPORTUNITIES, OPPORTUNITIES, FUNDERS, TASKS, MATCHES,
 } from "@/lib/mock-data"
 import { IncompleteProfileBanner } from "@/components/IncompleteProfileBanner"
 import { useScope } from "@/lib/scope-context"
 import { phaseFromStatus } from "@/lib/types"
-import type { PipelineOpportunity, Opportunity, Funder, PipelinePhase } from "@/lib/types"
+import type { PipelineOpportunity, Opportunity, Funder, PipelinePhase, Match, MatchStrength } from "@/lib/types"
+
+// ── Matches showcase ──────────────────────────────────────────────────────────
+
+const HOME_MATCH_CONFIG: Record<MatchStrength, { label: string; color: string; dots: number }> = {
+  strong:  { label: "Strong match",  color: "var(--evergreen)",     dots: 5 },
+  good:    { label: "Good match",    color: "var(--slate-primary)", dots: 4 },
+  partial: { label: "Partial match", color: "var(--ink-tertiary)",  dots: 3 },
+}
+
+const HOME_FUNDER_TYPE_LABELS: Record<string, string> = {
+  private_foundation:   "Private foundation",
+  community_foundation: "Community foundation",
+  government:           "Government",
+  corporate_foundation: "Corporate foundation",
+  public_charity:       "Public charity",
+}
+
+const HOME_AVATAR_PALETTE = [
+  { bg: "#EDE9F7", fg: "#5B45C8" },
+  { bg: "#DBF0FA", fg: "#2472A4" },
+  { bg: "#E0F5EB", fg: "#1F7A4C" },
+  { bg: "#FEF3E7", fg: "#AF5200" },
+  { bg: "#FCE8EA", fg: "#BF2B45" },
+  { bg: "#F0F4E8", fg: "#4A6B22" },
+]
+
+function homePaletteIndex(name: string): number {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff
+  return h % HOME_AVATAR_PALETTE.length
+}
+
+function HomeFunderAvatar({ name, size = 26 }: { name: string; size?: number }) {
+  const { bg, fg } = HOME_AVATAR_PALETTE[homePaletteIndex(name)]
+  const initials = name
+    .split(/\s+/)
+    .filter(w => /[A-Za-z]/.test(w.charAt(0)))
+    .slice(0, 2)
+    .map(w => w.charAt(0).toUpperCase())
+    .join("")
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", justifyContent: "center",
+      width: size, height: size, borderRadius: "50%",
+      backgroundColor: bg, color: fg,
+      fontSize: Math.round(size * 0.38), fontWeight: 700, lineHeight: 1,
+      flexShrink: 0, userSelect: "none",
+    }}>
+      {initials}
+    </span>
+  )
+}
+
+function HomeMatchDots({ strength }: { strength: MatchStrength }) {
+  const cfg = HOME_MATCH_CONFIG[strength]
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <span key={i} style={{
+          width: 6, height: 6, borderRadius: "50%",
+          backgroundColor: i < cfg.dots ? cfg.color : "var(--hair-2)",
+        }} />
+      ))}
+    </span>
+  )
+}
+
+const HOME_STRONG_MATCHES = MATCHES
+  .filter(m => m.matchStrength === "strong" && m.opportunityId)
+  .map(m => ({
+    match: m,
+    opp: OPPORTUNITIES.find(o => o.id === m.opportunityId),
+  }))
+  .filter((item): item is { match: Match; opp: Opportunity } => !!item.opp)
+  .slice(0, 3)
+
+function HomeMatchCard({ match, opp }: { match: Match; opp: Opportunity }) {
+  const funder = FUNDERS.find(f => f.id === opp.funderId)
+  const cfg = HOME_MATCH_CONFIG[match.matchStrength]
+  const primaryReason = match.reasons.positive[0]
+
+  return (
+    <Link href={`/discover?opp=${opp.id}`} style={{ textDecoration: "none", display: "block", flex: 1 }}>
+      <div
+        style={{
+          height: "100%",
+          padding: "12px 16px",
+          backgroundColor: "var(--surface)",
+          border: "1px solid var(--hair)",
+          borderRadius: 12,
+          cursor: "pointer",
+          display: "flex", flexDirection: "column", gap: 0,
+          transition: "border-color 150ms, box-shadow 150ms",
+          boxSizing: "border-box",
+        }}
+        onMouseEnter={(e) => {
+          const el = e.currentTarget as HTMLDivElement
+          el.style.borderColor = "var(--slate-light)"
+          el.style.boxShadow = "var(--shadow-sm)"
+        }}
+        onMouseLeave={(e) => {
+          const el = e.currentTarget as HTMLDivElement
+          el.style.borderColor = "var(--hair)"
+          el.style.boxShadow = "none"
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <HomeFunderAvatar name={funder?.name ?? ""} size={26} />
+          <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {funder?.name}
+            </span>
+            <HomeMatchDots strength={match.matchStrength} />
+            <span style={{ fontSize: 10, fontWeight: 600, color: cfg.color, flexShrink: 0, lineHeight: 1 }}>
+              {cfg.label}
+            </span>
+          </div>
+        </div>
+
+        <p style={{ margin: "0 0 8px", paddingLeft: 34, fontSize: 12, fontWeight: 400, color: "var(--slate-primary)", lineHeight: "17px" }}>
+          {opp.name}
+        </p>
+
+        <div style={{ display: "flex", gap: 8, alignItems: "center", paddingLeft: 34, flexWrap: "wrap", marginBottom: primaryReason ? 8 : 0 }}>
+          {opp.amount && (
+            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--slate-primary)" }}>{opp.amount}</span>
+          )}
+          {opp.deadline && (
+            <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
+              {opp.deadline === "Rolling" ? "Rolling deadline" : `Due ${opp.deadline}`}
+            </span>
+          )}
+          {funder && (
+            <span style={{ fontSize: 10, fontWeight: 500, color: "var(--ink-tertiary)", padding: "1px 7px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)" }}>
+              {HOME_FUNDER_TYPE_LABELS[funder.type] ?? funder.type}
+            </span>
+          )}
+        </div>
+
+        {primaryReason && (
+          <div style={{ display: "flex", gap: 7, alignItems: "flex-start", paddingLeft: 34 }}>
+            <Check size={12} style={{ color: "var(--evergreen)", flexShrink: 0, marginTop: 2 }} />
+            <span style={{ fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px" }}>{primaryReason}</span>
+          </div>
+        )}
+      </div>
+    </Link>
+  )
+}
+
+function HomeMatchesBar() {
+  if (HOME_STRONG_MATCHES.length === 0) return null
+
+  return (
+    <section
+      style={{
+        position: "relative",
+        isolation: "isolate",
+        overflow: "hidden",
+        padding: "20px",
+        borderRadius: 14,
+        background: "linear-gradient(135deg, rgba(91,69,200,0.07) 0%, rgba(107,168,164,0.07) 100%)",
+        border: "1px solid rgba(91,69,200,0.1)",
+        marginBottom: 16,
+      }}
+    >
+      <div className="ai-blob" aria-hidden="true" />
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span
+            className="material-symbols-outlined"
+            style={{
+              fontSize: 18, userSelect: "none",
+              background: "linear-gradient(135deg, rgb(91,69,200) 0%, rgb(107,168,164) 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}
+          >
+            auto_fix_high
+          </span>
+          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+            Matched for {ORG.name}
+          </h2>
+          <span style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            minWidth: 20, height: 20, padding: "0 6px", borderRadius: 10,
+            fontSize: 11, fontWeight: 700,
+            backgroundColor: "var(--evergreen-tint)", color: "var(--evergreen)",
+          }}>
+            {HOME_STRONG_MATCHES.length}
+          </span>
+        </div>
+        <Link
+          href="/discover"
+          style={{
+            fontSize: 12, fontWeight: 600, color: "var(--slate-secondary)",
+            textDecoration: "none", display: "flex", alignItems: "center", gap: 4,
+            transition: "color 120ms",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = "var(--slate-primary)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = "var(--slate-secondary)" }}
+        >
+          See all matches
+          <ChevronRight size={13} />
+        </Link>
+      </div>
+
+      <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
+        {HOME_STRONG_MATCHES.map(({ match, opp }) => (
+          <HomeMatchCard key={match.id} match={match} opp={opp} />
+        ))}
+      </div>
+    </section>
+  )
+}
 
 // ── Status strip config ────────────────────────────────────────────────────────
 
@@ -843,6 +1060,9 @@ export default function HomePage() {
             )
           })}
         </div>
+
+        {/* Matches showcase */}
+        <HomeMatchesBar />
 
         {/* Quick actions */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 28 }}>
