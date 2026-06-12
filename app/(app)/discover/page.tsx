@@ -671,18 +671,11 @@ function DiscoverPage() {
                   <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>No matches yet.</p>
                 </div>
               ) : (
-                <div style={{
-                  backgroundColor: "var(--surface)",
-                  border: "1px solid var(--hair-2)",
-                  borderRadius: 12,
-                  overflow: "hidden",
-                }}>
-                  {STRONG_MATCHES.map(({ match, opp }, i) => (
-                    <MatchRow
-                      key={match.id}
-                      match={match}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+                  {STRONG_MATCHES.map(({ opp }) => (
+                    <CatalogueCard
+                      key={opp.id}
                       opp={opp}
-                      isFirst={i === 0}
                       onOppClick={handleOppClick}
                       onTrack={handleTrack}
                     />
