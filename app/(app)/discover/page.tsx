@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ContentContainer } from "@/components/layout/content-container"
-import { Search, X, Check, CalendarDays, MapPin } from "lucide-react"
+import { Search, X, Check, CalendarDays, MapPin, EyeOff } from "lucide-react"
 import {
   OPPORTUNITIES, MATCHES, FUNDERS,
   getFunder, getMatchForOpportunity, createPipelineOpportunity, getPipelineForOpportunity,
@@ -11,6 +11,8 @@ import {
 import { useScope } from "@/lib/scope-context"
 import type { Opportunity, Funder, FunderType, MatchStrength, Match } from "@/lib/types"
 import { OpportunityPeekPanel } from "./OpportunityPeekPanel"
+import { HideOpportunityDialog, type HidePayload } from "./HideOpportunityDialog"
+import { recordHideOpportunity, undoHideOpportunity } from "./actions"
 import { FUNDER_TYPE_LABELS, AWARD_RANGE_LABELS, DEADLINE_LABELS } from "./FiltersPanel"
 import { IncompleteProfileBanner } from "@/components/IncompleteProfileBanner"
 
@@ -143,17 +145,21 @@ function daysLabel(deadline: string | undefined): string {
   const days = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
   const short = deadline.replace(/,\s*\d{4}$/, "")
   if (days < 0) return short
-  return `${short} · ${days}d left`
+  return `${short} · ${days}d`
 }
 
 // ── Catalogue card (Matches > Opportunities) ───────────────────────────────
 
-function CatalogueCard({ opp, onOppClick, onTrack }: {
+function CatalogueCard({ opp, onOppClick, onTrack, onHide }: {
   opp: Opportunity
   onOppClick: (oppId: string, el: HTMLElement) => void
   onTrack: (oppId: string) => void
+  onHide: (oppId: string) => void
 }) {
   const router = useRouter()
+  const [cardHovered, setCardHovered] = useState(false)
+  const [hideButtonFocused, setHideButtonFocused] = useState(false)
+  const hideButtonVisible = cardHovered || hideButtonFocused
   const funder = getFunder(opp.funderId)
   const match = getMatchForOpportunity(opp.id)
   const pipeline = getPipelineForOpportunity(opp.id)
@@ -187,11 +193,13 @@ function CatalogueCard({ opp, onOppClick, onTrack }: {
         transition: "border-color 150ms, box-shadow 150ms",
       }}
       onMouseEnter={(e) => {
+        setCardHovered(true)
         const el = e.currentTarget as HTMLDivElement
         el.style.borderColor = "var(--slate-light)"
         el.style.boxShadow = "var(--shadow-sm)"
       }}
       onMouseLeave={(e) => {
+        setCardHovered(false)
         const el = e.currentTarget as HTMLDivElement
         el.style.borderColor = "var(--hair)"
         el.style.boxShadow = "none"
@@ -266,7 +274,29 @@ function CatalogueCard({ opp, onOppClick, onTrack }: {
         </div>
       )}
 
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: "auto" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: "auto" }}>
+        {/* Hide — quiet affordance, revealed on hover or keyboard focus */}
+        <button
+          type="button"
+          aria-label={`Hide ${opp.name}`}
+          onClick={(e) => { e.stopPropagation(); onHide(opp.id) }}
+          onFocus={() => setHideButtonFocused(true)}
+          onBlur={() => setHideButtonFocused(false)}
+          style={{
+            display: "flex", alignItems: "center", gap: 4,
+            background: "none", border: "none", cursor: "pointer",
+            padding: "4px 2px", marginRight: "auto",
+            fontSize: 12, color: "var(--ink-tertiary)",
+            opacity: hideButtonVisible ? 1 : 0,
+            pointerEvents: hideButtonVisible ? "auto" : "none",
+            transition: "opacity 120ms, color 120ms",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-secondary)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
+        >
+          <EyeOff size={13} />
+          <span>Hide</span>
+        </button>
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onOppClick(opp.id, e.currentTarget as HTMLElement) }}
@@ -283,7 +313,7 @@ function CatalogueCard({ opp, onOppClick, onTrack }: {
           onMouseEnter={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--slate-secondary)"; el.style.borderColor = "var(--slate-secondary)" }}
           onMouseLeave={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--slate-primary)"; el.style.borderColor = "var(--slate-primary)" }}
         >
-          {pipeline ? "Open" : "Track"}
+          {"Track"}
         </button>
       </div>
     </div>
@@ -398,26 +428,30 @@ function MatchedFunderCard({ match, funder, onFunderClick }: {
 
 // ── Explore opportunity row (Explore > Opportunities) ──────────────────────
 
-function ExploreOpportunityRow({ opp, isFirst, onOppClick, onTrack }: {
+function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, onHide }: {
   opp: Opportunity
   isFirst: boolean
   onOppClick: (oppId: string, el: HTMLElement) => void
   onTrack: (oppId: string) => void
+  onHide: (oppId: string) => void
 }) {
   const router = useRouter()
+  const [rowHovered, setRowHovered] = useState(false)
+  const [hideButtonFocused, setHideButtonFocused] = useState(false)
+  const hideButtonVisible = rowHovered || hideButtonFocused
   const funder = getFunder(opp.funderId)
   const match = getMatchForOpportunity(opp.id)
   const pipeline = getPipelineForOpportunity(opp.id)
-  const cfg = match ? MATCH_CONFIG[match.matchStrength] : null
   const focusTags = opp.focusAreas ?? []
-  const visibleTags = focusTags.slice(0, 2)
-  const overflowCount = Math.max(0, focusTags.length - 2)
+  const visibleTags = focusTags.slice(0, 1)
+  const overflowCount = Math.max(0, focusTags.length - 1)
 
+  const eligBg = opp.eligibilityLabel === "Likely eligible"
+    ? "var(--evergreen-tint)"
+    : "var(--amber-light)"
   const eligColor = opp.eligibilityLabel === "Likely eligible"
     ? "var(--evergreen)"
-    : opp.eligibilityLabel === "Invitation required"
-    ? "var(--amber)"
-    : "var(--ink-tertiary)"
+    : "var(--amber)"
 
   return (
     <div
@@ -426,19 +460,30 @@ function ExploreOpportunityRow({ opp, isFirst, onOppClick, onTrack }: {
       onClick={(e) => onOppClick(opp.id, e.currentTarget)}
       onKeyDown={(e) => e.key === "Enter" && onOppClick(opp.id, e.currentTarget as HTMLElement)}
       style={{
-        display: "flex", alignItems: "center", gap: 16,
-        padding: "12px 8px",
-        borderTop: !isFirst ? "0.5px solid var(--hair)" : "none",
+        display: "flex", alignItems: "center", gap: 14,
+        padding: "11px 16px",
+        backgroundColor: "var(--surface)",
+        border: "1px solid var(--hair)",
+        borderRadius: 10,
+        marginBottom: 6,
         cursor: "pointer",
-        transition: "background-color 120ms",
-        borderRadius: 6,
-        marginLeft: -8, marginRight: -8,
+        transition: "border-color 120ms, box-shadow 120ms",
       }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--surface)" }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
+      onMouseEnter={(e) => {
+        setRowHovered(true)
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = "var(--hair-2)"
+        el.style.boxShadow = "var(--lift-1)"
+      }}
+      onMouseLeave={(e) => {
+        setRowHovered(false)
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = "var(--hair)"
+        el.style.boxShadow = "none"
+      }}
     >
       {/* Left: title + funder */}
-      <div style={{ flex: "0 0 260px", minWidth: 0 }}>
+      <div style={{ flex: "0 0 240px", minWidth: 0 }}>
         <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {opp.name}
         </p>
@@ -447,10 +492,10 @@ function ExploreOpportunityRow({ opp, isFirst, onOppClick, onTrack }: {
         </p>
       </div>
 
-      {/* Middle: focus area tags */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 4, overflow: "hidden" }}>
+      {/* Focus area tags */}
+      <div style={{ flex: "0 0 140px", display: "flex", alignItems: "center", gap: 4, overflow: "hidden" }}>
         {visibleTags.map(tag => (
-          <span key={tag} style={{ fontSize: 11, fontWeight: 500, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)", whiteSpace: "nowrap", flexShrink: 0 }}>
+          <span key={tag} style={{ fontSize: 11, fontWeight: 500, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)", whiteSpace: "nowrap", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", maxWidth: 100 }}>
             {tag}
           </span>
         ))}
@@ -461,47 +506,56 @@ function ExploreOpportunityRow({ opp, isFirst, onOppClick, onTrack }: {
         )}
       </div>
 
+      {/* Spacer */}
+      <div style={{ flex: 1 }} />
+
       {/* Right cluster */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-        {cfg && (
-          <span style={{ fontSize: 11, fontWeight: 500, color: cfg.color, padding: "2px 7px", borderRadius: 20, backgroundColor: cfg.bg, whiteSpace: "nowrap" }}>
-            {cfg.label.replace(" match", "")}
-          </span>
-        )}
+      <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
         {opp.amount && (
-          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-secondary)", whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap", minWidth: 70, textAlign: "right" }}>
             {opp.amount}
           </span>
         )}
         {opp.deadline && (
-          <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>
-            <CalendarDays size={11} />
+          <span style={{ fontSize: 12, color: "var(--ink-tertiary)", whiteSpace: "nowrap", minWidth: 90 }}>
             {daysLabel(opp.deadline)}
           </span>
         )}
         {opp.eligibilityLabel && (
-          <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: eligColor, whiteSpace: "nowrap" }}>
-            <Check size={11} />
+          <span style={{ fontSize: 11, fontWeight: 500, color: eligColor, padding: "3px 9px", borderRadius: 20, backgroundColor: eligBg, whiteSpace: "nowrap" }}>
             {opp.eligibilityLabel}
           </span>
         )}
+        {/* Hide — revealed on hover or keyboard focus */}
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); onOppClick(opp.id, e.currentTarget as HTMLElement) }}
-          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 500, color: "var(--slate-secondary)", padding: "0 2px", textDecoration: "underline", textUnderlineOffset: 2, whiteSpace: "nowrap", transition: "color 120ms" }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-primary)" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
+          aria-label={`Hide ${opp.name}`}
+          onClick={(e) => { e.stopPropagation(); onHide(opp.id) }}
+          onFocus={() => setHideButtonFocused(true)}
+          onBlur={() => setHideButtonFocused(false)}
+          style={{
+            display: "flex", alignItems: "center", gap: 3,
+            background: "none", border: "none", cursor: "pointer",
+            padding: "2px 4px",
+            fontSize: 11, color: "var(--ink-tertiary)",
+            opacity: hideButtonVisible ? 1 : 0,
+            pointerEvents: hideButtonVisible ? "auto" : "none",
+            transition: "opacity 120ms, color 120ms",
+            whiteSpace: "nowrap",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-secondary)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
         >
-          View details
+          <EyeOff size={12} />
         </button>
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); if (pipeline) { router.push(`/pursuit/${opp.id}`) } else { onTrack(opp.id) } }}
-          style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid var(--hair-2)", backgroundColor: "transparent", fontSize: 12, fontWeight: 600, color: "var(--slate-secondary)", cursor: "pointer", whiteSpace: "nowrap", transition: "background-color 120ms, border-color 120ms" }}
-          onMouseEnter={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--slate-tint)"; el.style.borderColor = "var(--slate-light)" }}
-          onMouseLeave={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "transparent"; el.style.borderColor = "var(--hair-2)" }}
+          style={{ padding: "5px 14px", borderRadius: 6, border: "none", backgroundColor: "var(--slate-primary)", fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer", whiteSpace: "nowrap", transition: "background-color 120ms" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-secondary)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
         >
-          {pipeline ? "Open" : "Track"}
+          Track
         </button>
       </div>
     </div>
@@ -510,7 +564,7 @@ function ExploreOpportunityRow({ opp, isFirst, onOppClick, onTrack }: {
 
 // ── Explore funder row (Explore > Funders) ─────────────────────────────────
 
-function ExploreFunderRow({ funder, isFirst, onFunderClick }: {
+function ExploreFunderRow({ funder, isFirst: _isFirst, onFunderClick }: {
   funder: Funder
   isFirst: boolean
   onFunderClick: (funderId: string) => void
@@ -518,8 +572,8 @@ function ExploreFunderRow({ funder, isFirst, onFunderClick }: {
   const match = MATCHES.find(m => m.funderId === funder.id)
   const cfg = match ? MATCH_CONFIG[match.matchStrength] : null
   const oppCount = matchedOppCount(funder.id)
-  const visibleFocus = funder.focusAreas.slice(0, 2)
-  const overflowCount = Math.max(0, funder.focusAreas.length - 2)
+  const visibleFocus = funder.focusAreas.slice(0, 1)
+  const overflowCount = Math.max(0, funder.focusAreas.length - 1)
 
   return (
     <div
@@ -528,19 +582,28 @@ function ExploreFunderRow({ funder, isFirst, onFunderClick }: {
       onClick={() => onFunderClick(funder.id)}
       onKeyDown={(e) => e.key === "Enter" && onFunderClick(funder.id)}
       style={{
-        display: "flex", alignItems: "center", gap: 16,
-        padding: "12px 8px",
-        borderTop: !isFirst ? "0.5px solid var(--hair)" : "none",
+        display: "flex", alignItems: "center", gap: 14,
+        padding: "11px 16px",
+        backgroundColor: "var(--surface)",
+        border: "1px solid var(--hair)",
+        borderRadius: 10,
+        marginBottom: 6,
         cursor: "pointer",
-        transition: "background-color 120ms",
-        borderRadius: 6,
-        marginLeft: -8, marginRight: -8,
+        transition: "border-color 120ms, box-shadow 120ms",
       }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "var(--surface)" }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = "transparent" }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = "var(--hair-2)"
+        el.style.boxShadow = "var(--lift-1)"
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = "var(--hair)"
+        el.style.boxShadow = "none"
+      }}
     >
       {/* Left: funder identity */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "0 0 280px", minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "0 0 260px", minWidth: 0 }}>
         <FunderAvatar name={funder.name} size={32} />
         <div style={{ minWidth: 0 }}>
           <p style={{ margin: "0 0 1px", fontSize: 13, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -552,10 +615,10 @@ function ExploreFunderRow({ funder, isFirst, onFunderClick }: {
         </div>
       </div>
 
-      {/* Middle: focus areas */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 4, overflow: "hidden" }}>
+      {/* Focus areas */}
+      <div style={{ flex: "0 0 140px", display: "flex", alignItems: "center", gap: 4, overflow: "hidden" }}>
         {visibleFocus.map(fa => (
-          <span key={fa} style={{ fontSize: 11, fontWeight: 500, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)", whiteSpace: "nowrap", flexShrink: 0 }}>
+          <span key={fa} style={{ fontSize: 11, fontWeight: 500, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)", whiteSpace: "nowrap", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", maxWidth: 100 }}>
             {fa}
           </span>
         ))}
@@ -566,24 +629,32 @@ function ExploreFunderRow({ funder, isFirst, onFunderClick }: {
         )}
       </div>
 
+      {/* Spacer */}
+      <div style={{ flex: 1 }} />
+
       {/* Right */}
       <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
-        {cfg && (
-          <span style={{ fontSize: 11, fontWeight: 500, color: cfg.color, padding: "2px 7px", borderRadius: 20, backgroundColor: cfg.bg, whiteSpace: "nowrap" }}>
-            {cfg.label.replace(" match", "")}
+        {funder.fundingRange && (
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap" }}>
+            {funder.fundingRange}
           </span>
         )}
         {oppCount > 0 && (
-          <span style={{ fontSize: 12, color: "var(--slate-secondary)", fontWeight: 500, whiteSpace: "nowrap" }}>
-            {oppCount} matched {oppCount === 1 ? "opportunity" : "opportunities"}
+          <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>
+            {oppCount} open {oppCount === 1 ? "grant" : "grants"}
+          </span>
+        )}
+        {cfg && (
+          <span style={{ fontSize: 11, fontWeight: 500, color: cfg.color, padding: "3px 9px", borderRadius: 20, backgroundColor: cfg.bg, whiteSpace: "nowrap" }}>
+            {cfg.label}
           </span>
         )}
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onFunderClick(funder.id) }}
-          style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid var(--hair-2)", backgroundColor: "transparent", fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)", cursor: "pointer", whiteSpace: "nowrap", transition: "background-color 120ms" }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+          style={{ padding: "5px 14px", borderRadius: 6, border: "none", backgroundColor: "var(--slate-primary)", fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer", whiteSpace: "nowrap", transition: "background-color 120ms" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-secondary)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
         >
           View funder
         </button>
@@ -625,6 +696,66 @@ function FilterSelect({ value, onChange, children, minWidth }: {
   )
 }
 
+// ── Undo toast ─────────────────────────────────────────────────────────────
+
+function UndoToast({ oppName, onUndo, onDismiss }: {
+  oppName: string
+  onUndo: () => void
+  onDismiss: () => void
+}) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      style={{
+        position: "fixed", bottom: 24, left: "50%",
+        transform: "translateX(-50%)",
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "10px 14px",
+        backgroundColor: "var(--ink)",
+        borderRadius: 10,
+        boxShadow: "0 4px 20px rgba(28,24,64,0.22)",
+        zIndex: 200,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <EyeOff size={14} style={{ color: "rgba(255,255,255,0.55)", flexShrink: 0 }} />
+      <span style={{ fontSize: 13, color: "#fff" }}>Opportunity hidden</span>
+      <button
+        type="button"
+        onClick={onUndo}
+        style={{
+          background: "none", border: "none", cursor: "pointer",
+          fontSize: 13, fontWeight: 600,
+          color: "var(--slate-tint)",
+          padding: "0 2px",
+          transition: "color 120ms",
+        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#fff" }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-tint)" }}
+      >
+        Undo
+      </button>
+      <button
+        type="button"
+        aria-label="Dismiss"
+        onClick={onDismiss}
+        style={{
+          background: "none", border: "none", cursor: "pointer",
+          color: "rgba(255,255,255,0.45)", padding: "0 2px",
+          display: "flex", alignItems: "center",
+          transition: "color 120ms",
+        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.80)" }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.45)" }}
+      >
+        <X size={13} />
+      </button>
+    </div>
+  )
+}
+
 // ── Discover page (inner) ──────────────────────────────────────────────────
 
 function DiscoverPage() {
@@ -645,18 +776,25 @@ function DiscoverPage() {
   const [deadlineFilter, setDeadlineFilter] = useState("")
   const [sortBy, setSortBy] = useState<"match" | "deadline" | "award">("match")
 
+  const [hiddenOppIds, setHiddenOppIds] = useState<Set<string>>(new Set())
+  const [hideDialogOpp, setHideDialogOpp] = useState<typeof OPPORTUNITIES[number] | null>(null)
+  const [toast, setToast] = useState<{ oppId: string; oppName: string } | null>(null)
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const lastFocusedRef = useRef<HTMLElement | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const browseToolbarSentinelRef = useRef<HTMLDivElement>(null)
   const [browseToolbarStuck, setBrowseToolbarStuck] = useState(false)
 
   const selectedOppId = searchParams.get("opp")
+  const selectedFunderId = searchParams.get("funder")
+  const panelOpen = !!(selectedOppId || selectedFunderId)
 
-  const prevOppIdRef = useRef<string | null>(null)
+  const prevPanelRef = useRef<boolean>(false)
   useEffect(() => {
-    if (prevOppIdRef.current && !selectedOppId) lastFocusedRef.current?.focus()
-    prevOppIdRef.current = selectedOppId
-  }, [selectedOppId])
+    if (prevPanelRef.current && !panelOpen) lastFocusedRef.current?.focus()
+    prevPanelRef.current = panelOpen
+  }, [panelOpen])
 
   useEffect(() => {
     const sentinel = browseToolbarSentinelRef.current
@@ -679,14 +817,53 @@ function DiscoverPage() {
     router.push("/discover")
   }, [router])
 
-  const handleFunderClick = useCallback((_funderId: string) => {
-    // funder detail route placeholder
-  }, [])
+  const handleFunderClick = useCallback((funderId: string) => {
+    router.push(`/discover?funder=${funderId}`)
+  }, [router])
 
   const handleTrack = useCallback((oppId: string) => {
     const pip = createPipelineOpportunity(oppId, selectedProjectId ?? "proj-general")
     router.push(`/pursuit/${pip.opportunityId}`)
   }, [router, selectedProjectId])
+
+  const handleHideClick = useCallback((oppId: string) => {
+    const opp = OPPORTUNITIES.find(o => o.id === oppId) ?? null
+    setHideDialogOpp(opp)
+  }, [])
+
+  const handleHideConfirm = useCallback((payload: HidePayload) => {
+    setHiddenOppIds(prev => { const next = new Set(prev); next.add(payload.opportunityId); return next })
+    setHideDialogOpp(null)
+
+    const opp = OPPORTUNITIES.find(o => o.id === payload.opportunityId)
+    if (opp) {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+      setToast({ oppId: payload.opportunityId, oppName: opp.name })
+      toastTimeoutRef.current = setTimeout(() => setToast(null), 6000)
+    }
+
+    recordHideOpportunity(payload)
+  }, [])
+
+  const handleHideUndo = useCallback(() => {
+    if (!toast) return
+    const { oppId } = toast
+    setHiddenOppIds(prev => { const next = new Set(prev); next.delete(oppId); return next })
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+    setToast(null)
+    undoHideOpportunity(oppId)
+  }, [toast])
+
+  const dismissToast = useCallback(() => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+    setToast(null)
+  }, [])
+
+  const handleRestoreAll = useCallback(() => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+    setHiddenOppIds(new Set())
+    setToast(null)
+  }, [])
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -729,7 +906,8 @@ function DiscoverPage() {
     return true
   })
 
-  const sortedOpps = [...filtered].sort((a, b) => {
+  const visibleOpps = filtered.filter(opp => !hiddenOppIds.has(opp.id))
+  const sortedOpps = [...visibleOpps].sort((a, b) => {
     if (sortBy === "deadline") {
       const da = parseDeadlineDate(a.deadline ?? "")
       const db = parseDeadlineDate(b.deadline ?? "")
@@ -801,7 +979,8 @@ function DiscoverPage() {
     return true
   })
 
-  const sortedMatchedOpps = [...filteredMatchedOpps].sort((a, b) => {
+  const visibleMatchedOpps = filteredMatchedOpps.filter(({ opp }) => !hiddenOppIds.has(opp.id))
+  const sortedMatchedOpps = [...visibleMatchedOpps].sort((a, b) => {
     if (sortBy === "deadline") {
       const da = parseDeadlineDate(a.opp.deadline ?? "")
       const db = parseDeadlineDate(b.opp.deadline ?? "")
@@ -855,13 +1034,35 @@ function DiscoverPage() {
           <IncompleteProfileBanner />
 
           {/* Page header */}
-          <div style={{ marginBottom: 20 }}>
-            <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700, color: "var(--ink)" }}>
-              Discover
-            </h1>
-            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>
-              Funding opportunities for {scopeLabel}
-            </p>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 20 }}>
+            <div>
+              <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700, color: "var(--ink)" }}>
+                Discover
+              </h1>
+              <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>
+                Funding opportunities for {scopeLabel}
+              </p>
+            </div>
+            {hiddenOppIds.size > 0 && (
+              <button
+                type="button"
+                onClick={handleRestoreAll}
+                style={{
+                  flexShrink: 0,
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "6px 12px", borderRadius: 8,
+                  border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
+                  fontSize: 12, color: "var(--ink-secondary)", cursor: "pointer",
+                  transition: "background-color 120ms, color 120ms",
+                  marginTop: 4,
+                }}
+                onMouseEnter={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink)" }}
+                onMouseLeave={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--surface)"; el.style.color = "var(--ink-secondary)" }}
+              >
+                <EyeOff size={13} style={{ color: "var(--ink-tertiary)" }} />
+                {hiddenOppIds.size} hidden · Restore
+              </button>
+            )}
           </div>
 
           {/* Single control band */}
@@ -1079,7 +1280,7 @@ function DiscoverPage() {
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 12 }}>
                   {sortedMatchedOpps.map(({ opp }) => (
-                    <CatalogueCard key={opp.id} opp={opp} onOppClick={handleOppClick} onTrack={handleTrack} />
+                    <CatalogueCard key={opp.id} opp={opp} onOppClick={handleOppClick} onTrack={handleTrack} onHide={handleHideClick} />
                   ))}
                 </div>
               )}
@@ -1121,9 +1322,12 @@ function DiscoverPage() {
           {/* Explore > Opportunities */}
           {primaryTab === "explore" && objectType === "opportunities" && (
             <div style={{ marginTop: 12 }}>
-              <p style={{ margin: "0 0 4px", fontSize: 11, color: "var(--ink-tertiary)" }}>
-                {sortedOpps.length} {sortedOpps.length === 1 ? "opportunity" : "opportunities"}
-              </p>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
+                <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+                  All opportunities
+                </h2>
+                <span style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-tertiary)" }}>{sortedOpps.length}</span>
+              </div>
               {sortedOpps.length > 0 ? (
                 <div>
                   {sortedOpps.map((opp, i) => (
@@ -1133,6 +1337,7 @@ function DiscoverPage() {
                       isFirst={i === 0}
                       onOppClick={handleOppClick}
                       onTrack={handleTrack}
+                      onHide={handleHideClick}
                     />
                   ))}
                 </div>
@@ -1152,9 +1357,12 @@ function DiscoverPage() {
           {/* Explore > Funders */}
           {primaryTab === "explore" && objectType === "funders" && (
             <div style={{ marginTop: 12 }}>
-              <p style={{ margin: "0 0 4px", fontSize: 11, color: "var(--ink-tertiary)" }}>
-                {sortedFunders.length} {sortedFunders.length === 1 ? "funder" : "funders"}
-              </p>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
+                <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+                  All funders
+                </h2>
+                <span style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-tertiary)" }}>{sortedFunders.length}</span>
+              </div>
               {sortedFunders.length > 0 ? (
                 <div>
                   {sortedFunders.map((funder, i) => (
@@ -1187,6 +1395,29 @@ function DiscoverPage() {
           key={selectedOppId}
           oppId={selectedOppId}
           onClose={handleClose}
+          onHide={handleHideClick}
+        />
+      )}
+      {selectedFunderId && !selectedOppId && (
+        <OpportunityPeekPanel
+          key={`funder-${selectedFunderId}`}
+          funderId={selectedFunderId}
+          onClose={handleClose}
+        />
+      )}
+
+      <HideOpportunityDialog
+        opp={hideDialogOpp}
+        onConfirm={handleHideConfirm}
+        onCancel={() => setHideDialogOpp(null)}
+        onAddToPipeline={handleTrack}
+      />
+
+      {toast && (
+        <UndoToast
+          oppName={toast.oppName}
+          onUndo={handleHideUndo}
+          onDismiss={dismissToast}
         />
       )}
     </div>

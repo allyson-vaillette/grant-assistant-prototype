@@ -3,6 +3,7 @@ import type {
   Funder, Opportunity, PipelineOpportunity, PipelineStatus,
   Artifact, Attachment, Task, Match,
   WritingSession, Snippet, CommentThread, RecentGrant,
+  FunderIntelligence,
 } from "./types"
 
 // ── Account & Org ─────────────────────────────────────────────────────────
@@ -1085,6 +1086,65 @@ export const COMMENT_THREADS: CommentThread[] = [
     ],
   },
 ]
+
+// ── Funder Intelligence ────────────────────────────────────────────────────
+
+export const FUNDER_INTELLIGENCE: FunderIntelligence[] = [
+  {
+    funderId: "funder-petco",
+    yearlyGiving: [
+      { year: 2019, totalAmount: 1_800_000, newGranteeCount: 42, repeatGranteeCount: 28 },
+      { year: 2020, totalAmount: 2_100_000, newGranteeCount: 51, repeatGranteeCount: 31 },
+      { year: 2021, totalAmount: 3_200_000, newGranteeCount: 78, repeatGranteeCount: 40 },
+      { year: 2022, totalAmount: 3_800_000, newGranteeCount: 89, repeatGranteeCount: 52 },
+      { year: 2023, totalAmount: 4_200_000, newGranteeCount: 95, repeatGranteeCount: 58 },
+    ],
+    medianGrantAmount: 32_000,
+    notableGrantees: [
+      "San Diego Humane Society",
+      "Austin Pets Alive",
+      "Nevada Humane Society",
+      "San Francisco SPCA",
+      "Seattle Humane",
+    ],
+  },
+  {
+    funderId: "funder-aspca",
+    yearlyGiving: [
+      { year: 2019, totalAmount: 2_400_000, newGranteeCount: 38, repeatGranteeCount: 24 },
+      { year: 2020, totalAmount: 2_800_000, newGranteeCount: 44, repeatGranteeCount: 28 },
+      { year: 2021, totalAmount: 3_100_000, newGranteeCount: 52, repeatGranteeCount: 33 },
+      { year: 2022, totalAmount: 3_500_000, newGranteeCount: 58, repeatGranteeCount: 38 },
+      { year: 2023, totalAmount: 4_000_000, newGranteeCount: 62, repeatGranteeCount: 44 },
+    ],
+    medianGrantAmount: 45_000,
+    notableGrantees: [
+      "Humane Rescue Alliance",
+      "Animal Rescue League of Boston",
+      "Kentucky Humane Society",
+    ],
+  },
+  {
+    funderId: "funder-found-animals",
+    yearlyGiving: [
+      { year: 2019, totalAmount: 800_000, newGranteeCount: 14, repeatGranteeCount: 8 },
+      { year: 2020, totalAmount: 950_000, newGranteeCount: 18, repeatGranteeCount: 9 },
+      { year: 2021, totalAmount: 1_100_000, newGranteeCount: 22, repeatGranteeCount: 11 },
+      { year: 2022, totalAmount: 1_300_000, newGranteeCount: 25, repeatGranteeCount: 14 },
+      { year: 2023, totalAmount: 1_500_000, newGranteeCount: 28, repeatGranteeCount: 17 },
+    ],
+    medianGrantAmount: 42_000,
+    notableGrantees: [
+      "Downtown Dog Rescue",
+      "L.A. Animal Services",
+      "Lange Foundation",
+    ],
+  },
+]
+
+export function getFunderIntelligence(funderId: string): FunderIntelligence | undefined {
+  return FUNDER_INTELLIGENCE.find((fi) => fi.funderId === funderId)
+}
 
 export function getCommentThreadsForArtifact(artifactId: string): CommentThread[] {
   return COMMENT_THREADS.filter((t) => t.artifactId === artifactId)

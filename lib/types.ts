@@ -230,6 +230,22 @@ export interface CommentThread {
   comments: Comment[]
 }
 
+// ── Funder Intelligence ────────────────────────────────────────────────────
+
+export interface FunderYearlyGiving {
+  year: number
+  totalAmount: number
+  newGranteeCount: number
+  repeatGranteeCount: number
+}
+
+export interface FunderIntelligence {
+  funderId: string
+  yearlyGiving: FunderYearlyGiving[]
+  medianGrantAmount: number
+  notableGrantees?: string[]
+}
+
 // ── Matching ───────────────────────────────────────────────────────────────
 
 export type MatchStrength = "strong" | "good" | "partial"
