@@ -151,12 +151,11 @@ function daysLabel(deadline: string | undefined): string {
 
 // ── Catalogue card (Matches > Opportunities) ───────────────────────────────
 
-function CatalogueCard({ opp, onOppClick, onTrack, onHide, trackedOppIds }: {
+function CatalogueCard({ opp, onOppClick, onTrack, onHide }: {
   opp: Opportunity
   onOppClick: (oppId: string, el: HTMLElement) => void
   onTrack: (oppId: string) => void
   onHide: (oppId: string) => void
-  trackedOppIds: Set<string>
 }) {
   const router = useRouter()
   const [cardHovered, setCardHovered] = useState(false)
@@ -164,8 +163,6 @@ function CatalogueCard({ opp, onOppClick, onTrack, onHide, trackedOppIds }: {
   const hideButtonVisible = cardHovered || hideButtonFocused
   const funder = getFunder(opp.funderId)
   const match = getMatchForOpportunity(opp.id)
-  const pipeline = getPipelineForOpportunity(opp.id)
-  const isTracked = !!pipeline || trackedOppIds.has(opp.id)
   const cfg = match ? MATCH_CONFIG[match.matchStrength] : null
   const primaryReason = match?.reasons.positive[0]
   const tags = (opp.focusAreas ?? []).slice(0, 3)
@@ -311,26 +308,12 @@ function CatalogueCard({ opp, onOppClick, onTrack, onHide, trackedOppIds }: {
         </button>
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); if (isTracked) { router.push(`/pursuit/${opp.id}`) } else { onTrack(opp.id) } }}
-          style={{
-            padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer",
-            transition: "background-color 120ms, border-color 120ms, color 120ms",
-            border: isTracked ? "1px solid var(--hair-2)" : "1px solid var(--slate-primary)",
-            backgroundColor: isTracked ? "transparent" : "var(--slate-primary)",
-            color: isTracked ? "var(--ink-secondary)" : "#ffffff",
-          }}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget as HTMLButtonElement
-            if (isTracked) { el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink)" }
-            else { el.style.backgroundColor = "var(--slate-secondary)"; el.style.borderColor = "var(--slate-secondary)" }
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget as HTMLButtonElement
-            if (isTracked) { el.style.backgroundColor = "transparent"; el.style.color = "var(--ink-secondary)" }
-            else { el.style.backgroundColor = "var(--slate-primary)"; el.style.borderColor = "var(--slate-primary)" }
-          }}
+          onClick={(e) => { e.stopPropagation(); onTrack(opp.id) }}
+          style={{ padding: "5px 14px", borderRadius: 6, border: "1px solid var(--slate-primary)", backgroundColor: "var(--slate-primary)", fontSize: 12, fontWeight: 600, color: "#ffffff", cursor: "pointer", transition: "background-color 120ms, border-color 120ms" }}
+          onMouseEnter={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--slate-secondary)"; el.style.borderColor = "var(--slate-secondary)" }}
+          onMouseLeave={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--slate-primary)"; el.style.borderColor = "var(--slate-primary)" }}
         >
-          {isTracked ? "Open workspace" : "Track"}
+          Track
         </button>
       </div>
     </div>
@@ -445,13 +428,12 @@ function MatchedFunderCard({ match, funder, onFunderClick }: {
 
 // ── Explore opportunity row (Explore > Opportunities) ──────────────────────
 
-function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, onHide, trackedOppIds }: {
+function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, onHide }: {
   opp: Opportunity
   isFirst: boolean
   onOppClick: (oppId: string, el: HTMLElement) => void
   onTrack: (oppId: string) => void
   onHide: (oppId: string) => void
-  trackedOppIds: Set<string>
 }) {
   const router = useRouter()
   const [rowHovered, setRowHovered] = useState(false)
@@ -459,8 +441,6 @@ function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, on
   const hideButtonVisible = rowHovered || hideButtonFocused
   const funder = getFunder(opp.funderId)
   const match = getMatchForOpportunity(opp.id)
-  const pipeline = getPipelineForOpportunity(opp.id)
-  const isTracked = !!pipeline || trackedOppIds.has(opp.id)
   const focusTags = opp.focusAreas ?? []
   const visibleTags = focusTags.slice(0, 1)
   const overflowCount = Math.max(0, focusTags.length - 1)
@@ -569,26 +549,12 @@ function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, on
         </button>
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); if (isTracked) { router.push(`/pursuit/${opp.id}`) } else { onTrack(opp.id) } }}
-          style={{
-            padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
-            transition: "background-color 120ms, border-color 120ms, color 120ms",
-            border: isTracked ? "1px solid var(--hair-2)" : "none",
-            backgroundColor: isTracked ? "transparent" : "var(--slate-primary)",
-            color: isTracked ? "var(--ink-secondary)" : "#fff",
-          }}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget as HTMLButtonElement
-            if (isTracked) { el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink)" }
-            else el.style.backgroundColor = "var(--slate-secondary)"
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget as HTMLButtonElement
-            if (isTracked) { el.style.backgroundColor = "transparent"; el.style.color = "var(--ink-secondary)" }
-            else el.style.backgroundColor = "var(--slate-primary)"
-          }}
+          onClick={(e) => { e.stopPropagation(); onTrack(opp.id) }}
+          style={{ padding: "5px 14px", borderRadius: 6, border: "none", backgroundColor: "var(--slate-primary)", fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer", whiteSpace: "nowrap", transition: "background-color 120ms" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-secondary)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
         >
-          {isTracked ? "Open workspace" : "Track"}
+          Track
         </button>
       </div>
     </div>
@@ -965,7 +931,7 @@ function DiscoverPage() {
     return true
   })
 
-  const visibleOpps = filtered.filter(opp => !hiddenOppIds.has(opp.id))
+  const visibleOpps = filtered.filter(opp => !hiddenOppIds.has(opp.id) && !getPipelineForOpportunity(opp.id) && !trackedOppIds.has(opp.id))
   const sortedOpps = [...visibleOpps].sort((a, b) => {
     if (sortBy === "deadline") {
       const da = parseDeadlineDate(a.deadline ?? "")
@@ -1038,7 +1004,7 @@ function DiscoverPage() {
     return true
   })
 
-  const visibleMatchedOpps = filteredMatchedOpps.filter(({ opp }) => !hiddenOppIds.has(opp.id))
+  const visibleMatchedOpps = filteredMatchedOpps.filter(({ opp }) => !hiddenOppIds.has(opp.id) && !getPipelineForOpportunity(opp.id) && !trackedOppIds.has(opp.id))
   const sortedMatchedOpps = [...visibleMatchedOpps].sort((a, b) => {
     if (sortBy === "deadline") {
       const da = parseDeadlineDate(a.opp.deadline ?? "")
@@ -1339,7 +1305,7 @@ function DiscoverPage() {
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 12 }}>
                   {sortedMatchedOpps.map(({ opp }) => (
-                    <CatalogueCard key={opp.id} opp={opp} onOppClick={handleOppClick} onTrack={handleTrack} onHide={handleHideClick} trackedOppIds={trackedOppIds} />
+                    <CatalogueCard key={opp.id} opp={opp} onOppClick={handleOppClick} onTrack={handleTrack} onHide={handleHideClick} />
                   ))}
                 </div>
               )}
@@ -1397,7 +1363,6 @@ function DiscoverPage() {
                       onOppClick={handleOppClick}
                       onTrack={handleTrack}
                       onHide={handleHideClick}
-                      trackedOppIds={trackedOppIds}
                     />
                   ))}
                 </div>

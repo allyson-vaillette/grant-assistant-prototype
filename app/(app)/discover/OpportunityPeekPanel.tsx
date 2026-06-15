@@ -456,7 +456,7 @@ export function OpportunityPeekPanel({ oppId, funderId: directFunderId, onClose,
                   onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
                 >
-                  Open workspace
+                  Track
                 </button>
               ) : (
                 <button
@@ -543,7 +543,7 @@ export function OpportunityPeekPanel({ oppId, funderId: directFunderId, onClose,
                     onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
                   >
-                    Open workspace
+                    Track
                   </button>
                 ) : (
                   <button
