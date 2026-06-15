@@ -605,12 +605,19 @@ function FilterSelect({ value, onChange, children, minWidth }: {
       value={value}
       onChange={(e) => onChange(e.target.value)}
       style={{
-        padding: "7px 28px 7px 10px", borderRadius: "var(--radius-input)",
-        border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
-        fontSize: 12, color: value ? "var(--ink)" : "var(--ink-secondary)",
-        outline: "none", cursor: "pointer",
+        padding: "7px 30px 7px 10px",
+        borderRadius: "var(--radius-input)",
+        border: "1px solid var(--hair-2)",
+        backgroundColor: "var(--surface)",
+        fontSize: 12,
+        color: value ? "var(--ink)" : "var(--ink-secondary)",
+        outline: "none",
+        cursor: "pointer",
         minWidth: minWidth ?? 0,
-        appearance: "auto",
+        appearance: "none",
+        backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0.5 0.5L5 5.5L9.5 0.5' stroke='%23909AA4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E\")",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "right 10px center",
       }}
     >
       {children}
