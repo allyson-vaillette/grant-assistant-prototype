@@ -485,21 +485,25 @@ export function OpportunityPeekPanel({ oppId, funderId: directFunderId, onClose,
                   {trackPhase === "loading" ? <><Loader2 size={13} className="animate-spin" /> Adding…</> : "Track"}
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => router.push(`/opportunity/${opp.id}`)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 5,
-                  padding: "8px 14px", borderRadius: 8,
-                  border: "1px solid var(--hair-2)", backgroundColor: "transparent",
-                  fontSize: 13, color: "var(--ink-secondary)", cursor: "pointer",
-                  transition: "background-color 150ms, color 150ms",
-                }}
-                onMouseEnter={(e) => { const el = e.currentTarget; el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink)" }}
-                onMouseLeave={(e) => { const el = e.currentTarget; el.style.backgroundColor = "transparent"; el.style.color = "var(--ink-secondary)" }}
-              >
-                Details <ExternalLink size={12} />
-              </button>
+              {funder.website && (
+                <a
+                  href={funder.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    padding: "8px 14px", borderRadius: 8,
+                    border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+                    fontSize: 13, color: "var(--ink-secondary)", cursor: "pointer",
+                    textDecoration: "none",
+                    transition: "background-color 150ms, color 150ms",
+                  }}
+                  onMouseEnter={(e) => { const el = e.currentTarget; el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink)" }}
+                  onMouseLeave={(e) => { const el = e.currentTarget; el.style.backgroundColor = "transparent"; el.style.color = "var(--ink-secondary)" }}
+                >
+                  Website <ExternalLink size={12} />
+                </a>
+              )}
               {onHide && (
                 <button
                   type="button"
