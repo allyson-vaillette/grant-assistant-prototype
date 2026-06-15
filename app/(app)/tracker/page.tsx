@@ -4,12 +4,13 @@ import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { ContentContainer } from "@/components/layout/content-container"
 import { useRouter } from "next/navigation"
-import { Telescope, ChevronDown } from "lucide-react"
+import { Telescope, ChevronDown, X, ExternalLink } from "lucide-react"
 import {
   FUNDERS, OPPORTUNITIES, PIPELINE_OPPORTUNITIES, updatePipelineStatus,
+  TRACKED_FUNDERS, untrackFunder,
 } from "@/lib/mock-data"
 import { useScope } from "@/lib/scope-context"
-import type { PipelineOpportunity, PipelineStatus, PipelinePhase } from "@/lib/types"
+import type { PipelineOpportunity, PipelineStatus, PipelinePhase, TrackedFunder } from "@/lib/types"
 import { phaseFromStatus } from "@/lib/types"
 
 type TrackerTab = "prospecting" | "applications" | "awards"
@@ -347,6 +348,12 @@ export default function TrackerPage() {
   const { scopeLabel, selectedProjectId } = useScope()
   const [pipelines, setPipelines] = useState(() => [...PIPELINE_OPPORTUNITIES])
   const [activeTab, setActiveTab] = useState<TrackerTab>("applications")
+  const [watchedFunders, setWatchedFunders] = useState<TrackedFunder[]>(() => [...TRACKED_FUNDERS])
+
+  function handleUntrackFunder(funderId: string) {
+    untrackFunder(funderId)
+    setWatchedFunders(prev => prev.filter(tf => tf.funderId !== funderId))
+  }
 
   function handleStatusChange(id: string, status: PipelineStatus) {
     setPipelines(prev =>
@@ -429,6 +436,73 @@ export default function TrackerPage() {
             </div>
           ))}
         </div>
+
+        {/* Watching — tracked funders (shown only when non-empty) */}
+        {watchedFunders.length > 0 && (
+          <div style={{ marginBottom: 28 }}>
+            <p style={{ margin: "0 0 12px", fontSize: 11, fontWeight: 600, color: "var(--ink-tertiary)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              Watching
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {watchedFunders.map(tf => {
+                const funder = FUNDERS.find(f => f.id === tf.funderId)
+                if (!funder) return null
+                const oppCount = OPPORTUNITIES.filter(o => o.funderId === funder.id).length
+                return (
+                  <div
+                    key={tf.id}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 12,
+                      backgroundColor: "var(--surface)",
+                      border: "1px solid var(--hair-2)",
+                      borderRadius: 10,
+                      padding: "10px 14px",
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
+                        {funder.name}
+                      </p>
+                      <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)" }}>
+                        {funder.type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                        {oppCount > 0 && ` · ${oppCount} open ${oppCount === 1 ? "grant" : "grants"}`}
+                      </p>
+                    </div>
+                    <Link
+                      href={`/discover?funder=${funder.id}`}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 4,
+                        padding: "5px 10px", borderRadius: 7,
+                        border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+                        fontSize: 12, color: "var(--ink-secondary)", textDecoration: "none",
+                        transition: "background-color 150ms",
+                      }}
+                    >
+                      View grants <ExternalLink size={11} />
+                    </Link>
+                    <button
+                      type="button"
+                      aria-label={`Stop watching ${funder.name}`}
+                      onClick={() => handleUntrackFunder(funder.id)}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        width: 28, height: 28, borderRadius: 6,
+                        border: "none", backgroundColor: "transparent",
+                        color: "var(--ink-tertiary)", cursor: "pointer",
+                        transition: "background-color 120ms, color 120ms",
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => { const el = e.currentTarget; el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink-secondary)" }}
+                      onMouseLeave={(e) => { const el = e.currentTarget; el.style.backgroundColor = "transparent"; el.style.color = "var(--ink-tertiary)" }}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Segmented control */}
         <div style={{ marginBottom: 20 }}>

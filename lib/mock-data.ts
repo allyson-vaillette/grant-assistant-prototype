@@ -3,7 +3,7 @@ import type {
   Funder, Opportunity, PipelineOpportunity, PipelineStatus,
   Artifact, Attachment, Task, Match,
   WritingSession, Snippet, CommentThread, RecentGrant,
-  FunderIntelligence,
+  FunderIntelligence, TrackedFunder,
 } from "./types"
 
 // ── Account & Org ─────────────────────────────────────────────────────────
@@ -1157,6 +1157,32 @@ export function updatePipelineStatus(pipId: string, status: PipelineStatus): voi
   if (status === "application-submitted" && !pip.submittedAt) {
     pip.submittedAt = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
   }
+}
+
+// ── Tracked Funders ────────────────────────────────────────────────────────
+
+export const TRACKED_FUNDERS: TrackedFunder[] = []
+
+export function trackFunder(funderId: string, organizationId = "org-1"): TrackedFunder {
+  const existing = TRACKED_FUNDERS.find(t => t.funderId === funderId)
+  if (existing) return existing
+  const tf: TrackedFunder = {
+    id: `tf-${TRACKED_FUNDERS.length + 1}-${funderId}`,
+    funderId,
+    organizationId,
+    trackedAt: new Date().toISOString(),
+  }
+  TRACKED_FUNDERS.push(tf)
+  return tf
+}
+
+export function isTrackedFunder(funderId: string): boolean {
+  return TRACKED_FUNDERS.some(t => t.funderId === funderId)
+}
+
+export function untrackFunder(funderId: string): void {
+  const idx = TRACKED_FUNDERS.findIndex(t => t.funderId === funderId)
+  if (idx >= 0) TRACKED_FUNDERS.splice(idx, 1)
 }
 
 export function submitPursuitApplication(

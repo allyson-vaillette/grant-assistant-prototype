@@ -121,6 +121,13 @@ export interface Opportunity {
 
 // ── Pipeline ───────────────────────────────────────────────────────────────
 
+export interface TrackedFunder {
+  id: string
+  funderId: string
+  organizationId: string
+  trackedAt: string
+}
+
 export interface PipelineOpportunity {
   id: string
   organizationId: string

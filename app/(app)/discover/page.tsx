@@ -7,6 +7,7 @@ import { Search, X, Check, CalendarDays, MapPin, EyeOff } from "lucide-react"
 import {
   OPPORTUNITIES, MATCHES, FUNDERS,
   getFunder, getMatchForOpportunity, createPipelineOpportunity, getPipelineForOpportunity,
+  trackFunder,
 } from "@/lib/mock-data"
 import { useScope } from "@/lib/scope-context"
 import type { Opportunity, Funder, FunderType, MatchStrength, Match } from "@/lib/types"
@@ -150,11 +151,12 @@ function daysLabel(deadline: string | undefined): string {
 
 // ── Catalogue card (Matches > Opportunities) ───────────────────────────────
 
-function CatalogueCard({ opp, onOppClick, onTrack, onHide }: {
+function CatalogueCard({ opp, onOppClick, onTrack, onHide, trackedOppIds }: {
   opp: Opportunity
   onOppClick: (oppId: string, el: HTMLElement) => void
   onTrack: (oppId: string) => void
   onHide: (oppId: string) => void
+  trackedOppIds: Set<string>
 }) {
   const router = useRouter()
   const [cardHovered, setCardHovered] = useState(false)
@@ -163,6 +165,7 @@ function CatalogueCard({ opp, onOppClick, onTrack, onHide }: {
   const funder = getFunder(opp.funderId)
   const match = getMatchForOpportunity(opp.id)
   const pipeline = getPipelineForOpportunity(opp.id)
+  const isTracked = !!pipeline || trackedOppIds.has(opp.id)
   const cfg = match ? MATCH_CONFIG[match.matchStrength] : null
   const primaryReason = match?.reasons.positive[0]
   const tags = (opp.focusAreas ?? []).slice(0, 3)
@@ -308,12 +311,26 @@ function CatalogueCard({ opp, onOppClick, onTrack, onHide }: {
         </button>
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); if (pipeline) { router.push(`/pursuit/${opp.id}`) } else { onTrack(opp.id) } }}
-          style={{ padding: "5px 14px", borderRadius: 6, border: "1px solid var(--slate-primary)", backgroundColor: "var(--slate-primary)", fontSize: 12, fontWeight: 600, color: "#ffffff", cursor: "pointer", transition: "background-color 120ms, border-color 120ms" }}
-          onMouseEnter={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--slate-secondary)"; el.style.borderColor = "var(--slate-secondary)" }}
-          onMouseLeave={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--slate-primary)"; el.style.borderColor = "var(--slate-primary)" }}
+          onClick={(e) => { e.stopPropagation(); if (isTracked) { router.push(`/pursuit/${opp.id}`) } else { onTrack(opp.id) } }}
+          style={{
+            padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer",
+            transition: "background-color 120ms, border-color 120ms, color 120ms",
+            border: isTracked ? "1px solid var(--hair-2)" : "1px solid var(--slate-primary)",
+            backgroundColor: isTracked ? "transparent" : "var(--slate-primary)",
+            color: isTracked ? "var(--ink-secondary)" : "#ffffff",
+          }}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            if (isTracked) { el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink)" }
+            else { el.style.backgroundColor = "var(--slate-secondary)"; el.style.borderColor = "var(--slate-secondary)" }
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            if (isTracked) { el.style.backgroundColor = "transparent"; el.style.color = "var(--ink-secondary)" }
+            else { el.style.backgroundColor = "var(--slate-primary)"; el.style.borderColor = "var(--slate-primary)" }
+          }}
         >
-          {"Track"}
+          {isTracked ? "Open workspace" : "Track"}
         </button>
       </div>
     </div>
@@ -428,12 +445,13 @@ function MatchedFunderCard({ match, funder, onFunderClick }: {
 
 // ── Explore opportunity row (Explore > Opportunities) ──────────────────────
 
-function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, onHide }: {
+function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, onHide, trackedOppIds }: {
   opp: Opportunity
   isFirst: boolean
   onOppClick: (oppId: string, el: HTMLElement) => void
   onTrack: (oppId: string) => void
   onHide: (oppId: string) => void
+  trackedOppIds: Set<string>
 }) {
   const router = useRouter()
   const [rowHovered, setRowHovered] = useState(false)
@@ -442,6 +460,7 @@ function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, on
   const funder = getFunder(opp.funderId)
   const match = getMatchForOpportunity(opp.id)
   const pipeline = getPipelineForOpportunity(opp.id)
+  const isTracked = !!pipeline || trackedOppIds.has(opp.id)
   const focusTags = opp.focusAreas ?? []
   const visibleTags = focusTags.slice(0, 1)
   const overflowCount = Math.max(0, focusTags.length - 1)
@@ -550,12 +569,26 @@ function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, on
         </button>
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); if (pipeline) { router.push(`/pursuit/${opp.id}`) } else { onTrack(opp.id) } }}
-          style={{ padding: "5px 14px", borderRadius: 6, border: "none", backgroundColor: "var(--slate-primary)", fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer", whiteSpace: "nowrap", transition: "background-color 120ms" }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-secondary)" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
+          onClick={(e) => { e.stopPropagation(); if (isTracked) { router.push(`/pursuit/${opp.id}`) } else { onTrack(opp.id) } }}
+          style={{
+            padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
+            transition: "background-color 120ms, border-color 120ms, color 120ms",
+            border: isTracked ? "1px solid var(--hair-2)" : "none",
+            backgroundColor: isTracked ? "transparent" : "var(--slate-primary)",
+            color: isTracked ? "var(--ink-secondary)" : "#fff",
+          }}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            if (isTracked) { el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink)" }
+            else el.style.backgroundColor = "var(--slate-secondary)"
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget as HTMLButtonElement
+            if (isTracked) { el.style.backgroundColor = "transparent"; el.style.color = "var(--ink-secondary)" }
+            else el.style.backgroundColor = "var(--slate-primary)"
+          }}
         >
-          Track
+          {isTracked ? "Open workspace" : "Track"}
         </button>
       </div>
     </div>
@@ -564,11 +597,14 @@ function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, on
 
 // ── Explore funder row (Explore > Funders) ─────────────────────────────────
 
-function ExploreFunderRow({ funder, isFirst: _isFirst, onFunderClick }: {
+function ExploreFunderRow({ funder, isFirst: _isFirst, onFunderClick, trackedFunderIds, onTrackFunder }: {
   funder: Funder
   isFirst: boolean
   onFunderClick: (funderId: string) => void
+  trackedFunderIds: Set<string>
+  onTrackFunder: (funderId: string) => void
 }) {
+  const isFunderTracked = trackedFunderIds.has(funder.id)
   const match = MATCHES.find(m => m.funderId === funder.id)
   const cfg = match ? MATCH_CONFIG[match.matchStrength] : null
   const oppCount = matchedOppCount(funder.id)
@@ -649,6 +685,21 @@ function ExploreFunderRow({ funder, isFirst: _isFirst, onFunderClick }: {
             {cfg.label}
           </span>
         )}
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); if (!isFunderTracked) onTrackFunder(funder.id) }}
+          style={{
+            padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: isFunderTracked ? "default" : "pointer", whiteSpace: "nowrap",
+            transition: "background-color 120ms, color 120ms",
+            border: "1px solid var(--hair-2)",
+            backgroundColor: isFunderTracked ? "var(--canvas)" : "transparent",
+            color: isFunderTracked ? "var(--ink-tertiary)" : "var(--ink-secondary)",
+          }}
+          onMouseEnter={(e) => { if (!isFunderTracked) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--ink)" } }}
+          onMouseLeave={(e) => { if (!isFunderTracked) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-secondary)" } }}
+        >
+          {isFunderTracked ? "Watching" : "Track funder"}
+        </button>
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onFunderClick(funder.id) }}
@@ -821,10 +872,18 @@ function DiscoverPage() {
     router.push(`/discover?funder=${funderId}`)
   }, [router])
 
+  const [trackedOppIds, setTrackedOppIds] = useState<Set<string>>(() => new Set())
+  const [trackedFunderIds, setTrackedFunderIds] = useState<Set<string>>(() => new Set())
+
   const handleTrack = useCallback((oppId: string) => {
-    const pip = createPipelineOpportunity(oppId, selectedProjectId ?? "proj-general")
-    router.push(`/pursuit/${pip.opportunityId}`)
-  }, [router, selectedProjectId])
+    createPipelineOpportunity(oppId, selectedProjectId ?? "proj-general")
+    setTrackedOppIds(prev => new Set([...prev, oppId]))
+  }, [selectedProjectId])
+
+  const handleTrackFunder = useCallback((funderId: string) => {
+    trackFunder(funderId)
+    setTrackedFunderIds(prev => new Set([...prev, funderId]))
+  }, [])
 
   const handleHideClick = useCallback((oppId: string) => {
     const opp = OPPORTUNITIES.find(o => o.id === oppId) ?? null
@@ -1280,7 +1339,7 @@ function DiscoverPage() {
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 12 }}>
                   {sortedMatchedOpps.map(({ opp }) => (
-                    <CatalogueCard key={opp.id} opp={opp} onOppClick={handleOppClick} onTrack={handleTrack} onHide={handleHideClick} />
+                    <CatalogueCard key={opp.id} opp={opp} onOppClick={handleOppClick} onTrack={handleTrack} onHide={handleHideClick} trackedOppIds={trackedOppIds} />
                   ))}
                 </div>
               )}
@@ -1338,6 +1397,7 @@ function DiscoverPage() {
                       onOppClick={handleOppClick}
                       onTrack={handleTrack}
                       onHide={handleHideClick}
+                      trackedOppIds={trackedOppIds}
                     />
                   ))}
                 </div>
@@ -1371,6 +1431,8 @@ function DiscoverPage() {
                       funder={funder}
                       isFirst={i === 0}
                       onFunderClick={handleFunderClick}
+                      trackedFunderIds={trackedFunderIds}
+                      onTrackFunder={handleTrackFunder}
                     />
                   ))}
                 </div>
