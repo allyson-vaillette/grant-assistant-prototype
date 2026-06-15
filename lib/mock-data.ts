@@ -780,6 +780,186 @@ export const MATCHES: Match[] = [
       ],
     },
   },
+  {
+    id: "match-6",
+    organizationId: "org-1",
+    funderId: "funder-best-friends",
+    opportunityId: "opp-6",
+    matchStrength: "good",
+    matchScore: 4,
+    reasons: {
+      positive: [
+        "No-kill coalition work aligns with your rescue-to-shelter diversion model.",
+        "San Diego Humane Society is an established Best Friends network partner — an existing relationship strengthens your application.",
+        "Geography: national funder, California organizations well-represented in their portfolio.",
+      ],
+      cautions: [
+        "Coalition documentation required: you'll need to show a formal data-sharing arrangement with a municipal shelter before applying.",
+      ],
+    },
+  },
+  {
+    id: "match-7",
+    organizationId: "org-1",
+    funderId: "funder-best-friends",
+    opportunityId: "opp-7",
+    matchStrength: "strong",
+    matchScore: 5,
+    reasons: {
+      positive: [
+        "Foster network expansion is one of your core strategic priorities — a direct fit.",
+        "Your existing volunteer infrastructure gives you a credible foundation to show capacity to scale.",
+        "Best Friends treats foster expansion as a primary lifesaving lever; your model demonstrates exactly that.",
+      ],
+      cautions: [
+        "Scale ambition: proposals should include a concrete target (number of new foster homes, animals placed) to be competitive.",
+      ],
+    },
+  },
+  {
+    id: "match-8",
+    organizationId: "org-1",
+    funderId: "funder-doris-day",
+    opportunityId: "opp-8",
+    matchStrength: "strong",
+    matchScore: 5,
+    reasons: {
+      positive: [
+        "TNR is one of your primary programs — this grant was designed for organizations like yours.",
+        "Colony management records: your documentation of managed colonies is exactly what they require.",
+        "Smaller community-based orgs are explicitly preferred; your size is an advantage here.",
+      ],
+      cautions: [
+        "Grant ceiling is $12K — plan for this as supplemental funding rather than a primary source.",
+      ],
+    },
+  },
+  {
+    id: "match-9",
+    organizationId: "org-1",
+    funderId: "funder-doris-day",
+    opportunityId: "opp-9",
+    matchStrength: "partial",
+    matchScore: 3,
+    reasons: {
+      positive: [
+        "Your low-cost spay/neuter services touch owned pets in low-income households, which overlaps with the stated priority.",
+        "San Diego's high rental cost burden means there's real need for owner-support services your org could address.",
+      ],
+      cautions: [
+        "Program fit is indirect — Whisker Haven's primary focus is rescue and TNR, not owned-pet retention services. You'd need to reframe or expand scope.",
+        "Income eligibility criteria: the grant requires a formal income-screening process you may not currently have.",
+      ],
+    },
+  },
+  {
+    id: "match-10",
+    organizationId: "org-1",
+    funderId: "funder-petfinder",
+    opportunityId: "opp-10",
+    matchStrength: "good",
+    matchScore: 4,
+    reasons: {
+      positive: [
+        "Petfinder membership: your active listings make you eligible and the application process streamlined.",
+        "Adoption outcomes: your placement data directly supports the 25+ adoptions/year threshold.",
+        "Rolling deadline means you can apply when your adoption numbers and photos are strongest.",
+      ],
+      cautions: [
+        "Competitive at the lower end: $10K ceiling means this is a capacity-building supplement, not a program grant.",
+      ],
+    },
+  },
+  {
+    id: "match-11",
+    organizationId: "org-1",
+    funderId: "funder-petfinder",
+    opportunityId: "opp-11",
+    matchStrength: "partial",
+    matchScore: 3,
+    reasons: {
+      positive: [
+        "Rolling deadline and fast review (5 business days) make this a reliable safety net for unexpected crises.",
+        "Rescue organizations regularly face intake surges — a documented surge event would qualify.",
+      ],
+      cautions: [
+        "Reactive by design: this is emergency relief, not proactive program funding. Apply only in response to a real crisis.",
+        "Low ceiling ($5K) limits strategic impact; better suited as gap coverage than a planned funding stream.",
+      ],
+    },
+  },
+  {
+    id: "match-12",
+    organizationId: "org-1",
+    funderId: "funder-humane-society",
+    opportunityId: "opp-12",
+    matchStrength: "good",
+    matchScore: 4,
+    reasons: {
+      positive: [
+        "Your intake diversion work — pulling cats from San Diego Humane before euthanasia — is a textbook shelter reform model.",
+        "Live release rate data: your placement outcomes give you the metrics this grant requires.",
+        "HSUS values innovation; your kitten nursery and neonatal care program could serve as the required 'innovation component.'",
+      ],
+      cautions: [
+        "You'll need to clearly frame Whisker Haven as a shelter partner, not just a standalone rescue, to fit the grant's shelter-reform framing.",
+      ],
+    },
+  },
+  {
+    id: "match-13",
+    organizationId: "org-1",
+    funderId: "funder-humane-society",
+    opportunityId: "opp-13",
+    matchStrength: "partial",
+    matchScore: 3,
+    reasons: {
+      positive: [
+        "San Diego is a disaster-prone region (wildfires, flooding) — emergency transport capacity is genuinely relevant for a rescue org here.",
+        "HSUS recognizes rescue orgs as first responders in large-scale cruelty cases, which you're positioned to support.",
+      ],
+      cautions: [
+        "Emergency response plan required: you'd need a documented plan on file before applying, which may require prep work.",
+        "This is not a primary fit — disaster response isn't a core part of your current program portfolio.",
+      ],
+    },
+  },
+  {
+    id: "match-14",
+    organizationId: "org-1",
+    funderId: "funder-ca-coastal",
+    opportunityId: "opp-14",
+    matchStrength: "partial",
+    matchScore: 3,
+    reasons: {
+      positive: [
+        "Your work directly benefits LA County residents who adopt cats through your network.",
+        "California Community Foundation has funded San Diego-adjacent orgs when they serve LA County populations.",
+      ],
+      cautions: [
+        "Geographic restriction: this grant is explicitly for Los Angeles County service areas. San Diego operations are unlikely to qualify without an LA County presence or partnership.",
+        "Verify with program staff before investing time in an application.",
+      ],
+    },
+  },
+  {
+    id: "match-15",
+    organizationId: "org-1",
+    funderId: "funder-aspca",
+    opportunityId: "opp-15",
+    matchStrength: "strong",
+    matchScore: 5,
+    reasons: {
+      positive: [
+        "Neonatal kitten care is central to Whisker Haven's work — your nursery program is exactly what this grant funds.",
+        "24-hour care capability: your bottle-baby volunteer network demonstrates the round-the-clock capacity they require.",
+        "ASPCA has historically prioritized orgs with demonstrated kitten throughput; your placement numbers make a strong case.",
+      ],
+      cautions: [
+        "Documentation depth: ASPCA expects outcome data (kittens received, weaned, placed) — make sure your records are clean and queryable before applying.",
+      ],
+    },
+  },
 ]
 
 // ── Helpers ────────────────────────────────────────────────────────────────
