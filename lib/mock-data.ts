@@ -1320,6 +1320,128 @@ export const FUNDER_INTELLIGENCE: FunderIntelligence[] = [
       "Lange Foundation",
     ],
   },
+  {
+    funderId: "funder-maddies",
+    yearlyGiving: [
+      { year: 2019, totalAmount: 7_200_000, newGranteeCount: 12, repeatGranteeCount: 22 },
+      { year: 2020, totalAmount: 8_400_000, newGranteeCount: 14, repeatGranteeCount: 24 },
+      { year: 2021, totalAmount: 9_800_000, newGranteeCount: 16, repeatGranteeCount: 27 },
+      { year: 2022, totalAmount: 11_200_000, newGranteeCount: 18, repeatGranteeCount: 29 },
+      { year: 2023, totalAmount: 12_500_000, newGranteeCount: 21, repeatGranteeCount: 31 },
+    ],
+    medianGrantAmount: 85_000,
+    notableGrantees: [
+      "Best Friends Animal Society",
+      "Oregon Humane Society",
+      "Pima Animal Care Center",
+      "Austin Pets Alive",
+      "Washoe County Regional Animal Services",
+    ],
+  },
+  {
+    funderId: "funder-petsmart",
+    yearlyGiving: [
+      { year: 2019, totalAmount: 4_800_000, newGranteeCount: 58, repeatGranteeCount: 34 },
+      { year: 2020, totalAmount: 5_200_000, newGranteeCount: 62, repeatGranteeCount: 37 },
+      { year: 2021, totalAmount: 6_100_000, newGranteeCount: 71, repeatGranteeCount: 44 },
+      { year: 2022, totalAmount: 6_900_000, newGranteeCount: 78, repeatGranteeCount: 50 },
+      { year: 2023, totalAmount: 7_800_000, newGranteeCount: 85, repeatGranteeCount: 55 },
+    ],
+    medianGrantAmount: 35_000,
+    notableGrantees: [
+      "North Shore Animal League",
+      "Kitten Lady Foundation",
+      "Tree House Humane Society",
+      "Nashville Humane Association",
+      "Stray Cat Alliance",
+    ],
+  },
+  {
+    funderId: "funder-best-friends",
+    yearlyGiving: [
+      { year: 2019, totalAmount: 2_600_000, newGranteeCount: 38, repeatGranteeCount: 19 },
+      { year: 2020, totalAmount: 3_100_000, newGranteeCount: 45, repeatGranteeCount: 22 },
+      { year: 2021, totalAmount: 3_900_000, newGranteeCount: 54, repeatGranteeCount: 27 },
+      { year: 2022, totalAmount: 4_700_000, newGranteeCount: 62, repeatGranteeCount: 33 },
+      { year: 2023, totalAmount: 5_400_000, newGranteeCount: 68, repeatGranteeCount: 38 },
+    ],
+    medianGrantAmount: 40_000,
+    notableGrantees: [
+      "Houston Humane Society",
+      "Animal Rescue of the Rockies",
+      "Triangle Beagle Rescue",
+      "KC Pet Project",
+      "Long Beach Animal Care Services",
+    ],
+  },
+  {
+    funderId: "funder-doris-day",
+    yearlyGiving: [
+      { year: 2019, totalAmount: 280_000, newGranteeCount: 16, repeatGranteeCount: 6 },
+      { year: 2020, totalAmount: 310_000, newGranteeCount: 18, repeatGranteeCount: 7 },
+      { year: 2021, totalAmount: 370_000, newGranteeCount: 21, repeatGranteeCount: 9 },
+      { year: 2022, totalAmount: 420_000, newGranteeCount: 24, repeatGranteeCount: 10 },
+      { year: 2023, totalAmount: 480_000, newGranteeCount: 27, repeatGranteeCount: 12 },
+    ],
+    medianGrantAmount: 15_000,
+    notableGrantees: [
+      "Alley Cat Allies",
+      "Mid-America Spay/Neuter Clinic",
+      "Feral Cat Coalition of Oregon",
+      "Community Cats of Greater Cincinnati",
+    ],
+  },
+  {
+    funderId: "funder-petfinder",
+    yearlyGiving: [
+      { year: 2019, totalAmount: 480_000, newGranteeCount: 52, repeatGranteeCount: 18 },
+      { year: 2020, totalAmount: 560_000, newGranteeCount: 61, repeatGranteeCount: 21 },
+      { year: 2021, totalAmount: 640_000, newGranteeCount: 68, repeatGranteeCount: 25 },
+      { year: 2022, totalAmount: 720_000, newGranteeCount: 74, repeatGranteeCount: 28 },
+      { year: 2023, totalAmount: 810_000, newGranteeCount: 81, repeatGranteeCount: 32 },
+    ],
+    medianGrantAmount: 8_000,
+    notableGrantees: [
+      "Rescue Me! Animal Sanctuary",
+      "Friends of the Shelter",
+      "Paws of Hope Rescue",
+      "Second Chance Animal Rescue",
+    ],
+  },
+  {
+    funderId: "funder-ca-coastal",
+    yearlyGiving: [
+      { year: 2019, totalAmount: 980_000, newGranteeCount: 13, repeatGranteeCount: 9 },
+      { year: 2020, totalAmount: 1_100_000, newGranteeCount: 15, repeatGranteeCount: 10 },
+      { year: 2021, totalAmount: 1_350_000, newGranteeCount: 17, repeatGranteeCount: 12 },
+      { year: 2022, totalAmount: 1_600_000, newGranteeCount: 19, repeatGranteeCount: 13 },
+      { year: 2023, totalAmount: 1_850_000, newGranteeCount: 21, repeatGranteeCount: 14 },
+    ],
+    medianGrantAmount: 38_000,
+    notableGrantees: [
+      "L.A. Animal Services Foundation",
+      "Lange Foundation",
+      "Stray Cat Alliance",
+      "NKLA Coalition",
+    ],
+  },
+  {
+    funderId: "funder-humane-society",
+    yearlyGiving: [
+      { year: 2019, totalAmount: 2_100_000, newGranteeCount: 42, repeatGranteeCount: 18 },
+      { year: 2020, totalAmount: 2_500_000, newGranteeCount: 48, repeatGranteeCount: 22 },
+      { year: 2021, totalAmount: 2_900_000, newGranteeCount: 54, repeatGranteeCount: 26 },
+      { year: 2022, totalAmount: 3_300_000, newGranteeCount: 59, repeatGranteeCount: 29 },
+      { year: 2023, totalAmount: 3_800_000, newGranteeCount: 64, repeatGranteeCount: 33 },
+    ],
+    medianGrantAmount: 28_000,
+    notableGrantees: [
+      "Charleston Animal Society",
+      "Animal Rescue Corps",
+      "Tri-County Animal Rescue",
+      "Animal Welfare League of Arlington",
+    ],
+  },
 ]
 
 export function getFunderIntelligence(funderId: string): FunderIntelligence | undefined {
