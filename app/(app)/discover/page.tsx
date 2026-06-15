@@ -605,11 +605,12 @@ function FilterSelect({ value, onChange, children, minWidth }: {
       value={value}
       onChange={(e) => onChange(e.target.value)}
       style={{
-        padding: "7px 10px", borderRadius: "var(--radius-input)",
+        padding: "7px 28px 7px 10px", borderRadius: "var(--radius-input)",
         border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
         fontSize: 12, color: value ? "var(--ink)" : "var(--ink-secondary)",
         outline: "none", cursor: "pointer",
         minWidth: minWidth ?? 0,
+        appearance: "auto",
       }}
     >
       {children}
@@ -944,24 +945,38 @@ function DiscoverPage() {
             transition: "box-shadow 150ms",
             boxShadow: browseToolbarStuck ? "0 1px 0 var(--hair), 0 2px 12px rgba(28,24,64,0.06)" : "none",
           }}>
-            {/* Search */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: "var(--radius-input)", border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)", marginBottom: 8 }}>
-              <Search size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={objectType === "opportunities" ? "Search opportunities" : "Search funders"}
-                style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 13, color: "var(--ink)", lineHeight: "17px" }}
-              />
-              {query && (
-                <button type="button" onClick={() => setQuery("")} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "var(--ink-tertiary)", padding: 0 }}>
-                  <X size={12} />
-                </button>
-              )}
+            {/* Search + Sort */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: "var(--radius-input)", border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)" }}>
+                <Search size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={objectType === "opportunities" ? "Search opportunities" : "Search funders"}
+                  style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 13, color: "var(--ink)", lineHeight: "17px" }}
+                />
+                {query && (
+                  <button type="button" onClick={() => setQuery("")} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "var(--ink-tertiary)", padding: 0 }}>
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                <span style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>Sort</span>
+                <FilterSelect value={sortBy} onChange={(v) => setSortBy(v as "match" | "deadline" | "award")}>
+                  <option value="match">Best fit</option>
+                  {objectType === "opportunities" && (
+                    <>
+                      <option value="deadline">Soonest deadline</option>
+                      <option value="award">Largest award</option>
+                    </>
+                  )}
+                </FilterSelect>
+              </div>
             </div>
 
-            {/* Filters + sort */}
+            {/* Filters */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: activeChips.length > 0 ? 8 : 0 }}>
               {objectType === "opportunities" && (
                 <FilterSelect value={typeFilter} onChange={(v) => setTypeFilter(v as FunderType | "")}>
@@ -999,19 +1014,6 @@ function DiscoverPage() {
                   </FilterSelect>
                 </>
               )}
-
-              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>Sort</span>
-                <FilterSelect value={sortBy} onChange={(v) => setSortBy(v as "match" | "deadline" | "award")}>
-                  <option value="match">Best fit</option>
-                  {objectType === "opportunities" && (
-                    <>
-                      <option value="deadline">Soonest deadline</option>
-                      <option value="award">Largest award</option>
-                    </>
-                  )}
-                </FilterSelect>
-              </div>
             </div>
 
             {/* Active filter chips */}
