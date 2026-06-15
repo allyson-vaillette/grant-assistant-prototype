@@ -1,8 +1,8 @@
 "use client"
 
 import React, { useEffect, useRef, useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
-import { X, Check, AlertTriangle, Loader2, ExternalLink } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { X, Check, AlertTriangle, Loader2, ExternalLink, ChevronRight, EyeOff } from "lucide-react"
 import {
   FUNDERS, OPPORTUNITIES, PROJECTS,
   getMatchForOpportunity,
@@ -10,6 +10,7 @@ import {
   createPipelineOpportunity,
 } from "@/lib/mock-data"
 import type { FunderType, MatchStrength } from "@/lib/types"
+import { FunderProfile } from "./FunderProfile"
 
 const FUNDER_TYPE_LABELS: Record<FunderType, string> = {
   private_foundation:   "Private foundation",
@@ -17,19 +18,6 @@ const FUNDER_TYPE_LABELS: Record<FunderType, string> = {
   government:           "Government",
   corporate_foundation: "Corporate foundation",
   public_charity:       "Public charity",
-}
-
-function formatCurrency(amount: number): string {
-  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`
-  if (amount >= 1_000) return `$${Math.round(amount / 1_000)}K`
-  return `$${amount}`
-}
-
-function getTypicalAwardRange(grants: Array<{ grantee: string; year: number; amount: number }>): string {
-  const amounts = grants.map(g => g.amount)
-  const min = Math.min(...amounts)
-  const max = Math.max(...amounts)
-  return min === max ? formatCurrency(min) : `${formatCurrency(min)} to ${formatCurrency(max)}`
 }
 
 const MATCH_CONFIG: Record<MatchStrength, { label: string; color: string; dots: number }> = {
@@ -52,23 +40,30 @@ function MatchDots({ strength }: { strength: MatchStrength }) {
   )
 }
 
+// Props: provide oppId to open with both tabs; funderId alone for funder-only view.
 interface Props {
-  oppId: string
+  oppId?: string
+  funderId?: string
   onClose: () => void
-  onFunderClick?: (funderId: string) => void
+  onHide?: (oppId: string) => void
 }
 
-export function OpportunityPeekPanel({ oppId, onClose, onFunderClick }: Props) {
+export function OpportunityPeekPanel({ oppId, funderId: directFunderId, onClose, onHide }: Props) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const panelRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const [visible, setVisible] = useState(false)
   const [localTracked, setLocalTracked] = useState(false)
   const [trackPhase, setTrackPhase] = useState<"idle" | "loading">("idle")
-  const [descExpanded, setDescExpanded] = useState(false)
 
-  const opp = OPPORTUNITIES.find(o => o.id === oppId)
-  const funder = opp ? FUNDERS.find(f => f.id === opp.funderId) : null
+  const opp = oppId ? OPPORTUNITIES.find((o) => o.id === oppId) ?? null : null
+  const funder = opp
+    ? FUNDERS.find((f) => f.id === opp.funderId) ?? null
+    : directFunderId
+      ? FUNDERS.find((f) => f.id === directFunderId) ?? null
+      : null
+
   const match = opp ? getMatchForOpportunity(opp.id) : null
   const defaultProject = PROJECTS[0]
   const existingPipeline = opp
@@ -76,7 +71,19 @@ export function OpportunityPeekPanel({ oppId, onClose, onFunderClick }: Props) {
     : null
   const isTracked = !!existingPipeline || localTracked
 
-  // Slide in and focus on mount
+  // Tabs only exist when an opportunity is present
+  const hasTabs = !!opp
+  const rawTab = searchParams.get("tab") as "opportunity" | "funder" | null
+  const activeTab: "opportunity" | "funder" = hasTabs ? rawTab ?? "opportunity" : "funder"
+
+  function switchTab(tab: "opportunity" | "funder") {
+    if (!oppId) return
+    const params = new URLSearchParams()
+    params.set("opp", oppId)
+    if (tab === "funder") params.set("tab", "funder")
+    router.push(`/discover?${params.toString()}`, { scroll: false } as any)
+  }
+
   useEffect(() => {
     requestAnimationFrame(() => {
       setVisible(true)
@@ -84,21 +91,17 @@ export function OpportunityPeekPanel({ oppId, onClose, onFunderClick }: Props) {
     })
   }, [])
 
-  // Reset local state when switching opportunities
   useEffect(() => {
     setLocalTracked(false)
     setTrackPhase("idle")
-    setDescExpanded(false)
   }, [oppId])
 
-  // Escape to close
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
     document.addEventListener("keydown", handler)
     return () => document.removeEventListener("keydown", handler)
   }, [onClose])
 
-  // Focus trap
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key !== "Tab") return
     const panel = panelRef.current
@@ -117,17 +120,17 @@ export function OpportunityPeekPanel({ oppId, onClose, onFunderClick }: Props) {
   }, [])
 
   async function handleTrack() {
-    if (isTracked || trackPhase === "loading") return
+    if (isTracked || trackPhase === "loading" || !opp) return
     setTrackPhase("loading")
     try {
-      createPipelineOpportunity(opp!.id, defaultProject?.id ?? "")
+      createPipelineOpportunity(opp.id, defaultProject?.id ?? "")
       setLocalTracked(true)
     } finally {
       setTrackPhase("idle")
     }
   }
 
-  if (!opp || !funder) return null
+  if (!funder) return null
 
   const backdropStyle: React.CSSProperties = {
     position: "absolute", inset: 0,
@@ -140,7 +143,7 @@ export function OpportunityPeekPanel({ oppId, onClose, onFunderClick }: Props) {
 
   const panelStyle: React.CSSProperties = {
     position: "absolute", top: 0, right: 0, bottom: 0,
-    width: 480,
+    width: 600,
     backgroundColor: "var(--surface)",
     borderLeft: "1px solid var(--hair)",
     boxShadow: "-6px 0 28px rgba(28, 24, 64, 0.10)",
@@ -150,341 +153,443 @@ export function OpportunityPeekPanel({ oppId, onClose, onFunderClick }: Props) {
     transition: "transform 220ms cubic-bezier(.32,.72,0,1)",
   }
 
+  const closeBtn = (
+    <button
+      ref={closeButtonRef}
+      type="button"
+      aria-label="Close panel"
+      onClick={onClose}
+      style={{
+        flexShrink: 0, width: 30, height: 30, borderRadius: 8,
+        border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        cursor: "pointer", color: "var(--ink-tertiary)",
+        transition: "background-color 120ms, color 120ms",
+      }}
+      onMouseEnter={(e) => { const el = e.currentTarget; el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink)" }}
+      onMouseLeave={(e) => { const el = e.currentTarget; el.style.backgroundColor = "transparent"; el.style.color = "var(--ink-tertiary)" }}
+    >
+      <X size={15} />
+    </button>
+  )
+
   return (
     <>
       <div aria-hidden="true" onClick={onClose} style={backdropStyle} />
 
-      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="peek-opp-title" onKeyDown={handleKeyDown} style={panelStyle}>
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="peek-panel-title"
+        onKeyDown={handleKeyDown}
+        style={panelStyle}
+      >
 
-        {/* Header */}
-        <div style={{ flexShrink: 0, padding: "18px 20px 16px", borderBottom: "1px solid var(--hair)" }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-                <span style={{
-                  display: "inline-block", padding: "2px 8px", borderRadius: 20,
-                  fontSize: 11, fontWeight: 500,
-                  backgroundColor: "var(--slate-tint)", color: "var(--slate-secondary)",
-                }}>
-                  {FUNDER_TYPE_LABELS[funder.type]}
-                </span>
-                {onFunderClick ? (
-                  <button
-                    type="button"
-                    onClick={() => onFunderClick(funder.id)}
-                    style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12, color: "var(--slate-secondary)", transition: "color 120ms" }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink)" }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
+        {/* Object-aware header */}
+        <div style={{ flexShrink: 0, padding: "16px 20px 14px", borderBottom: "1px solid var(--hair)" }}>
+          {activeTab === "opportunity" && opp ? (
+            // Opportunity header: grant title, amount, deadline; funder as secondary
+            <div>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                    <span style={{
+                      display: "inline-block", padding: "2px 8px", borderRadius: 20,
+                      fontSize: 11, fontWeight: 500,
+                      backgroundColor: "var(--slate-tint)", color: "var(--slate-secondary)",
+                    }}>
+                      {FUNDER_TYPE_LABELS[funder.type]}
+                    </span>
+                    {funder.website ? (
+                      <a
+                        href={funder.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--slate-secondary)", textDecoration: "none" }}
+                      >
+                        {funder.name} <ExternalLink size={11} />
+                      </a>
+                    ) : (
+                      <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>{funder.name}</span>
+                    )}
+                  </div>
+                  <h2
+                    id="peek-panel-title"
+                    style={{ margin: "0 0 8px", fontSize: 17, fontWeight: 700, color: "var(--ink)", lineHeight: "23px", letterSpacing: "-0.01em" }}
+                  >
+                    {opp.name}
+                  </h2>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    {opp.amount && (
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "var(--slate-primary)", letterSpacing: "-0.01em" }}>
+                        {opp.amount}
+                      </span>
+                    )}
+                    {opp.deadline && (
+                      <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>
+                        {opp.deadline === "Rolling" ? "Rolling deadline" : `Due ${opp.deadline}`}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {closeBtn}
+              </div>
+            </div>
+          ) : (
+            // Funder header: funder name, type + location; breadcrumb when in opp context
+            <div>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {opp && (
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 4,
+                      marginBottom: 8, fontSize: 11, color: "var(--ink-tertiary)",
+                    }}>
+                      <button
+                        type="button"
+                        onClick={() => switchTab("opportunity")}
+                        style={{
+                          background: "none", border: "none", padding: 0, cursor: "pointer",
+                          fontSize: 11, color: "var(--slate-secondary)",
+                          maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink)" }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
+                      >
+                        {opp.name}
+                      </button>
+                      <ChevronRight size={10} style={{ flexShrink: 0, color: "var(--ink-tertiary)" }} />
+                      <span>Funder</span>
+                    </div>
+                  )}
+                  <h2
+                    id="peek-panel-title"
+                    style={{ margin: "0 0 4px", fontSize: 17, fontWeight: 700, color: "var(--ink)", lineHeight: "23px", letterSpacing: "-0.01em" }}
                   >
                     {funder.name}
-                  </button>
-                ) : funder.website ? (
-                  <a href={funder.website} target="_blank" rel="noopener noreferrer"
-                    style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--slate-secondary)", textDecoration: "none" }}
-                  >
-                    {funder.name} <ExternalLink size={11} />
-                  </a>
-                ) : (
-                  <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>{funder.name}</span>
-                )}
-              </div>
-              <h2 id="peek-opp-title" style={{ margin: "0 0 8px", fontSize: 17, fontWeight: 700, color: "var(--ink)", lineHeight: "23px", letterSpacing: "-0.01em" }}>
-                {opp.name}
-              </h2>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                {opp.amount && (
-                  <span style={{ fontSize: 14, fontWeight: 700, color: "var(--slate-primary)", letterSpacing: "-0.01em" }}>{opp.amount}</span>
-                )}
-                {opp.deadline && (
-                  <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>
-                    {opp.deadline === "Rolling" ? "Rolling deadline" : `Due ${opp.deadline}`}
-                  </span>
-                )}
+                  </h2>
+                  <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)" }}>
+                    {FUNDER_TYPE_LABELS[funder.type]}
+                    {funder.location ? ` · ${funder.location}` : ""}
+                  </p>
+                </div>
+                {closeBtn}
               </div>
             </div>
-            <button
-              ref={closeButtonRef}
-              type="button"
-              aria-label="Close detail panel"
-              onClick={onClose}
-              style={{
-                flexShrink: 0, width: 30, height: 30, borderRadius: 8,
-                border: "1px solid var(--hair-2)", backgroundColor: "transparent",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer", color: "var(--ink-tertiary)",
-                transition: "background-color 120ms, color 120ms",
-              }}
-              onMouseEnter={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink)" }}
-              onMouseLeave={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "transparent"; el.style.color = "var(--ink-tertiary)" }}
-            >
-              <X size={15} />
-            </button>
-          </div>
+          )}
         </div>
 
-        {/* Scrollable body */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 0" }}>
-
-          {/* Match analysis */}
-          {match && (
-            <div style={{ marginBottom: 20, padding: "14px 16px", borderRadius: 10, backgroundColor: "var(--canvas)", border: "1px solid var(--hair)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                <MatchDots strength={match.matchStrength} />
-                <span style={{ fontSize: 12, fontWeight: 600, color: MATCH_CONFIG[match.matchStrength].color }}>
-                  {MATCH_CONFIG[match.matchStrength].label}
-                </span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {match.reasons.positive.map((r, i) => (
-                  <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                    <Check size={12} style={{ color: "var(--evergreen)", flexShrink: 0, marginTop: 2 }} />
-                    <span style={{ fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px" }}>{r}</span>
-                  </div>
-                ))}
-                {match.reasons.cautions.map((r, i) => (
-                  <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                    <AlertTriangle size={12} style={{ color: "var(--amber)", flexShrink: 0, marginTop: 2 }} />
-                    <span style={{ fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px" }}>{r}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Meta row */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 16px", padding: "14px 0", borderTop: "1px solid var(--hair)", borderBottom: "1px solid var(--hair)", marginBottom: 20 }}>
-            <div>
-              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Geography</p>
-              <p style={{ margin: 0, fontSize: 12, color: "var(--ink)" }}>{funder.geography}</p>
-            </div>
-            {funder.fundingRange && (
-              <div>
-                <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Funding range</p>
-                <p style={{ margin: 0, fontSize: 12, color: "var(--ink)" }}>{funder.fundingRange}</p>
-              </div>
-            )}
-            <div>
-              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Unsolicited</p>
-              <p style={{ margin: 0, fontSize: 12, color: "var(--ink)" }}>{funder.acceptsUnsolicited ? "Yes" : "No — LOI required"}</p>
-            </div>
-            <div>
-              <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Focus areas</p>
-              <p style={{ margin: 0, fontSize: 12, color: "var(--ink)", lineHeight: "17px" }}>{(opp.focusAreas ?? funder.focusAreas).join(" · ")}</p>
-            </div>
+        {/* Tab bar — only when opportunity is present */}
+        {hasTabs && (
+          <div style={{
+            flexShrink: 0,
+            display: "flex",
+            borderBottom: "1px solid var(--hair)",
+            backgroundColor: "var(--surface)",
+          }}>
+            {(["opportunity", "funder"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => switchTab(tab)}
+                style={{
+                  padding: "10px 20px",
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: activeTab === tab ? 600 : 400,
+                  color: activeTab === tab ? "var(--ink)" : "var(--ink-tertiary)",
+                  borderBottom: activeTab === tab ? "2px solid var(--slate-primary)" : "2px solid transparent",
+                  marginBottom: -1,
+                  transition: "color 120ms",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {tab === "opportunity" ? "Opportunity" : "Funder"}
+              </button>
+            ))}
           </div>
+        )}
 
-          {/* About this grant */}
-          {opp.description && (
-            <div style={{ marginBottom: 20 }}>
-              <h3 style={{ margin: "0 0 7px", fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>About this grant</h3>
-              <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "19px" }}>{opp.description}</p>
-            </div>
-          )}
+        {/* Scrollable body */}
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          {activeTab === "opportunity" && opp ? (
+            <div style={{ padding: "20px 20px 0" }}>
 
-          {/* Funder */}
-          <div style={{ marginBottom: 20, paddingTop: 20, borderTop: "1px solid var(--hair)" }}>
-            <h3 style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>Funder</h3>
+              {/* Match analysis */}
+              {match && (
+                <div style={{ marginBottom: 20, padding: "14px 16px", borderRadius: 10, backgroundColor: "var(--canvas)", border: "1px solid var(--hair)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                    <MatchDots strength={match.matchStrength} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: MATCH_CONFIG[match.matchStrength].color }}>
+                      {MATCH_CONFIG[match.matchStrength].label}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {match.reasons.positive.map((r, i) => (
+                      <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                        <Check size={12} style={{ color: "var(--evergreen)", flexShrink: 0, marginTop: 2 }} />
+                        <span style={{ fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px" }}>{r}</span>
+                      </div>
+                    ))}
+                    {match.reasons.cautions.map((r, i) => (
+                      <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                        <AlertTriangle size={12} style={{ color: "var(--amber)", flexShrink: 0, marginTop: 2 }} />
+                        <span style={{ fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px" }}>{r}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            {/* Identity */}
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
-              <div>
-                <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 700, color: "var(--ink)", lineHeight: "20px" }}>{funder.name}</p>
-                <p style={{ margin: 0, fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px" }}>
-                  {FUNDER_TYPE_LABELS[funder.type]}{funder.location ? ` · ${funder.location}` : ""}
-                </p>
-                {funder.ein && (
-                  <p style={{ margin: "3px 0 0", fontSize: 11, color: "var(--ink-tertiary)" }}>EIN {funder.ein}</p>
+              {/* Meta grid: geography, funding range, unsolicited, focus areas */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 16px", padding: "14px 0", borderTop: "1px solid var(--hair)", borderBottom: "1px solid var(--hair)", marginBottom: 20 }}>
+                <div>
+                  <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Geography</p>
+                  <p style={{ margin: 0, fontSize: 12, color: "var(--ink)" }}>{funder.geography}</p>
+                </div>
+                {funder.fundingRange && (
+                  <div>
+                    <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Funding range</p>
+                    <p style={{ margin: 0, fontSize: 12, color: "var(--ink)" }}>{funder.fundingRange}</p>
+                  </div>
                 )}
+                <div>
+                  <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Unsolicited</p>
+                  <p style={{ margin: 0, fontSize: 12, color: "var(--ink)" }}>{funder.acceptsUnsolicited ? "Yes" : "No, LOI required"}</p>
+                </div>
+                <div>
+                  <p style={{ margin: "0 0 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Focus areas</p>
+                  <p style={{ margin: 0, fontSize: 12, color: "var(--ink)", lineHeight: "17px" }}>
+                    {(opp.focusAreas ?? funder.focusAreas).join(" · ")}
+                  </p>
+                </div>
               </div>
+
+              {/* About this grant */}
+              {opp.description && (
+                <div style={{ marginBottom: 20 }}>
+                  <h3 style={{ margin: "0 0 7px", fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>About this grant</h3>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "19px" }}>{opp.description}</p>
+                </div>
+              )}
+
+              {/* Eligibility */}
+              {opp.eligibility && (
+                <div style={{ marginBottom: 20, padding: "12px 14px", borderRadius: 10, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)" }}>
+                  <p style={{ margin: "0 0 5px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>
+                    Eligibility requirements
+                  </p>
+                  <p style={{ margin: 0, fontSize: 12, color: "var(--ink-secondary)", lineHeight: "18px" }}>{opp.eligibility}</p>
+                </div>
+              )}
+
+              {/* Compact funder summary with "View funder" link */}
+              <div style={{
+                marginBottom: 24,
+                padding: "14px 16px",
+                borderRadius: 10,
+                backgroundColor: "var(--surface-sunk)",
+                border: "1px solid var(--hair)",
+              }}>
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>{funder.name}</p>
+                    <p style={{ margin: "0 0 6px", fontSize: 12, color: "var(--ink-tertiary)" }}>
+                      {FUNDER_TYPE_LABELS[funder.type]}{funder.location ? ` · ${funder.location}` : ""}
+                    </p>
+                    {funder.description && (
+                      <p style={{ margin: 0, fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as React.CSSProperties["WebkitBoxOrient"] }}>
+                        {funder.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => switchTab("funder")}
+                  style={{
+                    marginTop: 10,
+                    background: "none", border: "none", padding: 0, cursor: "pointer",
+                    fontSize: 12, fontWeight: 500, color: "var(--slate-secondary)",
+                    display: "flex", alignItems: "center", gap: 4,
+                    transition: "color 120ms",
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink)" }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
+                >
+                  View funder <ChevronRight size={12} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            // Funder tab (or funder-only mode)
+            <FunderProfile funder={funder} onFunderSelect={(id) => router.push(`/discover?funder=${id}`)} />
+          )}
+        </div>
+
+        {/* Action bar */}
+        <div style={{
+          flexShrink: 0,
+          borderTop: "1px solid var(--hair)",
+          padding: "0 20px",
+          height: 64,
+          display: "flex", alignItems: "center", gap: 12,
+          backgroundColor: "var(--surface)",
+        }}>
+          {activeTab === "opportunity" && opp ? (
+            // Opportunity actions: Track + Details + Hide
+            <>
+              {isTracked ? (
+                <button
+                  type="button"
+                  onClick={() => router.push(`/pursuit/${opp.id}`)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "8px 16px", borderRadius: 8,
+                    backgroundColor: "var(--slate-primary)", border: "none",
+                    fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer",
+                    transition: "background-color 150ms",
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
+                >
+                  Track
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleTrack}
+                  disabled={trackPhase === "loading"}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "8px 16px", borderRadius: 8,
+                    backgroundColor: trackPhase === "loading" ? "var(--slate-tint)" : "var(--slate-primary)",
+                    border: "none",
+                    fontSize: 13, fontWeight: 600,
+                    color: trackPhase === "loading" ? "var(--ink-tertiary)" : "#fff",
+                    cursor: trackPhase === "loading" ? "default" : "pointer",
+                    transition: "background-color 150ms",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (trackPhase === "loading") return
+                    ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A"
+                  }}
+                  onMouseLeave={(e) => {
+                    if (trackPhase === "loading") return
+                    ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)"
+                  }}
+                >
+                  {trackPhase === "loading" ? <><Loader2 size={13} className="animate-spin" /> Adding…</> : "Track"}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => router.push(`/opportunity/${opp.id}`)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  padding: "8px 14px", borderRadius: 8,
+                  border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+                  fontSize: 13, color: "var(--ink-secondary)", cursor: "pointer",
+                  transition: "background-color 150ms, color 150ms",
+                }}
+                onMouseEnter={(e) => { const el = e.currentTarget; el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink)" }}
+                onMouseLeave={(e) => { const el = e.currentTarget; el.style.backgroundColor = "transparent"; el.style.color = "var(--ink-secondary)" }}
+              >
+                Details <ExternalLink size={12} />
+              </button>
+              {onHide && (
+                <button
+                  type="button"
+                  aria-label="Hide this opportunity"
+                  onClick={() => { onHide(opp.id); onClose() }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    marginLeft: "auto",
+                    padding: "8px 12px", borderRadius: 8,
+                    border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+                    fontSize: 13, color: "var(--ink-tertiary)", cursor: "pointer",
+                    transition: "background-color 150ms, color 150ms",
+                  }}
+                  onMouseEnter={(e) => { const el = e.currentTarget; el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink-secondary)" }}
+                  onMouseLeave={(e) => { const el = e.currentTarget; el.style.backgroundColor = "transparent"; el.style.color = "var(--ink-tertiary)" }}
+                >
+                  <EyeOff size={13} />
+                  Hide opportunity
+                </button>
+              )}
+            </>
+          ) : (
+            // Funder tab actions: Track opp (if in opp context) + funder website
+            <>
+              {opp && (
+                isTracked ? (
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/pursuit/${opp.id}`)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "8px 16px", borderRadius: 8,
+                      backgroundColor: "var(--slate-primary)", border: "none",
+                      fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer",
+                      transition: "background-color 150ms",
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
+                  >
+                    Track
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleTrack}
+                    disabled={trackPhase === "loading"}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "8px 16px", borderRadius: 8,
+                      backgroundColor: trackPhase === "loading" ? "var(--slate-tint)" : "var(--slate-primary)",
+                      border: "none",
+                      fontSize: 13, fontWeight: 600,
+                      color: trackPhase === "loading" ? "var(--ink-tertiary)" : "#fff",
+                      cursor: trackPhase === "loading" ? "default" : "pointer",
+                      transition: "background-color 150ms",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (trackPhase === "loading") return
+                      ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A"
+                    }}
+                    onMouseLeave={(e) => {
+                      if (trackPhase === "loading") return
+                      ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)"
+                    }}
+                  >
+                    {trackPhase === "loading" ? <><Loader2 size={13} className="animate-spin" /> Adding…</> : "Track"}
+                  </button>
+                )
+              )}
               {funder.website && (
                 <a
                   href={funder.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ color: "var(--ink-tertiary)", display: "flex", alignItems: "center", flexShrink: 0, padding: "2px 0" }}
-                  aria-label={`Visit ${funder.name} website`}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    padding: "8px 14px", borderRadius: 8,
+                    border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+                    fontSize: 13, color: "var(--ink-secondary)", cursor: "pointer",
+                    textDecoration: "none",
+                    transition: "background-color 150ms, color 150ms",
+                  }}
+                  onMouseEnter={(e) => { const el = e.currentTarget; el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink)" }}
+                  onMouseLeave={(e) => { const el = e.currentTarget; el.style.backgroundColor = "transparent"; el.style.color = "var(--ink-secondary)" }}
                 >
-                  <ExternalLink size={13} />
+                  Funder website <ExternalLink size={12} />
                 </a>
               )}
-            </div>
-
-            {/* Profile */}
-            {funder.description && (
-              <div style={{ marginBottom: 14 }}>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 12,
-                    color: "var(--ink-secondary)",
-                    lineHeight: "18px",
-                    ...(descExpanded ? {} : {
-                      overflow: "hidden",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical" as any,
-                    }),
-                  }}
-                >
-                  {funder.description}
-                </p>
-                {funder.description.length > 100 && (
-                  <button
-                    type="button"
-                    onClick={() => setDescExpanded(v => !v)}
-                    style={{
-                      background: "none", border: "none", padding: "4px 0 0",
-                      fontSize: 11, fontWeight: 500, color: "var(--slate-secondary)", cursor: "pointer",
-                    }}
-                  >
-                    {descExpanded ? "Show less" : "Show more"}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* What they fund */}
-            {!!(funder.programAreas?.length || funder.orgTypesFunded?.length || funder.locationsFunded?.length) && (
-              <div style={{ marginBottom: 14 }}>
-                <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: "var(--ink)" }}>What they fund</p>
-                {!!funder.programAreas?.length && (
-                  <div style={{ marginBottom: 10 }}>
-                    <p style={{ margin: "0 0 5px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Program areas</p>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                      {funder.programAreas.map((area, i) => (
-                        <span key={i} style={{
-                          padding: "2px 8px", borderRadius: 20,
-                          fontSize: 11, fontWeight: 500,
-                          backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)",
-                          color: "var(--ink-secondary)",
-                        }}>{area}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {!!funder.orgTypesFunded?.length && (
-                  <div style={{ marginBottom: 10 }}>
-                    <p style={{ margin: "0 0 5px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Organizations funded</p>
-                    <ul style={{ margin: 0, padding: "0 0 0 14px", display: "flex", flexDirection: "column", gap: 3 }}>
-                      {funder.orgTypesFunded.map((orgType, i) => (
-                        <li key={i} style={{ fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px" }}>{orgType}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {!!funder.locationsFunded?.length && (
-                  <div>
-                    <p style={{ margin: "0 0 5px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Locations funded</p>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                      {funder.locationsFunded.map((loc, i) => (
-                        <span key={i} style={{
-                          padding: "2px 8px", borderRadius: 20,
-                          fontSize: 11, fontWeight: 500,
-                          backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)",
-                          color: "var(--ink-secondary)",
-                        }}>{loc}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Track record */}
-            {!!funder.recentGrants?.length && (
-              <div>
-                <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: "var(--ink)" }}>Track record</p>
-                <p style={{ margin: "0 0 6px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>Recent grants</p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 10 }}>
-                  {funder.recentGrants.slice(0, 3).map((grant, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                      <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: "var(--ink-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{grant.grantee}</span>
-                      <span style={{ flexShrink: 0, fontSize: 11, color: "var(--ink-tertiary)" }}>{grant.year}</span>
-                      <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 600, color: "var(--ink)", minWidth: 52, textAlign: "right" }}>{formatCurrency(grant.amount)}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                  <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>Typical award</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)" }}>{getTypicalAwardRange(funder.recentGrants.slice(0, 3))}</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Eligibility */}
-          {opp.eligibility && (
-            <div style={{ marginBottom: 20, padding: "12px 14px", borderRadius: 10, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)" }}>
-              <p style={{ margin: "0 0 5px", fontSize: 10, fontWeight: 700, color: "var(--ink-tertiary)" }}>
-                Eligibility requirements
-              </p>
-              <p style={{ margin: 0, fontSize: 12, color: "var(--ink-secondary)", lineHeight: "18px" }}>{opp.eligibility}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Action bar */}
-        <div style={{ flexShrink: 0, borderTop: "1px solid var(--hair)", padding: "0 20px", height: 64, display: "flex", alignItems: "center", gap: 12, backgroundColor: "var(--surface)" }}>
-          {isTracked ? (
-            <>
-              <button
-                type="button"
-                onClick={() => router.push(`/pursuit/${opp.id}`)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  padding: "8px 16px", borderRadius: 8,
-                  backgroundColor: "var(--slate-primary)", border: "none",
-                  fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer",
-                  transition: "background-color 150ms",
-                }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A" }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
-              >
-                Track
-              </button>
             </>
-          ) : (
-            <button
-              type="button"
-              onClick={handleTrack}
-              disabled={trackPhase === "loading"}
-              style={{
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "8px 16px", borderRadius: 8,
-                backgroundColor: trackPhase === "loading" ? "var(--slate-tint)" : "var(--slate-primary)",
-                border: "none",
-                fontSize: 13, fontWeight: 600,
-                color: trackPhase === "loading" ? "var(--ink-tertiary)" : "#fff",
-                cursor: trackPhase === "loading" ? "default" : "pointer",
-                transition: "background-color 150ms",
-              }}
-              onMouseEnter={(e) => {
-                if (trackPhase === "loading") return
-                ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "#3A4F6A"
-              }}
-              onMouseLeave={(e) => {
-                if (trackPhase === "loading") return
-                ;(e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)"
-              }}
-            >
-              {trackPhase === "loading" ? <><Loader2 size={13} className="animate-spin" /> Adding…</> : "Track"}
-            </button>
           )}
-          <button
-            type="button"
-            onClick={() => router.push(`/opportunity/${opp.id}`)}
-            style={{
-              display: "flex", alignItems: "center", gap: 5,
-              padding: "8px 14px", borderRadius: 8,
-              border: "1px solid var(--hair-2)", backgroundColor: "transparent",
-              fontSize: 13, color: "var(--ink-secondary)", cursor: "pointer",
-              transition: "background-color 150ms, color 150ms",
-            }}
-            onMouseEnter={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink)" }}
-            onMouseLeave={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "transparent"; el.style.color = "var(--ink-secondary)" }}
-          >
-            Details <ExternalLink size={12} />
-          </button>
         </div>
       </div>
     </>
