@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 
 import {
-  House, LayoutList, Telescope, Settings,
+  House, LayoutList, Telescope, Settings, Library,
   Sparkles, ChevronLeft, ChevronRight, ChevronDown, Bell, X, Check,
 } from "lucide-react"
 import { useScope } from "@/lib/scope-context"
@@ -21,6 +21,7 @@ const MAIN_NAV = [
 ] as const
 
 const WORKSPACE_NAV = [
+  { label: "Library",  href: "/library",  icon: Library  },
   { label: "Settings", href: "/settings", icon: Settings },
 ] as const
 
