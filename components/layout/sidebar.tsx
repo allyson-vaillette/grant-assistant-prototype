@@ -337,6 +337,7 @@ export function Sidebar() {
   function isActive(href: string) {
     if (href === "/home") return pathname === "/" || pathname === "/home"
     if (href === "/tracker") return pathname === "/tracker" || pathname.startsWith("/tracker/") || pathname.startsWith("/pursuit/")
+    if (href === "/discover") return pathname === "/discover" || pathname.startsWith("/discover/") || pathname.startsWith("/funders/")
     return pathname === href || pathname.startsWith(href + "/")
   }
 

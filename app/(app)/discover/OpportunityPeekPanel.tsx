@@ -592,6 +592,21 @@ export function OpportunityPeekPanel({ oppId, funderId: directFunderId, onClose,
                   Funder website <ExternalLink size={12} />
                 </a>
               )}
+              <button
+                type="button"
+                onClick={() => router.push(`/funders/${funder.id}`)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  padding: "8px 14px", borderRadius: 8,
+                  border: "1px solid var(--hair-2)", backgroundColor: "transparent",
+                  fontSize: 13, color: "var(--ink-secondary)", cursor: "pointer",
+                  transition: "background-color 150ms, color 150ms",
+                }}
+                onMouseEnter={(e) => { const el = e.currentTarget; el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink)" }}
+                onMouseLeave={(e) => { const el = e.currentTarget; el.style.backgroundColor = "transparent"; el.style.color = "var(--ink-secondary)" }}
+              >
+                Open full profile <ChevronRight size={13} />
+              </button>
             </>
           )}
         </div>

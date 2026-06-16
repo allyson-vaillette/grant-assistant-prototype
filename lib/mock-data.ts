@@ -1508,3 +1508,939 @@ export function submitPursuitApplication(
     if (att) att.includedInSubmission = true
   }
 }
+
+// ── Funder Extended Data ───────────────────────────────────────────────────
+
+import type { FunderExtended } from "./types"
+
+const BUCKET_LABELS = ["<$5k", "$5k-$15k", "$15k-$25k", "$25k-$50k", "$50k-$150k", "$150k-$500k", "$500k-$1.5m", "$1.5m+"]
+
+export const FUNDER_EXTENDED: FunderExtended[] = [
+  {
+    funderId: "funder-petco",
+    address: "100 Petco Park Way, San Diego, CA 92103",
+    phone: "(858) 555-0142",
+    totalAssetsEstimate: 84_000_000,
+    yearlyAssets: [52_000_000, 61_000_000, 72_000_000, 79_000_000, 84_000_000],
+    keyPeople: [
+      { name: "Susanne Kogut", title: "President & CEO" },
+      { name: "Sara Kent", title: "VP Grantmaking" },
+      { name: "Marcus Webb", title: "Grants Manager" },
+    ],
+    forms990: [
+      { year: 2023, url: "#" }, { year: 2022, url: "#" },
+      { year: 2021, url: "#" }, { year: 2020, url: "#" }, { year: 2019, url: "#" },
+    ],
+    nteeBreakdown: [
+      { code: "D20", label: "Animal Protection & Welfare", amount: 2_100_000 },
+      { code: "D10", label: "Animal Related (General)", amount: 1_200_000 },
+      { code: "D30", label: "Wildlife Preservation", amount: 580_000 },
+      { code: "D40", label: "Veterinary Services", amount: 220_000 },
+      { code: "D99", label: "Other Animal Related", amount: 100_000 },
+    ],
+    pastGrantees: [
+      { id: "pg-pc-1", name: "San Diego Humane Society", year: 2023, location: "San Diego, CA", amount: 75000, purpose: "Shelter capacity expansion and kitten nursery staffing" },
+      { id: "pg-pc-2", name: "Austin Pets Alive", year: 2023, location: "Austin, TX", amount: 50000, purpose: "No-kill program operations and foster network" },
+      { id: "pg-pc-3", name: "Nevada Humane Society", year: 2022, location: "Reno, NV", amount: 40000, purpose: "Community spay/neuter outreach program" },
+      { id: "pg-pc-4", name: "San Francisco SPCA", year: 2022, location: "San Francisco, CA", amount: 35000, purpose: "Intake reduction and community cat management" },
+      { id: "pg-pc-5", name: "Seattle Humane", year: 2023, location: "Bellevue, WA", amount: 28000, purpose: "Foster program expansion and volunteer training" },
+      { id: "pg-pc-6", name: "Charleston Animal Society", year: 2021, location: "Charleston, SC", amount: 32000, purpose: "Low-cost veterinary services for underserved pets" },
+      { id: "pg-pc-7", name: "Animal Humane Society", year: 2021, location: "Golden Valley, MN", amount: 45000, purpose: "Shelter medicine and neonatal kitten care" },
+    ],
+    grantYearStats: [
+      {
+        yearKey: "snapshot", yearLabel: "Snapshot",
+        min: 5000, max: 50000, median: 32000, average: 27451, count: 563,
+        buckets: [
+          { label: "<$5k", count: 16 }, { label: "$5k-$15k", count: 110 },
+          { label: "$15k-$25k", count: 172 }, { label: "$25k-$50k", count: 234 },
+          { label: "$50k-$150k", count: 31 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2023, yearLabel: "2023",
+        min: 5000, max: 50000, median: 32000, average: 27451, count: 153,
+        buckets: [
+          { label: "<$5k", count: 4 }, { label: "$5k-$15k", count: 28 },
+          { label: "$15k-$25k", count: 47 }, { label: "$25k-$50k", count: 62 },
+          { label: "$50k-$150k", count: 12 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2022, yearLabel: "2022",
+        min: 5000, max: 50000, median: 30000, average: 26950, count: 141,
+        buckets: [
+          { label: "<$5k", count: 4 }, { label: "$5k-$15k", count: 27 },
+          { label: "$15k-$25k", count: 43 }, { label: "$25k-$50k", count: 57 },
+          { label: "$50k-$150k", count: 10 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2021, yearLabel: "2021",
+        min: 5000, max: 50000, median: 28000, average: 27119, count: 118,
+        buckets: [
+          { label: "<$5k", count: 3 }, { label: "$5k-$15k", count: 22 },
+          { label: "$15k-$25k", count: 38 }, { label: "$25k-$50k", count: 48 },
+          { label: "$50k-$150k", count: 7 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2020, yearLabel: "2020",
+        min: 5000, max: 45000, median: 26000, average: 25610, count: 82,
+        buckets: [
+          { label: "<$5k", count: 2 }, { label: "$5k-$15k", count: 15 },
+          { label: "$15k-$25k", count: 26 }, { label: "$25k-$50k", count: 34 },
+          { label: "$50k-$150k", count: 5 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2019, yearLabel: "2019",
+        min: 5000, max: 40000, median: 24000, average: 25714, count: 70,
+        buckets: [
+          { label: "<$5k", count: 2 }, { label: "$5k-$15k", count: 14 },
+          { label: "$15k-$25k", count: 22 }, { label: "$25k-$50k", count: 28 },
+          { label: "$50k-$150k", count: 4 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+    ],
+  },
+  {
+    funderId: "funder-aspca",
+    address: "424 E 92nd St, New York, NY 10128",
+    phone: "(212) 876-7700",
+    totalAssetsEstimate: 292_000_000,
+    yearlyAssets: [210_000_000, 240_000_000, 265_000_000, 280_000_000, 292_000_000],
+    keyPeople: [
+      { name: "Matt Bershadker", title: "President & CEO" },
+      { name: "Howard Lawrence", title: "VP Grants & Awards" },
+      { name: "Tara Loller", title: "Senior Grants Officer" },
+    ],
+    forms990: [
+      { year: 2023, url: "#" }, { year: 2022, url: "#" },
+      { year: 2021, url: "#" }, { year: 2020, url: "#" }, { year: 2019, url: "#" },
+    ],
+    nteeBreakdown: [
+      { code: "D20", label: "Animal Protection & Welfare", amount: 1_800_000 },
+      { code: "D30", label: "Spay/Neuter Programs", amount: 900_000 },
+      { code: "D10", label: "Animal Related (General)", amount: 700_000 },
+      { code: "D40", label: "Veterinary Services", amount: 400_000 },
+      { code: "D99", label: "Other Animal Related", amount: 200_000 },
+    ],
+    pastGrantees: [
+      { id: "pg-as-1", name: "Humane Rescue Alliance", year: 2023, location: "Washington, D.C.", amount: 65000, purpose: "Shelter intake reduction and live release rate improvement" },
+      { id: "pg-as-2", name: "Animal Rescue League of Boston", year: 2023, location: "Boston, MA", amount: 50000, purpose: "Foster network expansion and neonatal kitten program" },
+      { id: "pg-as-3", name: "Kentucky Humane Society", year: 2022, location: "Louisville, KY", amount: 45000, purpose: "Community cat management and TNR operations" },
+      { id: "pg-as-4", name: "San Diego Humane Society", year: 2022, location: "San Diego, CA", amount: 55000, purpose: "Kitten nursery staffing and bottle-baby program" },
+      { id: "pg-as-5", name: "Oregon Humane Society", year: 2021, location: "Portland, OR", amount: 48000, purpose: "Shelter medicine program and surgical capacity" },
+      { id: "pg-as-6", name: "Pets Alive", year: 2021, location: "Middletown, NY", amount: 35000, purpose: "No-kill community coalition building" },
+    ],
+    grantYearStats: [
+      {
+        yearKey: "snapshot", yearLabel: "Snapshot",
+        min: 5000, max: 75000, median: 45000, average: 38462, count: 260,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 18 },
+          { label: "$15k-$25k", count: 32 }, { label: "$25k-$50k", count: 142 },
+          { label: "$50k-$150k", count: 68 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2023, yearLabel: "2023",
+        min: 8000, max: 75000, median: 45000, average: 38710, count: 62,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 5 },
+          { label: "$15k-$25k", count: 8 }, { label: "$25k-$50k", count: 34 },
+          { label: "$50k-$150k", count: 15 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2022, yearLabel: "2022",
+        min: 5000, max: 75000, median: 43000, average: 36897, count: 58,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 5 },
+          { label: "$15k-$25k", count: 9 }, { label: "$25k-$50k", count: 31 },
+          { label: "$50k-$150k", count: 13 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2021, yearLabel: "2021",
+        min: 5000, max: 70000, median: 40000, average: 36176, count: 52,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 4 },
+          { label: "$15k-$25k", count: 7 }, { label: "$25k-$50k", count: 28 },
+          { label: "$50k-$150k", count: 13 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2020, yearLabel: "2020",
+        min: 5000, max: 65000, median: 38000, average: 38095, count: 44,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 3 },
+          { label: "$15k-$25k", count: 6 }, { label: "$25k-$50k", count: 25 },
+          { label: "$50k-$150k", count: 10 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2019, yearLabel: "2019",
+        min: 5000, max: 60000, median: 35000, average: 38710, count: 44,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 4 },
+          { label: "$15k-$25k", count: 7 }, { label: "$25k-$50k", count: 24 },
+          { label: "$50k-$150k", count: 9 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+    ],
+  },
+  {
+    funderId: "funder-maddies",
+    address: "6160 Stoneridge Mall Rd, Pleasanton, CA 94588",
+    phone: "(925) 310-5450",
+    totalAssetsEstimate: 750_000_000,
+    yearlyAssets: [540_000_000, 600_000_000, 660_000_000, 710_000_000, 750_000_000],
+    keyPeople: [
+      { name: "Rich Avanzino", title: "President" },
+      { name: "Julie Castle", title: "Chief Program Officer" },
+      { name: "Dr. Kate Hurley", title: "Director of Shelter Medicine" },
+    ],
+    forms990: [
+      { year: 2023, url: "#" }, { year: 2022, url: "#" },
+      { year: 2021, url: "#" }, { year: 2020, url: "#" }, { year: 2019, url: "#" },
+    ],
+    nteeBreakdown: [
+      { code: "D20", label: "Animal Protection & Welfare", amount: 5_500_000 },
+      { code: "D10", label: "Animal Related (General)", amount: 3_800_000 },
+      { code: "D40", label: "Veterinary Services", amount: 2_100_000 },
+      { code: "D30", label: "Wildlife Preservation", amount: 600_000 },
+      { code: "D99", label: "Other Animal Related", amount: 500_000 },
+    ],
+    pastGrantees: [
+      { id: "pg-md-1", name: "Best Friends Animal Society", year: 2023, location: "Kanab, UT", amount: 150000, purpose: "No-kill community coalition operations" },
+      { id: "pg-md-2", name: "Oregon Humane Society", year: 2023, location: "Portland, OR", amount: 100000, purpose: "Shelter medicine fellowship program" },
+      { id: "pg-md-3", name: "Pima Animal Care Center", year: 2022, location: "Tucson, AZ", amount: 75000, purpose: "Data-driven lifesaving initiative" },
+      { id: "pg-md-4", name: "Austin Pets Alive", year: 2022, location: "Austin, TX", amount: 120000, purpose: "No-kill community modeling and replication" },
+      { id: "pg-md-5", name: "Washoe County Regional Animal Services", year: 2021, location: "Reno, NV", amount: 90000, purpose: "Foster expansion and community outreach" },
+      { id: "pg-md-6", name: "KC Pet Project", year: 2021, location: "Kansas City, MO", amount: 85000, purpose: "Municipal shelter reform and live release improvement" },
+    ],
+    grantYearStats: [
+      {
+        yearKey: "snapshot", yearLabel: "Snapshot",
+        min: 25000, max: 200000, median: 85000, average: 92157, count: 170,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 0 },
+          { label: "$15k-$25k", count: 0 }, { label: "$25k-$50k", count: 21 },
+          { label: "$50k-$150k", count: 116 }, { label: "$150k-$500k", count: 33 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2023, yearLabel: "2023",
+        min: 30000, max: 200000, median: 85000, average: 94697, count: 52,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 0 },
+          { label: "$15k-$25k", count: 0 }, { label: "$25k-$50k", count: 6 },
+          { label: "$50k-$150k", count: 36 }, { label: "$150k-$500k", count: 10 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2022, yearLabel: "2022",
+        min: 25000, max: 180000, median: 82000, average: 89362, count: 47,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 0 },
+          { label: "$15k-$25k", count: 0 }, { label: "$25k-$50k", count: 6 },
+          { label: "$50k-$150k", count: 33 }, { label: "$150k-$500k", count: 8 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2021, yearLabel: "2021",
+        min: 25000, max: 175000, median: 78000, average: 89908, count: 43,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 0 },
+          { label: "$15k-$25k", count: 0 }, { label: "$25k-$50k", count: 5 },
+          { label: "$50k-$150k", count: 30 }, { label: "$150k-$500k", count: 8 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2020, yearLabel: "2020",
+        min: 25000, max: 160000, median: 72000, average: 86957, count: 46,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 0 },
+          { label: "$15k-$25k", count: 0 }, { label: "$25k-$50k", count: 7 },
+          { label: "$50k-$150k", count: 32 }, { label: "$150k-$500k", count: 7 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2019, yearLabel: "2019",
+        min: 25000, max: 150000, median: 70000, average: 85714, count: 42,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 0 },
+          { label: "$15k-$25k", count: 0 }, { label: "$25k-$50k", count: 7 },
+          { label: "$50k-$150k", count: 28 }, { label: "$150k-$500k", count: 7 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+    ],
+  },
+  {
+    funderId: "funder-found-animals",
+    address: "1601 Cloverfield Blvd, Santa Monica, CA 90404",
+    phone: "(310) 555-0181",
+    totalAssetsEstimate: 48_000_000,
+    yearlyAssets: [30_000_000, 34_000_000, 39_000_000, 43_000_000, 48_000_000],
+    keyPeople: [
+      { name: "Dr. Gary Michelson", title: "Founder & Chairman" },
+      { name: "Aimee Gilbreath", title: "President" },
+      { name: "Kevin Lewis", title: "Grants Director" },
+    ],
+    forms990: [
+      { year: 2023, url: "#" }, { year: 2022, url: "#" },
+      { year: 2021, url: "#" }, { year: 2020, url: "#" }, { year: 2019, url: "#" },
+    ],
+    nteeBreakdown: [
+      { code: "D30", label: "Spay/Neuter Programs", amount: 680_000 },
+      { code: "D20", label: "Animal Protection & Welfare", amount: 420_000 },
+      { code: "D40", label: "Veterinary Services", amount: 280_000 },
+      { code: "D10", label: "Animal Related (General)", amount: 80_000 },
+      { code: "D99", label: "Other Animal Related", amount: 40_000 },
+    ],
+    pastGrantees: [
+      { id: "pg-fa-1", name: "Downtown Dog Rescue", year: 2023, location: "Los Angeles, CA", amount: 60000, purpose: "Spay/neuter and microchipping for underserved communities" },
+      { id: "pg-fa-2", name: "L.A. Animal Services", year: 2022, location: "Los Angeles, CA", amount: 75000, purpose: "Community cat TNR and colony management" },
+      { id: "pg-fa-3", name: "Lange Foundation", year: 2022, location: "Los Angeles, CA", amount: 35000, purpose: "Low-cost spay/neuter clinic operations" },
+      { id: "pg-fa-4", name: "Stray Cat Alliance", year: 2021, location: "Los Angeles, CA", amount: 42000, purpose: "TNR program and feral cat colony management" },
+      { id: "pg-fa-5", name: "Pasadena Humane", year: 2021, location: "Pasadena, CA", amount: 38000, purpose: "Pet retention and owner support services" },
+    ],
+    grantYearStats: [
+      {
+        yearKey: "snapshot", yearLabel: "Snapshot",
+        min: 10000, max: 75000, median: 42000, average: 37037, count: 135,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 6 },
+          { label: "$15k-$25k", count: 18 }, { label: "$25k-$50k", count: 82 },
+          { label: "$50k-$150k", count: 29 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2023, yearLabel: "2023",
+        min: 10000, max: 75000, median: 42000, average: 33333, count: 45,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 2 },
+          { label: "$15k-$25k", count: 6 }, { label: "$25k-$50k", count: 27 },
+          { label: "$50k-$150k", count: 10 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2022, yearLabel: "2022",
+        min: 10000, max: 75000, median: 40000, average: 33333, count: 39,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 2 },
+          { label: "$15k-$25k", count: 5 }, { label: "$25k-$50k", count: 24 },
+          { label: "$50k-$150k", count: 8 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2021, yearLabel: "2021",
+        min: 10000, max: 70000, median: 38000, average: 33333, count: 33,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 1 },
+          { label: "$15k-$25k", count: 5 }, { label: "$25k-$50k", count: 20 },
+          { label: "$50k-$150k", count: 7 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2020, yearLabel: "2020",
+        min: 10000, max: 65000, median: 36000, average: 35185, count: 27,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 1 },
+          { label: "$15k-$25k", count: 3 }, { label: "$25k-$50k", count: 17 },
+          { label: "$50k-$150k", count: 6 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2019, yearLabel: "2019",
+        min: 10000, max: 60000, median: 34000, average: 36364, count: 22,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 1 },
+          { label: "$15k-$25k", count: 3 }, { label: "$25k-$50k", count: 14 },
+          { label: "$50k-$150k", count: 4 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+    ],
+  },
+  {
+    funderId: "funder-petsmart",
+    address: "19601 N 27th Ave, Phoenix, AZ 85027",
+    phone: "(623) 555-0199",
+    totalAssetsEstimate: 128_000_000,
+    yearlyAssets: [88_000_000, 96_000_000, 108_000_000, 118_000_000, 128_000_000],
+    keyPeople: [
+      { name: "Aimee Gilbreath", title: "Executive Director" },
+      { name: "Rachel Mielke", title: "VP Programs" },
+      { name: "James Tedford", title: "Grants Manager" },
+    ],
+    forms990: [
+      { year: 2023, url: "#" }, { year: 2022, url: "#" },
+      { year: 2021, url: "#" }, { year: 2020, url: "#" }, { year: 2019, url: "#" },
+    ],
+    nteeBreakdown: [
+      { code: "D20", label: "Animal Protection & Welfare", amount: 3_400_000 },
+      { code: "D30", label: "Spay/Neuter Programs", amount: 2_100_000 },
+      { code: "D10", label: "Animal Related (General)", amount: 1_500_000 },
+      { code: "D40", label: "Veterinary Services", amount: 500_000 },
+      { code: "D99", label: "Other Animal Related", amount: 300_000 },
+    ],
+    pastGrantees: [
+      { id: "pg-ps-1", name: "North Shore Animal League", year: 2023, location: "Port Washington, NY", amount: 90000, purpose: "Cat and kitten foster program expansion" },
+      { id: "pg-ps-2", name: "Kitten Lady Foundation", year: 2023, location: "Washington, D.C.", amount: 45000, purpose: "Neonatal kitten education and advocacy" },
+      { id: "pg-ps-3", name: "Tree House Humane Society", year: 2022, location: "Chicago, IL", amount: 40000, purpose: "Community cat management and TNR operations" },
+      { id: "pg-ps-4", name: "Nashville Humane Association", year: 2022, location: "Nashville, TN", amount: 55000, purpose: "Kitten nursery and foster program" },
+      { id: "pg-ps-5", name: "Stray Cat Alliance", year: 2021, location: "Los Angeles, CA", amount: 38000, purpose: "TNR and community cat colony stewardship" },
+      { id: "pg-ps-6", name: "San Diego Humane Society", year: 2021, location: "San Diego, CA", amount: 65000, purpose: "Foster network expansion and volunteer infrastructure" },
+    ],
+    grantYearStats: [
+      {
+        yearKey: "snapshot", yearLabel: "Snapshot",
+        min: 10000, max: 100000, median: 35000, average: 55000, count: 340,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 22 },
+          { label: "$15k-$25k", count: 62 }, { label: "$25k-$50k", count: 178 },
+          { label: "$50k-$150k", count: 78 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2023, yearLabel: "2023",
+        min: 10000, max: 100000, median: 35000, average: 55556, count: 140,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 8 },
+          { label: "$15k-$25k", count: 22 }, { label: "$25k-$50k", count: 72 },
+          { label: "$50k-$150k", count: 38 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2022, yearLabel: "2022",
+        min: 10000, max: 90000, median: 33000, average: 54688, count: 128,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 8 },
+          { label: "$15k-$25k", count: 22 }, { label: "$25k-$50k", count: 65 },
+          { label: "$50k-$150k", count: 33 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2021, yearLabel: "2021",
+        min: 10000, max: 85000, median: 31000, average: 52542, count: 118,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 8 },
+          { label: "$15k-$25k", count: 20 }, { label: "$25k-$50k", count: 62 },
+          { label: "$50k-$150k", count: 28 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2020, yearLabel: "2020",
+        min: 10000, max: 80000, median: 28000, average: 52000, count: 100,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 7 },
+          { label: "$15k-$25k", count: 16 }, { label: "$25k-$50k", count: 54 },
+          { label: "$50k-$150k", count: 23 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2019, yearLabel: "2019",
+        min: 10000, max: 75000, median: 26000, average: 52174, count: 92,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 6 },
+          { label: "$15k-$25k", count: 15 }, { label: "$25k-$50k", count: 48 },
+          { label: "$50k-$150k", count: 23 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+    ],
+  },
+  {
+    funderId: "funder-best-friends",
+    address: "5001 Angel Canyon Rd, Kanab, UT 84741",
+    phone: "(435) 644-2001",
+    totalAssetsEstimate: 88_000_000,
+    yearlyAssets: [55_000_000, 62_000_000, 72_000_000, 80_000_000, 88_000_000],
+    keyPeople: [
+      { name: "Julie Castle", title: "Chief Executive Officer" },
+      { name: "Francis Battista", title: "Co-founder & Board Chair" },
+      { name: "Paul Saginaw", title: "Director of Grants" },
+    ],
+    forms990: [
+      { year: 2023, url: "#" }, { year: 2022, url: "#" },
+      { year: 2021, url: "#" }, { year: 2020, url: "#" }, { year: 2019, url: "#" },
+    ],
+    nteeBreakdown: [
+      { code: "D20", label: "Animal Protection & Welfare", amount: 2_400_000 },
+      { code: "D10", label: "Animal Related (General)", amount: 1_500_000 },
+      { code: "D30", label: "Wildlife Preservation", amount: 900_000 },
+      { code: "D40", label: "Veterinary Services", amount: 400_000 },
+      { code: "D99", label: "Other Animal Related", amount: 200_000 },
+    ],
+    pastGrantees: [
+      { id: "pg-bf-1", name: "Houston Humane Society", year: 2023, location: "Houston, TX", amount: 85000, purpose: "No-kill coalition operations and community outreach" },
+      { id: "pg-bf-2", name: "Animal Rescue of the Rockies", year: 2023, location: "Denver, CO", amount: 50000, purpose: "Foster network expansion" },
+      { id: "pg-bf-3", name: "Triangle Beagle Rescue", year: 2022, location: "Raleigh, NC", amount: 30000, purpose: "Breed-specific rescue and adoption program" },
+      { id: "pg-bf-4", name: "KC Pet Project", year: 2022, location: "Kansas City, MO", amount: 75000, purpose: "Municipal shelter partnership and diversion" },
+      { id: "pg-bf-5", name: "Long Beach Animal Care Services", year: 2021, location: "Long Beach, CA", amount: 60000, purpose: "No-kill community program" },
+    ],
+    grantYearStats: [
+      {
+        yearKey: "snapshot", yearLabel: "Snapshot",
+        min: 10000, max: 100000, median: 40000, average: 40299, count: 268,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 12 },
+          { label: "$15k-$25k", count: 32 }, { label: "$25k-$50k", count: 152 },
+          { label: "$50k-$150k", count: 72 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2023, yearLabel: "2023",
+        min: 10000, max: 100000, median: 40000, average: 50000, count: 106,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 5 },
+          { label: "$15k-$25k", count: 14 }, { label: "$25k-$50k", count: 58 },
+          { label: "$50k-$150k", count: 29 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2022, yearLabel: "2022",
+        min: 10000, max: 90000, median: 38000, average: 47000, count: 95,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 4 },
+          { label: "$15k-$25k", count: 13 }, { label: "$25k-$50k", count: 53 },
+          { label: "$50k-$150k", count: 25 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2021, yearLabel: "2021",
+        min: 10000, max: 80000, median: 36000, average: 43333, count: 81,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 4 },
+          { label: "$15k-$25k", count: 11 }, { label: "$25k-$50k", count: 46 },
+          { label: "$50k-$150k", count: 20 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2020, yearLabel: "2020",
+        min: 10000, max: 75000, median: 34000, average: 46269, count: 67,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 3 },
+          { label: "$15k-$25k", count: 9 }, { label: "$25k-$50k", count: 38 },
+          { label: "$50k-$150k", count: 17 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2019, yearLabel: "2019",
+        min: 10000, max: 70000, median: 32000, average: 45614, count: 57,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 3 },
+          { label: "$15k-$25k", count: 8 }, { label: "$25k-$50k", count: 32 },
+          { label: "$50k-$150k", count: 14 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+    ],
+  },
+  {
+    funderId: "funder-doris-day",
+    address: "PO Box 65597, Washington, D.C. 20035",
+    phone: "(202) 555-0167",
+    totalAssetsEstimate: 12_500_000,
+    yearlyAssets: [7_800_000, 8_600_000, 9_800_000, 11_000_000, 12_500_000],
+    keyPeople: [
+      { name: "Kyla Duffy", title: "Executive Director" },
+      { name: "Steven Moncrief", title: "Grants Administrator" },
+    ],
+    forms990: [
+      { year: 2023, url: "#" }, { year: 2022, url: "#" },
+      { year: 2021, url: "#" }, { year: 2020, url: "#" }, { year: 2019, url: "#" },
+    ],
+    nteeBreakdown: [
+      { code: "D30", label: "Spay/Neuter Programs", amount: 220_000 },
+      { code: "D20", label: "Animal Protection & Welfare", amount: 140_000 },
+      { code: "D40", label: "Veterinary Services", amount: 80_000 },
+      { code: "D99", label: "Other Animal Related", amount: 40_000 },
+    ],
+    pastGrantees: [
+      { id: "pg-dd-1", name: "Alley Cat Allies", year: 2023, location: "Bethesda, MD", amount: 30000, purpose: "TNR program operations and advocacy" },
+      { id: "pg-dd-2", name: "Mid-America Spay/Neuter Clinic", year: 2022, location: "Kansas City, MO", amount: 20000, purpose: "Low-cost spay/neuter clinic capacity" },
+      { id: "pg-dd-3", name: "Feral Cat Coalition of Oregon", year: 2022, location: "Portland, OR", amount: 15000, purpose: "Community cat colony management" },
+      { id: "pg-dd-4", name: "Community Cats of Greater Cincinnati", year: 2021, location: "Cincinnati, OH", amount: 12000, purpose: "TNR volunteer training program" },
+      { id: "pg-dd-5", name: "Feline Rescue", year: 2021, location: "Saint Paul, MN", amount: 18000, purpose: "Spay/neuter services for owned community cats" },
+    ],
+    grantYearStats: [
+      {
+        yearKey: "snapshot", yearLabel: "Snapshot",
+        min: 2000, max: 35000, median: 15000, average: 13714, count: 140,
+        buckets: [
+          { label: "<$5k", count: 8 }, { label: "$5k-$15k", count: 62 },
+          { label: "$15k-$25k", count: 50 }, { label: "$25k-$50k", count: 20 },
+          { label: "$50k-$150k", count: 0 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2023, yearLabel: "2023",
+        min: 5000, max: 35000, median: 15000, average: 12308, count: 39,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 18 },
+          { label: "$15k-$25k", count: 15 }, { label: "$25k-$50k", count: 6 },
+          { label: "$50k-$150k", count: 0 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2022, yearLabel: "2022",
+        min: 3000, max: 30000, median: 14000, average: 12500, count: 34,
+        buckets: [
+          { label: "<$5k", count: 1 }, { label: "$5k-$15k", count: 16 },
+          { label: "$15k-$25k", count: 13 }, { label: "$25k-$50k", count: 4 },
+          { label: "$50k-$150k", count: 0 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2021, yearLabel: "2021",
+        min: 3000, max: 28000, median: 13000, average: 12222, count: 30,
+        buckets: [
+          { label: "<$5k", count: 2 }, { label: "$5k-$15k", count: 14 },
+          { label: "$15k-$25k", count: 11 }, { label: "$25k-$50k", count: 3 },
+          { label: "$50k-$150k", count: 0 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2020, yearLabel: "2020",
+        min: 2000, max: 25000, median: 12000, average: 12400, count: 25,
+        buckets: [
+          { label: "<$5k", count: 2 }, { label: "$5k-$15k", count: 12 },
+          { label: "$15k-$25k", count: 9 }, { label: "$25k-$50k", count: 2 },
+          { label: "$50k-$150k", count: 0 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2019, yearLabel: "2019",
+        min: 2000, max: 22000, median: 11000, average: 12727, count: 22,
+        buckets: [
+          { label: "<$5k", count: 2 }, { label: "$5k-$15k", count: 12 },
+          { label: "$15k-$25k", count: 7 }, { label: "$25k-$50k", count: 1 },
+          { label: "$50k-$150k", count: 0 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+    ],
+  },
+  {
+    funderId: "funder-petfinder",
+    address: "300 Vesey St, New York, NY 10281",
+    phone: "(212) 555-0144",
+    totalAssetsEstimate: 22_000_000,
+    yearlyAssets: [14_000_000, 16_000_000, 18_000_000, 20_000_000, 22_000_000],
+    keyPeople: [
+      { name: "Betsy Banks Saul", title: "Founder" },
+      { name: "Jaime Freyer", title: "Executive Director" },
+    ],
+    forms990: [
+      { year: 2023, url: "#" }, { year: 2022, url: "#" },
+      { year: 2021, url: "#" }, { year: 2020, url: "#" }, { year: 2019, url: "#" },
+    ],
+    nteeBreakdown: [
+      { code: "D20", label: "Animal Protection & Welfare", amount: 380_000 },
+      { code: "D10", label: "Animal Related (General)", amount: 250_000 },
+      { code: "D30", label: "Emergency Relief", amount: 120_000 },
+      { code: "D99", label: "Other Animal Related", amount: 60_000 },
+    ],
+    pastGrantees: [
+      { id: "pg-pf-1", name: "Rescue Me! Animal Sanctuary", year: 2023, location: "Albany, NY", amount: 18000, purpose: "Adoption program digital outreach and photography" },
+      { id: "pg-pf-2", name: "Friends of the Shelter", year: 2023, location: "Athens, GA", amount: 12000, purpose: "Emergency relief and capacity building" },
+      { id: "pg-pf-3", name: "Paws of Hope Rescue", year: 2022, location: "Portland, OR", amount: 10000, purpose: "Adoption guarantee program technology adoption" },
+      { id: "pg-pf-4", name: "Second Chance Animal Rescue", year: 2022, location: "Denver, CO", amount: 15000, purpose: "Emergency surge capacity and temporary housing" },
+    ],
+    grantYearStats: [
+      {
+        yearKey: "snapshot", yearLabel: "Snapshot",
+        min: 2500, max: 20000, median: 8000, average: 7182, count: 570,
+        buckets: [
+          { label: "<$5k", count: 82 }, { label: "$5k-$15k", count: 364 },
+          { label: "$15k-$25k", count: 124 }, { label: "$25k-$50k", count: 0 },
+          { label: "$50k-$150k", count: 0 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2023, yearLabel: "2023",
+        min: 2500, max: 20000, median: 8000, average: 7531, count: 113,
+        buckets: [
+          { label: "<$5k", count: 14 }, { label: "$5k-$15k", count: 76 },
+          { label: "$15k-$25k", count: 23 }, { label: "$25k-$50k", count: 0 },
+          { label: "$50k-$150k", count: 0 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2022, yearLabel: "2022",
+        min: 2500, max: 18000, median: 7500, average: 7297, count: 102,
+        buckets: [
+          { label: "<$5k", count: 13 }, { label: "$5k-$15k", count: 70 },
+          { label: "$15k-$25k", count: 19 }, { label: "$25k-$50k", count: 0 },
+          { label: "$50k-$150k", count: 0 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2021, yearLabel: "2021",
+        min: 2500, max: 15000, median: 7000, average: 7059, count: 93,
+        buckets: [
+          { label: "<$5k", count: 12 }, { label: "$5k-$15k", count: 65 },
+          { label: "$15k-$25k", count: 16 }, { label: "$25k-$50k", count: 0 },
+          { label: "$50k-$150k", count: 0 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2020, yearLabel: "2020",
+        min: 2500, max: 15000, median: 6500, average: 6557, count: 82,
+        buckets: [
+          { label: "<$5k", count: 12 }, { label: "$5k-$15k", count: 56 },
+          { label: "$15k-$25k", count: 14 }, { label: "$25k-$50k", count: 0 },
+          { label: "$50k-$150k", count: 0 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2019, yearLabel: "2019",
+        min: 2500, max: 12000, median: 6000, average: 6923, count: 70,
+        buckets: [
+          { label: "<$5k", count: 12 }, { label: "$5k-$15k", count: 48 },
+          { label: "$15k-$25k", count: 10 }, { label: "$25k-$50k", count: 0 },
+          { label: "$50k-$150k", count: 0 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+    ],
+  },
+  {
+    funderId: "funder-ca-coastal",
+    address: "700 S Flower St, Ste 2600, Los Angeles, CA 90017",
+    phone: "(213) 413-4130",
+    totalAssetsEstimate: 286_000_000,
+    yearlyAssets: [190_000_000, 218_000_000, 248_000_000, 265_000_000, 286_000_000],
+    keyPeople: [
+      { name: "Antonia Hernandez", title: "President & CEO" },
+      { name: "Albert Murillo", title: "VP Grants" },
+      { name: "Rosa Ramirez", title: "Program Officer, Animal Welfare" },
+    ],
+    forms990: [
+      { year: 2023, url: "#" }, { year: 2022, url: "#" },
+      { year: 2021, url: "#" }, { year: 2020, url: "#" }, { year: 2019, url: "#" },
+    ],
+    nteeBreakdown: [
+      { code: "D20", label: "Animal Protection & Welfare", amount: 820_000 },
+      { code: "D10", label: "Animal Related (General)", amount: 580_000 },
+      { code: "D40", label: "Veterinary Services", amount: 280_000 },
+      { code: "D30", label: "Wildlife Preservation", amount: 120_000 },
+      { code: "D99", label: "Other Animal Related", amount: 50_000 },
+    ],
+    pastGrantees: [
+      { id: "pg-cc-1", name: "L.A. Animal Services Foundation", year: 2023, location: "Los Angeles, CA", amount: 60000, purpose: "Community animal welfare services in underserved neighborhoods" },
+      { id: "pg-cc-2", name: "Lange Foundation", year: 2023, location: "Los Angeles, CA", amount: 40000, purpose: "Rescue operations and low-cost veterinary access" },
+      { id: "pg-cc-3", name: "Stray Cat Alliance", year: 2022, location: "Los Angeles, CA", amount: 25000, purpose: "Community cat TNR program" },
+      { id: "pg-cc-4", name: "NKLA Coalition", year: 2022, location: "Los Angeles, CA", amount: 55000, purpose: "No-kill coalition building and advocacy" },
+      { id: "pg-cc-5", name: "Shelter Hope Pet Shop", year: 2021, location: "Thousand Oaks, CA", amount: 32000, purpose: "Adoption program and community outreach" },
+    ],
+    grantYearStats: [
+      {
+        yearKey: "snapshot", yearLabel: "Snapshot",
+        min: 15000, max: 75000, median: 38000, average: 42308, count: 104,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 0 },
+          { label: "$15k-$25k", count: 14 }, { label: "$25k-$50k", count: 62 },
+          { label: "$50k-$150k", count: 28 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2023, yearLabel: "2023",
+        min: 15000, max: 75000, median: 38000, average: 43333, count: 35,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 0 },
+          { label: "$15k-$25k", count: 5 }, { label: "$25k-$50k", count: 21 },
+          { label: "$50k-$150k", count: 9 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2022, yearLabel: "2022",
+        min: 15000, max: 70000, median: 36000, average: 41250, count: 32,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 0 },
+          { label: "$15k-$25k", count: 4 }, { label: "$25k-$50k", count: 19 },
+          { label: "$50k-$150k", count: 9 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2021, yearLabel: "2021",
+        min: 15000, max: 65000, median: 34000, average: 43103, count: 29,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 0 },
+          { label: "$15k-$25k", count: 4 }, { label: "$25k-$50k", count: 17 },
+          { label: "$50k-$150k", count: 8 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2020, yearLabel: "2020",
+        min: 15000, max: 60000, median: 32000, average: 44000, count: 25,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 0 },
+          { label: "$15k-$25k", count: 3 }, { label: "$25k-$50k", count: 15 },
+          { label: "$50k-$150k", count: 7 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2019, yearLabel: "2019",
+        min: 15000, max: 55000, median: 30000, average: 44444, count: 22,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 0 },
+          { label: "$15k-$25k", count: 3 }, { label: "$25k-$50k", count: 13 },
+          { label: "$50k-$150k", count: 6 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+    ],
+  },
+  {
+    funderId: "funder-humane-society",
+    address: "1255 23rd St NW, Ste 450, Washington, D.C. 20037",
+    phone: "(202) 452-1100",
+    totalAssetsEstimate: 192_000_000,
+    yearlyAssets: [130_000_000, 152_000_000, 168_000_000, 180_000_000, 192_000_000],
+    keyPeople: [
+      { name: "Kitty Block", title: "President & CEO" },
+      { name: "Sara Amundson", title: "President, HSUS Action Fund" },
+      { name: "David Favre", title: "VP Policy & Government Affairs" },
+    ],
+    forms990: [
+      { year: 2023, url: "#" }, { year: 2022, url: "#" },
+      { year: 2021, url: "#" }, { year: 2020, url: "#" }, { year: 2019, url: "#" },
+    ],
+    nteeBreakdown: [
+      { code: "D20", label: "Animal Protection & Welfare", amount: 1_700_000 },
+      { code: "D30", label: "Spay/Neuter Programs", amount: 900_000 },
+      { code: "D10", label: "Animal Related (General)", amount: 700_000 },
+      { code: "D40", label: "Veterinary Services", amount: 300_000 },
+      { code: "D99", label: "Other Animal Related", amount: 200_000 },
+    ],
+    pastGrantees: [
+      { id: "pg-hs-1", name: "Charleston Animal Society", year: 2023, location: "Charleston, SC", amount: 55000, purpose: "Shelter reform and intake reduction program" },
+      { id: "pg-hs-2", name: "Animal Rescue Corps", year: 2023, location: "Tysons Corner, VA", amount: 45000, purpose: "Large-scale cruelty case response capacity" },
+      { id: "pg-hs-3", name: "Tri-County Animal Rescue", year: 2022, location: "Boca Raton, FL", amount: 30000, purpose: "Spay/neuter and community outreach" },
+      { id: "pg-hs-4", name: "Animal Welfare League of Arlington", year: 2022, location: "Arlington, VA", amount: 40000, purpose: "Disaster preparedness and emergency response" },
+      { id: "pg-hs-5", name: "Humane Society of the Pikes Peak Region", year: 2021, location: "Colorado Springs, CO", amount: 35000, purpose: "Shelter innovation and live release rate improvement" },
+    ],
+    grantYearStats: [
+      {
+        yearKey: "snapshot", yearLabel: "Snapshot",
+        min: 10000, max: 60000, median: 28000, average: 30200, count: 250,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 18 },
+          { label: "$15k-$25k", count: 68 }, { label: "$25k-$50k", count: 138 },
+          { label: "$50k-$150k", count: 26 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2023, yearLabel: "2023",
+        min: 10000, max: 60000, median: 28000, average: 38060, count: 97,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 6 },
+          { label: "$15k-$25k", count: 24 }, { label: "$25k-$50k", count: 54 },
+          { label: "$50k-$150k", count: 13 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2022, yearLabel: "2022",
+        min: 10000, max: 55000, median: 26000, average: 36364, count: 88,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 5 },
+          { label: "$15k-$25k", count: 23 }, { label: "$25k-$50k", count: 49 },
+          { label: "$50k-$150k", count: 11 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2021, yearLabel: "2021",
+        min: 10000, max: 50000, median: 24000, average: 35185, count: 80,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 5 },
+          { label: "$15k-$25k", count: 22 }, { label: "$25k-$50k", count: 44 },
+          { label: "$50k-$150k", count: 9 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2020, yearLabel: "2020",
+        min: 10000, max: 50000, median: 23000, average: 35714, count: 70,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 4 },
+          { label: "$15k-$25k", count: 19 }, { label: "$25k-$50k", count: 39 },
+          { label: "$50k-$150k", count: 8 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+      {
+        yearKey: 2019, yearLabel: "2019",
+        min: 10000, max: 45000, median: 22000, average: 35000, count: 60,
+        buckets: [
+          { label: "<$5k", count: 0 }, { label: "$5k-$15k", count: 4 },
+          { label: "$15k-$25k", count: 17 }, { label: "$25k-$50k", count: 34 },
+          { label: "$50k-$150k", count: 5 }, { label: "$150k-$500k", count: 0 },
+          { label: "$500k-$1.5m", count: 0 }, { label: "$1.5m+", count: 0 },
+        ],
+      },
+    ],
+  },
+]
+
+export function getFunderExtended(funderId: string): FunderExtended | undefined {
+  return FUNDER_EXTENDED.find((fe) => fe.funderId === funderId)
+}
+
+// suppress unused-variable warning for BUCKET_LABELS (used as documentation)
+void BUCKET_LABELS

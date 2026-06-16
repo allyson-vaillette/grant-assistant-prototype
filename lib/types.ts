@@ -253,6 +253,62 @@ export interface FunderIntelligence {
   notableGrantees?: string[]
 }
 
+// ── Funder Extended ───────────────────────────────────────────────────────
+
+export interface KeyPerson {
+  name: string
+  title: string
+}
+
+export interface Form990 {
+  year: number
+  url: string
+}
+
+export interface PastGrantee {
+  id: string
+  name: string
+  year: number
+  location: string
+  amount: number
+  purpose: string
+}
+
+export interface NTEEBreakdown {
+  code: string
+  label: string
+  amount: number
+}
+
+export interface GrantSizeBucket {
+  label: string
+  count: number
+}
+
+export interface GrantYearStats {
+  yearKey: "snapshot" | number
+  yearLabel: string
+  min: number
+  max: number
+  median: number
+  average: number
+  count: number
+  buckets: GrantSizeBucket[]
+}
+
+export interface FunderExtended {
+  funderId: string
+  address?: string
+  phone?: string
+  keyPeople?: KeyPerson[]
+  forms990?: Form990[]
+  pastGrantees?: PastGrantee[]
+  nteeBreakdown?: NTEEBreakdown[]
+  totalAssetsEstimate?: number
+  yearlyAssets?: number[]
+  grantYearStats?: GrantYearStats[]
+}
+
 // ── Matching ───────────────────────────────────────────────────────────────
 
 export type MatchStrength = "strong" | "good" | "partial"
