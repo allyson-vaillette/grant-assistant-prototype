@@ -8,7 +8,7 @@ import {
   MapPin, Plus, FileDown,
 } from "lucide-react"
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
   LineChart, Line, ResponsiveContainer, Legend,
 } from "recharts"
 import {
@@ -545,14 +545,17 @@ function GrantAmountsTab({
 
                 {/* Range track */}
                 <div style={{ flex: 1, paddingTop: 8 }}>
-                  <div style={{ position: "relative", height: 4, backgroundColor: "var(--slate-tint)", borderRadius: 2, marginBottom: 28 }}>
+                  {/* Outer container holds track + labels; enough height so labels don't clip */}
+                  <div style={{ position: "relative", height: 52 }}>
+                    {/* Track bar */}
+                    <div style={{ position: "absolute", top: 5, left: 0, right: 0, height: 4, backgroundColor: "var(--slate-tint)", borderRadius: 2 }} />
                     {(["min", "median", "average", "max"] as const).map((key) => {
                       const val = key === "min" ? activeStat.min : key === "max" ? activeStat.max : key === "median" ? activeStat.median : activeStat.average
                       const pct = markerPct(val)
                       return (
-                        <div key={key} style={{ position: "absolute", top: "50%", left: `${pct}%`, transform: "translate(-50%, -50%)" }}>
+                        <div key={key} style={{ position: "absolute", top: 2, left: `${pct}%`, transform: "translateX(-50%)" }}>
                           <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: CLR_PRIMARY, border: "2px solid #fff", boxShadow: "0 0 0 1px rgba(74,96,128,0.3)" }} />
-                          <div style={{ position: "absolute", top: 14, left: "50%", transform: "translateX(-50%)", textAlign: "center", whiteSpace: "nowrap" }}>
+                          <div style={{ marginTop: 6, textAlign: "center", whiteSpace: "nowrap" }}>
                             <p style={{ margin: "0 0 1px", fontSize: 9, fontWeight: 600, color: "var(--ink-tertiary)", textTransform: "uppercase" }}>{key}</p>
                             <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: "var(--ink)" }}>{fmtCurrency(val)}</p>
                           </div>
@@ -573,9 +576,9 @@ function GrantAmountsTab({
                   <XAxis dataKey="label" tick={{ fontSize: 10, fill: CLR_TICK }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: CLR_TICK }} axisLine={false} tickLine={false} width={28} label={{ value: "Grants", angle: -90, position: "insideLeft", offset: 14, style: { fontSize: 10, fill: CLR_TICK } }} />
                   <Tooltip content={<ChartTooltip fmt={(v) => `${v}`} />} cursor={{ fill: "rgba(42,42,42,0.03)" }} />
-                  <Bar dataKey="count" name="Grants">
+                  <Bar dataKey="count" name="Grants" radius={[3, 3, 0, 0]}>
                     {activeStat.buckets.map((_, idx) => (
-                      <rect key={idx} fill={SLATE_RAMP[idx % SLATE_RAMP.length]} />
+                      <Cell key={idx} fill={SLATE_RAMP[idx % SLATE_RAMP.length]} />
                     ))}
                   </Bar>
                 </BarChart>
