@@ -1043,10 +1043,10 @@ function DiscoverPage() {
 
   const segmentOppCount = primaryTab === "matches" ? sortedMatchedOpps.length : sortedOpps.length
   const segmentFunderCount = primaryTab === "matches" ? filteredMatchedFunders.length : sortedFunders.length
-  const newCount = [
-    ...sortedMatchedOpps.map(({ match }) => match),
-    ...filteredMatchedFunders.map(({ match }) => match),
-  ].filter(m => m.isNew).length
+  const newCount = new Set([
+    ...sortedMatchedOpps.filter(({ match }) => match.isNew).map(({ match }) => match.id),
+    ...filteredMatchedFunders.filter(({ match }) => match.isNew).map(({ match }) => match.id),
+  ]).size
 
   return (
     <div style={{ height: "100%", position: "relative", overflow: "hidden", backgroundColor: "var(--canvas)" }}>
