@@ -707,6 +707,11 @@ export const MATCHES: Match[] = [
         "Competitive: Petco Love gets a high volume of applications; strong outcome data will help your proposal stand out.",
       ],
     },
+    matchReasons: [
+      { label: "Focus Areas", value: "Animal Welfare, Spay/Neuter" },
+      { label: "Eligible Project Location", value: "National" },
+      { value: "History of funding shelter and rescue programs" },
+    ],
   },
   {
     id: "match-2",
@@ -725,6 +730,11 @@ export const MATCHES: Match[] = [
         "Data requirements: ASPCA grants require demonstrated intake and live release rate metrics.",
       ],
     },
+    matchReasons: [
+      { label: "Focus Areas", value: "Animal Welfare, Shelter Reform" },
+      { label: "Eligible Project Location", value: "National" },
+      { value: "History of funding animal welfare nonprofits" },
+    ],
   },
   {
     id: "match-3",
@@ -761,6 +771,11 @@ export const MATCHES: Match[] = [
         "Geographic restriction: grants are limited to Los Angeles County and surrounding areas; verify San Diego eligibility.",
       ],
     },
+    matchReasons: [
+      { label: "Focus Areas", value: "Spay/Neuter, Community Programs" },
+      { label: "Eligible Project Location", value: "Los Angeles County" },
+      { value: "History of serving Los Angeles County" },
+    ],
   },
   {
     id: "match-5",

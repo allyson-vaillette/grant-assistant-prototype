@@ -5,12 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { ContentContainer } from "@/components/layout/content-container"
 import { Search, X, Check, CalendarDays, MapPin, EyeOff } from "lucide-react"
 import {
-  OPPORTUNITIES, MATCHES, FUNDERS,
+  OPPORTUNITIES, MATCHES, FUNDERS, PROJECTS,
   getFunder, getMatchForOpportunity, createPipelineOpportunity, getPipelineForOpportunity,
   trackFunder,
 } from "@/lib/mock-data"
 import { useScope } from "@/lib/scope-context"
-import type { Opportunity, Funder, FunderType, MatchStrength, Match } from "@/lib/types"
+import type { Opportunity, Funder, FunderType, Match } from "@/lib/types"
 import { OpportunityPeekPanel } from "./OpportunityPeekPanel"
 import { HideOpportunityDialog, type HidePayload } from "./HideOpportunityDialog"
 import { recordHideOpportunity, undoHideOpportunity } from "./actions"
@@ -18,12 +18,6 @@ import { FUNDER_TYPE_LABELS, AWARD_RANGE_LABELS, DEADLINE_LABELS } from "./Filte
 import { IncompleteProfileBanner } from "@/components/IncompleteProfileBanner"
 
 // ── Constants ──────────────────────────────────────────────────────────────
-
-const MATCH_CONFIG: Record<MatchStrength, { label: string; color: string; bg: string; dots: number }> = {
-  strong:  { label: "Strong match",  color: "var(--evergreen)",     bg: "var(--evergreen-tint)",  dots: 5 },
-  good:    { label: "Good match",    color: "var(--slate-primary)", bg: "var(--slate-tint)",      dots: 4 },
-  partial: { label: "Partial match", color: "var(--ink-tertiary)",  bg: "var(--canvas)",          dots: 3 },
-}
 
 const MONTH_INDEX: Record<string, number> = {
   Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
@@ -77,60 +71,92 @@ function matchedOppCount(funderId: string): number {
   return MATCHES.filter(m => m.funderId === funderId && !!m.opportunityId).length
 }
 
-// ── Match dots ─────────────────────────────────────────────────────────────
+// ── Funder type icon (Part 2) ──────────────────────────────────────────────
 
-function MatchDots({ strength }: { strength: MatchStrength }) {
-  const cfg = MATCH_CONFIG[strength]
+const FUNDER_ICON_MAP: Record<FunderType, string> = {
+  private_foundation:   "account_balance",
+  corporate_foundation: "corporate_fare",
+  public_charity:       "volunteer_activism",
+  community_foundation: "groups",
+  government:           "gavel",
+}
+
+function FunderTypeIcon({ type }: { type: FunderType }) {
+  const icon = FUNDER_ICON_MAP[type] ?? "account_balance"
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <span
-          key={i}
-          style={{
-            width: 6, height: 6, borderRadius: "50%",
-            backgroundColor: i < cfg.dots ? cfg.color : "var(--hair-2)",
-          }}
-        />
-      ))}
+    <span style={{
+      display: "inline-flex", alignItems: "center", justifyContent: "center",
+      width: 32, height: 32, borderRadius: "50%",
+      backgroundColor: "#EEF2F6", flexShrink: 0,
+    }}>
+      <span className="material-symbols-outlined" style={{ fontSize: 18, color: "#4A6080", lineHeight: 1, userSelect: "none" }}>
+        {icon}
+      </span>
     </span>
   )
 }
 
-// ── Funder avatar ─────────────────────────────────────────────────────────
+// ── Program picker pill (Part 1) ───────────────────────────────────────────
 
-const AVATAR_PALETTE = [
-  { bg: "#EDE9F7", fg: "#5B45C8" },
-  { bg: "#DBF0FA", fg: "#2472A4" },
-  { bg: "#E0F5EB", fg: "#1F7A4C" },
-  { bg: "#FEF3E7", fg: "#AF5200" },
-  { bg: "#FCE8EA", fg: "#BF2B45" },
-  { bg: "#F0F4E8", fg: "#4A6B22" },
-]
+function ProgramPickerPill({ activeProjectId, newCount }: { activeProjectId: string; newCount: number }) {
+  const [open, setOpen] = useState(false)
+  const project = PROJECTS.find(p => p.id === activeProjectId) ?? PROJECTS[0]
+  const name = project?.name ?? "Spay/Neuter Program"
 
-function funderPaletteIndex(name: string): number {
-  let h = 0
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff
-  return h % AVATAR_PALETTE.length
-}
-
-function FunderAvatar({ name, size = 26 }: { name: string; size?: number }) {
-  const { bg, fg } = AVATAR_PALETTE[funderPaletteIndex(name)]
-  const initials = name
-    .split(/\s+/)
-    .filter(w => /[A-Za-z]/.test(w.charAt(0)))
-    .slice(0, 2)
-    .map(w => w.charAt(0).toUpperCase())
-    .join("")
   return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", justifyContent: "center",
-      width: size, height: size, borderRadius: "50%",
-      backgroundColor: bg, color: fg,
-      fontSize: Math.round(size * 0.38), fontWeight: 700, lineHeight: 1,
-      flexShrink: 0, userSelect: "none",
-    }}>
-      {initials}
-    </span>
+    <div style={{ position: "relative", flexShrink: 0 }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "6px 10px 6px 12px", borderRadius: 8,
+          border: "1px solid rgba(42,42,42,0.1)", backgroundColor: "#fff",
+          cursor: "pointer",
+        }}
+      >
+        <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#4A6080", flexShrink: 0 }} />
+        <span style={{ fontSize: 13, fontWeight: 500, color: "#2a2a2a", whiteSpace: "nowrap" }}>{name}</span>
+        {newCount > 0 && (
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#3c5e4c", backgroundColor: "#EEF2F6", borderRadius: 10, padding: "1px 6px", whiteSpace: "nowrap" }}>
+            {newCount} new
+          </span>
+        )}
+        <span className="material-symbols-outlined" style={{ fontSize: 16, color: "#738498", userSelect: "none", flexShrink: 0 }}>expand_more</span>
+      </button>
+
+      {open && (
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 29 }} onClick={() => setOpen(false)} />
+          <div style={{
+            position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30,
+            backgroundColor: "#fff", border: "1px solid rgba(42,42,42,0.1)",
+            borderRadius: 8, boxShadow: "0 4px 12px rgba(42,42,42,0.10)",
+            minWidth: 220, overflow: "hidden",
+          }}>
+            {PROJECTS.map((p, i) => {
+              const pNew = p.id === activeProjectId ? newCount : 0
+              const pTotal = p.id === activeProjectId ? STRONG_MATCHES.length : 0
+              return (
+                <div key={p.id} style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  padding: "9px 14px",
+                  borderTop: i > 0 ? "1px solid rgba(42,42,42,0.06)" : "none",
+                }}>
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: p.id === activeProjectId ? 600 : 400, color: "#2a2a2a", minWidth: 0 }}>{p.name}</span>
+                  {pNew > 0 && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#3c5e4c", backgroundColor: "#EEF2F6", borderRadius: 10, padding: "1px 6px", whiteSpace: "nowrap" }}>
+                      {pNew} new
+                    </span>
+                  )}
+                  <span style={{ fontSize: 11, color: "#738498", whiteSpace: "nowrap" }}>{pTotal} total</span>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -157,25 +183,18 @@ function CatalogueCard({ opp, onOppClick, onTrack, onHide }: {
   onTrack: (oppId: string) => void
   onHide: (oppId: string) => void
 }) {
-  const router = useRouter()
   const [cardHovered, setCardHovered] = useState(false)
   const [hideButtonFocused, setHideButtonFocused] = useState(false)
   const hideButtonVisible = cardHovered || hideButtonFocused
   const funder = getFunder(opp.funderId)
   const match = getMatchForOpportunity(opp.id)
-  const cfg = match ? MATCH_CONFIG[match.matchStrength] : null
-  const primaryReason = match?.reasons.positive[0]
-  const tags = (opp.focusAreas ?? []).slice(0, 3)
+  const matchReasons = match?.matchReasons ?? []
 
   const eligColor = opp.eligibilityLabel === "Likely eligible"
     ? "var(--evergreen)"
     : opp.eligibilityLabel === "Invitation required"
     ? "var(--amber)"
     : "var(--ink-tertiary)"
-
-  const geoShort = funder?.geography === "National (U.S.)" || funder?.geography === "National (U.S.) + Canada"
-    ? "National"
-    : funder?.geography ?? ""
 
   return (
     <div
@@ -205,8 +224,9 @@ function CatalogueCard({ opp, onOppClick, onTrack, onHide }: {
         el.style.boxShadow = "none"
       }}
     >
+      {/* Header: icon + funder identity + amount */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        {funder && <FunderAvatar name={funder.name} size={32} />}
+        {funder && <FunderTypeIcon type={funder.type} />}
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {funder?.name}
@@ -217,11 +237,8 @@ function CatalogueCard({ opp, onOppClick, onTrack, onHide }: {
             </p>
           )}
         </div>
-        {match && cfg && (
-          <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-            <MatchDots strength={match.matchStrength} />
-            <span style={{ fontSize: 10, fontWeight: 600, color: cfg.color, whiteSpace: "nowrap" }}>{cfg.label}</span>
-          </div>
+        {opp.amount && (
+          <span style={{ fontSize: 18, fontWeight: 600, color: "#2a2a2a", flexShrink: 0, letterSpacing: "-0.01em" }}>{opp.amount}</span>
         )}
       </div>
 
@@ -229,21 +246,28 @@ function CatalogueCard({ opp, onOppClick, onTrack, onHide }: {
         {opp.name}
       </p>
 
-      {match && primaryReason && (
-        <div style={{ display: "flex", gap: 6, alignItems: "flex-start", marginBottom: 10 }}>
-          <Check size={12} style={{ color: "var(--evergreen)", flexShrink: 0, marginTop: 2 }} />
-          <span style={{ fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-            {primaryReason}
-          </span>
+      {/* Structured match reasons list */}
+      {matchReasons.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 10 }}>
+          {matchReasons.map((reason, i) => (
+            <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 13, color: "#3c5e4c", flexShrink: 0, lineHeight: "17px", userSelect: "none" }}>check</span>
+              <span style={{ fontSize: 12, lineHeight: "17px" }}>
+                {reason.label ? (
+                  <><span style={{ fontWeight: 600, color: "#2a2a2a" }}>{reason.label}:</span>{" "}<span style={{ fontWeight: 400, color: "#4d6585" }}>{reason.value}</span></>
+                ) : (
+                  <span style={{ fontWeight: 400, color: "#4d6585" }}>{reason.value}</span>
+                )}
+              </span>
+            </div>
+          ))}
         </div>
       )}
 
-      <div style={{ borderTop: "0.5px solid var(--hair)", margin: `${match && primaryReason ? 0 : 10}px 0 10px` }} />
+      <div style={{ borderTop: "0.5px solid var(--hair)", margin: "0 0 10px" }} />
 
+      {/* Meta row: deadline + eligibility only */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 8 }}>
-        {opp.amount && (
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>{opp.amount}</span>
-        )}
         {opp.deadline && (
           <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--ink-tertiary)" }}>
             <CalendarDays size={12} />
@@ -256,23 +280,7 @@ function CatalogueCard({ opp, onOppClick, onTrack, onHide }: {
             {opp.eligibilityLabel}
           </span>
         )}
-        {geoShort && (
-          <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--ink-tertiary)" }}>
-            <MapPin size={12} />
-            {geoShort}
-          </span>
-        )}
       </div>
-
-      {tags.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 12 }}>
-          {tags.map(tag => (
-            <span key={tag} style={{ fontSize: 11, fontWeight: 500, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)" }}>
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
 
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: "auto" }}>
         {/* Hide — quiet affordance, revealed on hover or keyboard focus */}
@@ -322,12 +330,10 @@ function CatalogueCard({ opp, onOppClick, onTrack, onHide }: {
 
 // ── Matched funder card (Matches > Funders) ────────────────────────────────
 
-function MatchedFunderCard({ match, funder, onFunderClick }: {
-  match: Match
+function MatchedFunderCard({ funder, onFunderClick }: {
   funder: Funder
   onFunderClick: (funderId: string) => void
 }) {
-  const cfg = MATCH_CONFIG[match.matchStrength]
   const tags = funder.focusAreas.slice(0, 3)
   const oppCount = matchedOppCount(funder.id)
   const geoShort = funder.geography === "National (U.S.)" || funder.geography === "National (U.S.) + Canada"
@@ -361,7 +367,7 @@ function MatchedFunderCard({ match, funder, onFunderClick }: {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <FunderAvatar name={funder.name} size={32} />
+        <FunderTypeIcon type={funder.type} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {funder.name}
@@ -369,10 +375,6 @@ function MatchedFunderCard({ match, funder, onFunderClick }: {
           <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {FUNDER_TYPE_LABELS[funder.type]}{funder.location ? ` · ${funder.location}` : ""}
           </p>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-          <MatchDots strength={match.matchStrength} />
-          <span style={{ fontSize: 10, fontWeight: 600, color: cfg.color, whiteSpace: "nowrap" }}>{cfg.label}</span>
         </div>
       </div>
 
@@ -571,8 +573,6 @@ function ExploreFunderRow({ funder, isFirst: _isFirst, onFunderClick, trackedFun
   onTrackFunder: (funderId: string) => void
 }) {
   const isFunderTracked = trackedFunderIds.has(funder.id)
-  const match = MATCHES.find(m => m.funderId === funder.id)
-  const cfg = match ? MATCH_CONFIG[match.matchStrength] : null
   const oppCount = matchedOppCount(funder.id)
   const visibleFocus = funder.focusAreas.slice(0, 1)
   const overflowCount = Math.max(0, funder.focusAreas.length - 1)
@@ -606,7 +606,7 @@ function ExploreFunderRow({ funder, isFirst: _isFirst, onFunderClick, trackedFun
     >
       {/* Left: funder identity */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "0 0 260px", minWidth: 0 }}>
-        <FunderAvatar name={funder.name} size={32} />
+        <FunderTypeIcon type={funder.type} />
         <div style={{ minWidth: 0 }}>
           <p style={{ margin: "0 0 1px", fontSize: 13, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {funder.name}
@@ -644,11 +644,6 @@ function ExploreFunderRow({ funder, isFirst: _isFirst, onFunderClick, trackedFun
         {oppCount > 0 && (
           <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>
             {oppCount} open {oppCount === 1 ? "grant" : "grants"}
-          </span>
-        )}
-        {cfg && (
-          <span style={{ fontSize: 11, fontWeight: 500, color: cfg.color, padding: "3px 9px", borderRadius: 20, backgroundColor: cfg.bg, whiteSpace: "nowrap" }}>
-            {cfg.label}
           </span>
         )}
         <button
@@ -1068,26 +1063,30 @@ function DiscoverPage() {
                 Funding opportunities for {scopeLabel}
               </p>
             </div>
-            {hiddenOppIds.size > 0 && (
-              <button
-                type="button"
-                onClick={handleRestoreAll}
-                style={{
-                  flexShrink: 0,
-                  display: "flex", alignItems: "center", gap: 6,
-                  padding: "6px 12px", borderRadius: 8,
-                  border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
-                  fontSize: 12, color: "var(--ink-secondary)", cursor: "pointer",
-                  transition: "background-color 120ms, color 120ms",
-                  marginTop: 4,
-                }}
-                onMouseEnter={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink)" }}
-                onMouseLeave={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--surface)"; el.style.color = "var(--ink-secondary)" }}
-              >
-                <EyeOff size={13} style={{ color: "var(--ink-tertiary)" }} />
-                {hiddenOppIds.size} hidden · Restore
-              </button>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, marginTop: 4 }}>
+              <ProgramPickerPill
+                activeProjectId={selectedProjectId ?? "proj-general"}
+                newCount={sortedMatchedOpps.length > 0 ? 3 : 0}
+              />
+              {hiddenOppIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={handleRestoreAll}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "6px 12px", borderRadius: 8,
+                    border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
+                    fontSize: 12, color: "var(--ink-secondary)", cursor: "pointer",
+                    transition: "background-color 120ms, color 120ms",
+                  }}
+                  onMouseEnter={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink)" }}
+                  onMouseLeave={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--surface)"; el.style.color = "var(--ink-secondary)" }}
+                >
+                  <EyeOff size={13} style={{ color: "var(--ink-tertiary)" }} />
+                  {hiddenOppIds.size} hidden · Restore
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Single control band */}
@@ -1101,6 +1100,7 @@ function DiscoverPage() {
                   type="button"
                   onClick={() => setPrimaryTab(tab)}
                   style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
                     background: "none", border: "none", cursor: "pointer",
                     padding: "0 0 10px",
                     fontSize: 14,
@@ -1111,7 +1111,16 @@ function DiscoverPage() {
                     transition: "color 120ms",
                   }}
                 >
-                  {tab === "matches" ? "Matches" : "Explore"}
+                  {tab === "matches" ? (
+                    <>
+                      Matches
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, backgroundColor: "#f0f3f6", borderRadius: 10, padding: "1px 6px" }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "#3c5e4c", lineHeight: 1 }}>{sortedMatchedOpps.length > 0 ? 3 : 0} New</span>
+                        <span style={{ fontSize: 10, color: "#b7c0ca", lineHeight: 1 }}>|</span>
+                        <span style={{ fontSize: 11, fontWeight: 400, color: "#738498", lineHeight: 1 }}>{sortedMatchedOpps.length} Total</span>
+                      </span>
+                    </>
+                  ) : "Explore"}
                 </button>
               ))}
             </div>
@@ -1336,8 +1345,8 @@ function DiscoverPage() {
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 12 }}>
-                  {filteredMatchedFunders.map(({ match, funder }) => (
-                    <MatchedFunderCard key={funder.id} match={match} funder={funder} onFunderClick={handleFunderClick} />
+                  {filteredMatchedFunders.map(({ funder }) => (
+                    <MatchedFunderCard key={funder.id} funder={funder} onFunderClick={handleFunderClick} />
                   ))}
                 </div>
               )}

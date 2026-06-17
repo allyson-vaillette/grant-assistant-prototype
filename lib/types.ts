@@ -324,4 +324,5 @@ export interface Match {
     positive: string[]
     cautions: string[]
   }
+  matchReasons?: Array<{ label?: string; value: string }>
 }

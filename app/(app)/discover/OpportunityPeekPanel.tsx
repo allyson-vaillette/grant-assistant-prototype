@@ -9,7 +9,7 @@ import {
   getPipelineForOpportunityAndProject,
   createPipelineOpportunity,
 } from "@/lib/mock-data"
-import type { FunderType, MatchStrength } from "@/lib/types"
+import type { FunderType } from "@/lib/types"
 import { FunderProfile } from "./FunderProfile"
 
 const FUNDER_TYPE_LABELS: Record<FunderType, string> = {
@@ -18,26 +18,6 @@ const FUNDER_TYPE_LABELS: Record<FunderType, string> = {
   government:           "Government",
   corporate_foundation: "Corporate foundation",
   public_charity:       "Public charity",
-}
-
-const MATCH_CONFIG: Record<MatchStrength, { label: string; color: string; dots: number }> = {
-  strong:  { label: "Strong match",  color: "var(--evergreen)",     dots: 5 },
-  good:    { label: "Good match",    color: "var(--slate-primary)", dots: 4 },
-  partial: { label: "Partial match", color: "var(--ink-tertiary)",  dots: 3 },
-}
-
-function MatchDots({ strength }: { strength: MatchStrength }) {
-  const cfg = MATCH_CONFIG[strength]
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <span key={i} style={{
-          width: 7, height: 7, borderRadius: "50%",
-          backgroundColor: i < cfg.dots ? cfg.color : "var(--hair-2)",
-        }} />
-      ))}
-    </span>
-  )
 }
 
 // Props: provide oppId to open with both tabs; funderId alone for funder-only view.
@@ -321,12 +301,6 @@ export function OpportunityPeekPanel({ oppId, funderId: directFunderId, onClose,
               {/* Match analysis */}
               {match && (
                 <div style={{ marginBottom: 20, padding: "14px 16px", borderRadius: 10, backgroundColor: "var(--canvas)", border: "1px solid var(--hair)" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                    <MatchDots strength={match.matchStrength} />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: MATCH_CONFIG[match.matchStrength].color }}>
-                      {MATCH_CONFIG[match.matchStrength].label}
-                    </span>
-                  </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {match.reasons.positive.map((r, i) => (
                       <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
