@@ -440,6 +440,14 @@ function MatchedFunderCard({ funder, isNew, onFunderClick }: {
   )
 }
 
+// ── Explore table layout constants ────────────────────────────────────────
+
+const OPP_GRID_COLS = "220px 160px 75px 90px 120px 1fr auto"
+const OPP_COL_GAP = 36
+const FUNDER_GRID_COLS = "250px 160px 120px 70px 1fr auto"
+const FUNDER_COL_GAP = 36
+const EXPLORE_HEADER_LABEL: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: "#738498", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }
+
 // ── Explore opportunity row (Explore > Opportunities) ──────────────────────
 
 function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, onHide }: {
@@ -449,15 +457,14 @@ function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, on
   onTrack: (oppId: string) => void
   onHide: (oppId: string) => void
 }) {
-  const router = useRouter()
   const [rowHovered, setRowHovered] = useState(false)
   const [hideButtonFocused, setHideButtonFocused] = useState(false)
   const hideButtonVisible = rowHovered || hideButtonFocused
   const funder = getFunder(opp.funderId)
-  const match = getMatchForOpportunity(opp.id)
   const focusTags = opp.focusAreas ?? []
-  const visibleTags = focusTags.slice(0, 1)
-  const overflowCount = Math.max(0, focusTags.length - 1)
+  // TODO: populate real second focus area when data model supports multiple per opportunity
+  const visibleTags = focusTags.slice(0, 2)
+  const overflowCount = Math.max(0, focusTags.length - 2)
 
   const eligBg = opp.eligibilityLabel === "Likely eligible"
     ? "var(--evergreen-tint)"
@@ -473,7 +480,10 @@ function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, on
       onClick={(e) => onOppClick(opp.id, e.currentTarget)}
       onKeyDown={(e) => e.key === "Enter" && onOppClick(opp.id, e.currentTarget as HTMLElement)}
       style={{
-        display: "flex", alignItems: "center", gap: 14,
+        display: "grid",
+        gridTemplateColumns: OPP_GRID_COLS,
+        columnGap: OPP_COL_GAP,
+        alignItems: "center",
         padding: "11px 16px",
         backgroundColor: "var(--surface)",
         border: "1px solid var(--hair)",
@@ -495,8 +505,8 @@ function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, on
         el.style.boxShadow = "none"
       }}
     >
-      {/* Left: title + funder */}
-      <div style={{ flex: "0 0 240px", minWidth: 0 }}>
+      {/* Col 1: Opportunity name + funder */}
+      <div style={{ minWidth: 0 }}>
         <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {opp.name}
         </p>
@@ -505,10 +515,10 @@ function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, on
         </p>
       </div>
 
-      {/* Focus area tags */}
-      <div style={{ flex: "0 0 140px", display: "flex", alignItems: "center", gap: 4, overflow: "hidden" }}>
+      {/* Col 2: Focus area chips (up to 2 + overflow) */}
+      <div style={{ display: "flex", alignItems: "center", gap: 4, overflow: "hidden" }}>
         {visibleTags.map(tag => (
-          <span key={tag} style={{ fontSize: 11, fontWeight: 500, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)", whiteSpace: "nowrap", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", maxWidth: 100 }}>
+          <span key={tag} style={{ fontSize: 11, fontWeight: 500, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)", whiteSpace: "nowrap", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", maxWidth: 86 }}>
             {tag}
           </span>
         ))}
@@ -519,27 +529,28 @@ function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, on
         )}
       </div>
 
-      {/* Spacer */}
-      <div style={{ flex: 1 }} />
+      {/* Col 3: Award size */}
+      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        {opp.amount ?? ""}
+      </span>
 
-      {/* Right cluster */}
-      <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
-        {opp.amount && (
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap", minWidth: 70, textAlign: "right" }}>
-            {opp.amount}
-          </span>
-        )}
-        {opp.deadline && (
-          <span style={{ fontSize: 12, color: "var(--ink-tertiary)", whiteSpace: "nowrap", minWidth: 90 }}>
-            {daysLabel(opp.deadline)}
-          </span>
-        )}
-        {opp.eligibilityLabel && (
-          <span style={{ fontSize: 11, fontWeight: 500, color: eligColor, padding: "3px 9px", borderRadius: 20, backgroundColor: eligBg, whiteSpace: "nowrap" }}>
-            {opp.eligibilityLabel}
-          </span>
-        )}
-        {/* Hide — revealed on hover or keyboard focus */}
+      {/* Col 4: Deadline + countdown */}
+      <span style={{ fontSize: 12, color: "var(--ink-tertiary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        {opp.deadline ? daysLabel(opp.deadline) : ""}
+      </span>
+
+      {/* Col 5: Eligibility chip */}
+      {opp.eligibilityLabel ? (
+        <span style={{ fontSize: 11, fontWeight: 500, color: eligColor, padding: "3px 9px", borderRadius: 20, backgroundColor: eligBg, whiteSpace: "nowrap", justifySelf: "start" }}>
+          {opp.eligibilityLabel}
+        </span>
+      ) : <span />}
+
+      {/* Col 6: Spacer (1fr) */}
+      <span />
+
+      {/* Col 7: Actions */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         <button
           type="button"
           aria-label={`Hide ${opp.name}`}
@@ -586,8 +597,9 @@ function ExploreFunderRow({ funder, isFirst: _isFirst, onFunderClick, trackedFun
 }) {
   const isFunderTracked = trackedFunderIds.has(funder.id)
   const oppCount = matchedOppCount(funder.id)
-  const visibleFocus = funder.focusAreas.slice(0, 1)
-  const overflowCount = Math.max(0, funder.focusAreas.length - 1)
+  // TODO: populate real second focus area when data model supports multiple per funder
+  const visibleFocus = funder.focusAreas.slice(0, 2)
+  const overflowCount = Math.max(0, funder.focusAreas.length - 2)
 
   return (
     <div
@@ -596,7 +608,10 @@ function ExploreFunderRow({ funder, isFirst: _isFirst, onFunderClick, trackedFun
       onClick={() => onFunderClick(funder.id)}
       onKeyDown={(e) => e.key === "Enter" && onFunderClick(funder.id)}
       style={{
-        display: "flex", alignItems: "center", gap: 14,
+        display: "grid",
+        gridTemplateColumns: FUNDER_GRID_COLS,
+        columnGap: FUNDER_COL_GAP,
+        alignItems: "center",
         padding: "11px 16px",
         backgroundColor: "var(--surface)",
         border: "1px solid var(--hair)",
@@ -616,8 +631,8 @@ function ExploreFunderRow({ funder, isFirst: _isFirst, onFunderClick, trackedFun
         el.style.boxShadow = "none"
       }}
     >
-      {/* Left: funder identity */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "0 0 260px", minWidth: 0 }}>
+      {/* Col 1: Funder name + type/location */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
         <FunderTypeIcon type={funder.type} />
         <div style={{ minWidth: 0 }}>
           <p style={{ margin: "0 0 1px", fontSize: 13, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -629,10 +644,10 @@ function ExploreFunderRow({ funder, isFirst: _isFirst, onFunderClick, trackedFun
         </div>
       </div>
 
-      {/* Focus areas */}
-      <div style={{ flex: "0 0 140px", display: "flex", alignItems: "center", gap: 4, overflow: "hidden" }}>
+      {/* Col 2: Focus area chips (up to 2 + overflow) */}
+      <div style={{ display: "flex", alignItems: "center", gap: 4, overflow: "hidden" }}>
         {visibleFocus.map(fa => (
-          <span key={fa} style={{ fontSize: 11, fontWeight: 500, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)", whiteSpace: "nowrap", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", maxWidth: 100 }}>
+          <span key={fa} style={{ fontSize: 11, fontWeight: 500, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)", whiteSpace: "nowrap", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", maxWidth: 86 }}>
             {fa}
           </span>
         ))}
@@ -643,21 +658,30 @@ function ExploreFunderRow({ funder, isFirst: _isFirst, onFunderClick, trackedFun
         )}
       </div>
 
-      {/* Spacer */}
-      <div style={{ flex: 1 }} />
+      {/* Col 3: Median award size (no "Median" prefix — header carries it) */}
+      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        {funder.fundingRange ?? ""}
+      </span>
 
-      {/* Right */}
-      <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
-        {funder.fundingRange && (
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap" }}>
-            {funder.fundingRange}
-          </span>
-        )}
-        {oppCount > 0 && (
-          <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>
-            {oppCount} open {oppCount === 1 ? "grant" : "grants"}
-          </span>
-        )}
+      {/* Col 4: Matched opportunities count badge */}
+      {oppCount > 0 ? (
+        <span style={{
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          minWidth: 17, height: 17, padding: "0 5px",
+          borderRadius: 9999,
+          backgroundColor: "#e0ede6", color: "#3c5e4c",
+          fontSize: 10, fontWeight: 600,
+          justifySelf: "start",
+        }}>
+          {oppCount}
+        </span>
+      ) : <span />}
+
+      {/* Col 5: Spacer (1fr) */}
+      <span />
+
+      {/* Col 6: Actions */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); if (!isFunderTracked) onTrackFunder(funder.id) }}
@@ -1495,18 +1519,36 @@ function DiscoverPage() {
                 <span style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-tertiary)" }}>{sortedOpps.length}</span>
               </div>
               {sortedOpps.length > 0 ? (
-                <div>
-                  {sortedOpps.map((opp, i) => (
-                    <ExploreOpportunityRow
-                      key={opp.id}
-                      opp={opp}
-                      isFirst={i === 0}
-                      onOppClick={handleOppClick}
-                      onTrack={handleTrack}
-                      onHide={handleHideClick}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: OPP_GRID_COLS,
+                    columnGap: OPP_COL_GAP,
+                    padding: "0 16px 8px",
+                    borderBottom: "1px solid rgba(42,42,42,0.06)",
+                    marginBottom: 6,
+                  }}>
+                    <span style={EXPLORE_HEADER_LABEL}>Opportunity name</span>
+                    <span style={EXPLORE_HEADER_LABEL}>Focus area</span>
+                    <span style={EXPLORE_HEADER_LABEL}>Award size</span>
+                    <span style={EXPLORE_HEADER_LABEL}>Deadline</span>
+                    <span style={EXPLORE_HEADER_LABEL}>Eligibility</span>
+                    <span />
+                    <span />
+                  </div>
+                  <div>
+                    {sortedOpps.map((opp, i) => (
+                      <ExploreOpportunityRow
+                        key={opp.id}
+                        opp={opp}
+                        isFirst={i === 0}
+                        onOppClick={handleOppClick}
+                        onTrack={handleTrack}
+                        onHide={handleHideClick}
+                      />
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div style={{ padding: "56px 0", textAlign: "center" }}>
                   <p style={{ margin: "0 0 8px", fontSize: 13, color: "var(--ink-tertiary)" }}>No results match these filters.</p>
@@ -1530,18 +1572,35 @@ function DiscoverPage() {
                 <span style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-tertiary)" }}>{sortedFunders.length}</span>
               </div>
               {sortedFunders.length > 0 ? (
-                <div>
-                  {sortedFunders.map((funder, i) => (
-                    <ExploreFunderRow
-                      key={funder.id}
-                      funder={funder}
-                      isFirst={i === 0}
-                      onFunderClick={handleFunderClick}
-                      trackedFunderIds={trackedFunderIds}
-                      onTrackFunder={handleTrackFunder}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: FUNDER_GRID_COLS,
+                    columnGap: FUNDER_COL_GAP,
+                    padding: "0 16px 8px",
+                    borderBottom: "1px solid rgba(42,42,42,0.06)",
+                    marginBottom: 6,
+                  }}>
+                    <span style={EXPLORE_HEADER_LABEL}>Funder name</span>
+                    <span style={EXPLORE_HEADER_LABEL}>Focus area</span>
+                    <span style={EXPLORE_HEADER_LABEL}>Median award size</span>
+                    <span style={EXPLORE_HEADER_LABEL}>Matched opportunities</span>
+                    <span />
+                    <span />
+                  </div>
+                  <div>
+                    {sortedFunders.map((funder, i) => (
+                      <ExploreFunderRow
+                        key={funder.id}
+                        funder={funder}
+                        isFirst={i === 0}
+                        onFunderClick={handleFunderClick}
+                        trackedFunderIds={trackedFunderIds}
+                        onTrackFunder={handleTrackFunder}
+                      />
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div style={{ padding: "56px 0", textAlign: "center" }}>
                   <p style={{ margin: "0 0 8px", fontSize: 13, color: "var(--ink-tertiary)" }}>No funders match these filters.</p>
