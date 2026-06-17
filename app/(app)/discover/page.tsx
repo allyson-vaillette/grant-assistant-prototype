@@ -336,11 +336,14 @@ function CatalogueCard({ opp, onOppClick, onTrack, onHide }: {
 
 // ── Matched funder card (Matches > Funders) ────────────────────────────────
 
-function MatchedFunderCard({ funder, isNew, onFunderClick }: {
+function MatchedFunderCard({ funder, isNew, onFunderClick, trackedFunderIds, onTrackFunder }: {
   funder: Funder
   isNew?: boolean
   onFunderClick: (funderId: string) => void
+  trackedFunderIds: Set<string>
+  onTrackFunder: (funderId: string) => void
 }) {
+  const isFunderTracked = trackedFunderIds.has(funder.id)
   const tags = funder.focusAreas.slice(0, 3)
   const oppCount = matchedOppCount(funder.id)
   const geoShort = funder.geography === "National (U.S.)" || funder.geography === "National (U.S.) + Canada"
@@ -425,7 +428,7 @@ function MatchedFunderCard({ funder, isNew, onFunderClick }: {
         )}
       </div>
 
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "auto" }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, marginTop: "auto" }}>
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onFunderClick(funder.id) }}
@@ -434,6 +437,22 @@ function MatchedFunderCard({ funder, isNew, onFunderClick }: {
           onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
         >
           View funder
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); if (!isFunderTracked) onTrackFunder(funder.id) }}
+          style={{
+            padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600,
+            cursor: isFunderTracked ? "default" : "pointer", whiteSpace: "nowrap",
+            border: "none",
+            backgroundColor: isFunderTracked ? "var(--slate-light)" : "var(--slate-primary)",
+            color: isFunderTracked ? "var(--ink-tertiary)" : "#fff",
+            transition: "background-color 120ms",
+          }}
+          onMouseEnter={(e) => { if (!isFunderTracked) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-secondary)" }}
+          onMouseLeave={(e) => { if (!isFunderTracked) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
+        >
+          {isFunderTracked ? "Watching" : "Track funder"}
         </button>
       </div>
     </div>
@@ -581,7 +600,7 @@ function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, on
       <span />
 
       {/* Col 7: Actions */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
         <button
           type="button"
           aria-label={`Hide ${opp.name}`}
@@ -602,6 +621,15 @@ function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, on
           onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
         >
           <EyeOff size={12} />
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onOppClick(opp.id, e.currentTarget as HTMLElement) }}
+          style={{ padding: "5px 12px", borderRadius: 6, border: "1px solid var(--hair-2)", backgroundColor: "transparent", fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)", cursor: "pointer", whiteSpace: "nowrap", transition: "background-color 120ms" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+        >
+          View details
         </button>
         <button
           type="button"
@@ -701,27 +729,28 @@ function ExploreFunderRow({ funder, isFirst: _isFirst, onFunderClick, trackedFun
       <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); if (!isFunderTracked) onTrackFunder(funder.id) }}
-          style={{
-            padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: isFunderTracked ? "default" : "pointer", whiteSpace: "nowrap",
-            transition: "background-color 120ms, color 120ms",
-            border: "1px solid var(--hair-2)",
-            backgroundColor: isFunderTracked ? "var(--canvas)" : "transparent",
-            color: isFunderTracked ? "var(--ink-tertiary)" : "var(--ink-secondary)",
-          }}
-          onMouseEnter={(e) => { if (!isFunderTracked) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--ink)" } }}
-          onMouseLeave={(e) => { if (!isFunderTracked) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-secondary)" } }}
+          onClick={(e) => { e.stopPropagation(); onFunderClick(funder.id) }}
+          style={{ padding: "5px 12px", borderRadius: 6, border: "1px solid var(--hair-2)", backgroundColor: "transparent", fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)", cursor: "pointer", whiteSpace: "nowrap", transition: "background-color 120ms" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
         >
-          {isFunderTracked ? "Watching" : "Track funder"}
+          View funder
         </button>
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); onFunderClick(funder.id) }}
-          style={{ padding: "5px 14px", borderRadius: 6, border: "none", backgroundColor: "var(--slate-primary)", fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer", whiteSpace: "nowrap", transition: "background-color 120ms" }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-secondary)" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
+          onClick={(e) => { e.stopPropagation(); if (!isFunderTracked) onTrackFunder(funder.id) }}
+          style={{
+            padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600,
+            cursor: isFunderTracked ? "default" : "pointer", whiteSpace: "nowrap",
+            border: "none",
+            backgroundColor: isFunderTracked ? "var(--slate-light)" : "var(--slate-primary)",
+            color: isFunderTracked ? "var(--ink-tertiary)" : "#fff",
+            transition: "background-color 120ms",
+          }}
+          onMouseEnter={(e) => { if (!isFunderTracked) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-secondary)" }}
+          onMouseLeave={(e) => { if (!isFunderTracked) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
         >
-          View funder
+          {isFunderTracked ? "Watching" : "Track funder"}
         </button>
       </div>
     </div>
@@ -1519,7 +1548,7 @@ function DiscoverPage() {
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 12 }}>
                   {filteredMatchedFunders.map(({ funder, match }) => (
-                    <MatchedFunderCard key={funder.id} funder={funder} isNew={match.isNew} onFunderClick={handleFunderClick} />
+                    <MatchedFunderCard key={funder.id} funder={funder} isNew={match.isNew} onFunderClick={handleFunderClick} trackedFunderIds={trackedFunderIds} onTrackFunder={handleTrackFunder} />
                   ))}
                 </div>
               )}
