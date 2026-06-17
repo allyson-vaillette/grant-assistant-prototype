@@ -10,6 +10,7 @@ import {
   trackFunder,
 } from "@/lib/mock-data"
 import { useScope } from "@/lib/scope-context"
+import { useDiscoverFilters } from "@/lib/discover-filters-context"
 import type { Opportunity, Funder, FunderType, Match } from "@/lib/types"
 import { OpportunityPeekPanel } from "./OpportunityPeekPanel"
 import { HideOpportunityDialog, type HidePayload } from "./HideOpportunityDialog"
@@ -719,6 +720,126 @@ function FilterSelect({ value, onChange, children, minWidth }: {
   )
 }
 
+// ── Multi-select filter dropdown ───────────────────────────────────────────
+
+function MultiSelectFilter({
+  label,
+  options,
+  selected,
+  onToggle,
+}: {
+  label: string
+  options: { value: string; label: string }[]
+  selected: string[]
+  onToggle: (value: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handleOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleOutside)
+    return () => document.removeEventListener("mousedown", handleOutside)
+  }, [open])
+
+  const count = selected.length
+  const isActive = count > 0
+
+  return (
+    <div ref={containerRef} style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen(prev => !prev)}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 5,
+          padding: "7px 10px",
+          borderRadius: "var(--radius-input)",
+          border: isActive ? "1px solid rgba(74,96,128,0.4)" : "1px solid var(--hair-2)",
+          backgroundColor: isActive ? "var(--slate-tint)" : "var(--surface)",
+          fontSize: 12,
+          fontWeight: isActive ? 600 : 400,
+          color: isActive ? "var(--slate-secondary)" : "var(--ink-secondary)",
+          cursor: "pointer",
+          whiteSpace: "nowrap",
+          transition: "background-color 120ms",
+        }}
+      >
+        {label}
+        {isActive ? (
+          <span style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            minWidth: 16, height: 16, padding: "0 3px",
+            borderRadius: 8,
+            backgroundColor: "var(--slate-secondary)",
+            color: "#fff",
+            fontSize: 10, fontWeight: 700,
+          }}>
+            {count}
+          </span>
+        ) : (
+          <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{ flexShrink: 0 }}>
+            <path d="M0.5 0.5L5 5.5L9.5 0.5" stroke="#909AA4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </button>
+
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 50,
+          backgroundColor: "var(--surface)",
+          border: "1px solid var(--hair-2)",
+          borderRadius: "var(--radius-input)",
+          boxShadow: "0 4px 16px rgba(28,24,64,0.12)",
+          minWidth: 200,
+          padding: "4px 0",
+          maxHeight: 280,
+          overflowY: "auto",
+        }}>
+          {options.map(opt => {
+            const checked = selected.includes(opt.value)
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onToggle(opt.value)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  width: "100%", padding: "7px 12px",
+                  background: "none", border: "none", cursor: "pointer",
+                  fontSize: 13,
+                  color: checked ? "var(--slate-secondary)" : "var(--ink)",
+                  fontWeight: checked ? 600 : 400,
+                  textAlign: "left",
+                  transition: "background-color 80ms",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "" }}
+              >
+                <span style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  width: 16, height: 16, flexShrink: 0,
+                  borderRadius: 3,
+                  border: checked ? "1.5px solid var(--slate-secondary)" : "1.5px solid var(--hair-2)",
+                  backgroundColor: checked ? "var(--slate-tint)" : "transparent",
+                  transition: "background-color 80ms, border-color 80ms",
+                }}>
+                  {checked && <Check size={11} style={{ color: "var(--slate-secondary)" }} />}
+                </span>
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Undo toast ─────────────────────────────────────────────────────────────
 
 function UndoToast({ oppName, onUndo, onDismiss }: {
@@ -786,18 +907,18 @@ function DiscoverPage() {
   const searchParams = useSearchParams()
   const { scopeLabel, selectedProjectId } = useScope()
 
-  // objectType persists across primary tab switches
-  const [primaryTab, setPrimaryTab] = useState<"matches" | "explore">("matches")
-  const [objectType, setObjectType] = useState<"opportunities" | "funders">("opportunities")
-
-  // Explore filters
-  const [query, setQuery] = useState("")
-  const [typeFilter, setTypeFilter] = useState<FunderType | "">("")
-  const [focusAreaFilter, setFocusAreaFilter] = useState("")
-  const [geographyFilter, setGeographyFilter] = useState("")
-  const [awardRangeFilter, setAwardRangeFilter] = useState("")
-  const [deadlineFilter, setDeadlineFilter] = useState("")
-  const [sortBy, setSortBy] = useState<"match" | "deadline" | "award">("match")
+  const {
+    primaryTab, setPrimaryTab,
+    objectType, setObjectType,
+    query, setQuery,
+    typeFilters, toggleTypeFilter,
+    focusAreaFilters, toggleFocusAreaFilter,
+    geographyFilters, toggleGeographyFilter,
+    awardRangeFilter, setAwardRangeFilter,
+    deadlineFilter, setDeadlineFilter,
+    sortBy, setSortBy,
+    clearFilters, hasActiveFilters,
+  } = useDiscoverFilters()
 
   const [hiddenOppIds, setHiddenOppIds] = useState<Set<string>>(new Set())
   const [hideDialogOpp, setHideDialogOpp] = useState<typeof OPPORTUNITIES[number] | null>(null)
@@ -903,13 +1024,13 @@ function DiscoverPage() {
   const filtered: Opportunity[] = OPPORTUNITIES.filter((opp) => {
     const funder = getFunder(opp.funderId)
     if (!funder) return false
-    if (typeFilter && funder.type !== typeFilter) return false
-    if (focusAreaFilter) {
-      const inFunder = funder.focusAreas.includes(focusAreaFilter)
-      const inOpp = (opp.focusAreas ?? []).includes(focusAreaFilter)
+    if (typeFilters.length > 0 && !typeFilters.includes(funder.type)) return false
+    if (focusAreaFilters.length > 0) {
+      const inFunder = funder.focusAreas.some(fa => focusAreaFilters.includes(fa))
+      const inOpp = (opp.focusAreas ?? []).some(fa => focusAreaFilters.includes(fa))
       if (!inFunder && !inOpp) return false
     }
-    if (geographyFilter && funder.geography !== geographyFilter) return false
+    if (geographyFilters.length > 0 && !geographyFilters.includes(funder.geography)) return false
     if (awardRangeFilter) {
       const amt = parseAmount(opp.amount)
       if (amt === null) return false
@@ -957,8 +1078,8 @@ function DiscoverPage() {
 
   // Filtered + sorted funders
   const filteredFunders = FUNDERS.filter((funder) => {
-    if (focusAreaFilter && !funder.focusAreas.includes(focusAreaFilter)) return false
-    if (geographyFilter && funder.geography !== geographyFilter) return false
+    if (focusAreaFilters.length > 0 && !funder.focusAreas.some(fa => focusAreaFilters.includes(fa))) return false
+    if (geographyFilters.length > 0 && !geographyFilters.includes(funder.geography)) return false
     if (query.trim()) {
       const q = query.toLowerCase()
       const searchable = [funder.name, funder.description ?? "", ...funder.focusAreas, funder.geography].join(" ").toLowerCase()
@@ -976,13 +1097,13 @@ function DiscoverPage() {
   const filteredMatchedOpps = STRONG_MATCHES.filter(({ opp }) => {
     const funder = getFunder(opp.funderId)
     if (!funder) return false
-    if (typeFilter && funder.type !== typeFilter) return false
-    if (focusAreaFilter) {
-      const inFunder = funder.focusAreas.includes(focusAreaFilter)
-      const inOpp = (opp.focusAreas ?? []).includes(focusAreaFilter)
+    if (typeFilters.length > 0 && !typeFilters.includes(funder.type)) return false
+    if (focusAreaFilters.length > 0) {
+      const inFunder = funder.focusAreas.some(fa => focusAreaFilters.includes(fa))
+      const inOpp = (opp.focusAreas ?? []).some(fa => focusAreaFilters.includes(fa))
       if (!inFunder && !inOpp) return false
     }
-    if (geographyFilter && funder.geography !== geographyFilter) return false
+    if (geographyFilters.length > 0 && !geographyFilters.includes(funder.geography)) return false
     if (awardRangeFilter) {
       const amt = parseAmount(opp.amount)
       if (amt === null) return false
@@ -1027,8 +1148,8 @@ function DiscoverPage() {
   })
 
   const filteredMatchedFunders = MATCHED_FUNDERS.filter(({ funder }) => {
-    if (focusAreaFilter && !funder.focusAreas.includes(focusAreaFilter)) return false
-    if (geographyFilter && funder.geography !== geographyFilter) return false
+    if (focusAreaFilters.length > 0 && !funder.focusAreas.some(fa => focusAreaFilters.includes(fa))) return false
+    if (geographyFilters.length > 0 && !geographyFilters.includes(funder.geography)) return false
     if (query.trim()) {
       const q = query.toLowerCase()
       const searchable = [funder.name, funder.description ?? "", ...funder.focusAreas, funder.geography].join(" ").toLowerCase()
@@ -1037,19 +1158,12 @@ function DiscoverPage() {
     return true
   })
 
-  const hasActiveFilters = !!(typeFilter || focusAreaFilter || geographyFilter || awardRangeFilter || deadlineFilter)
-
-  function clearFilters() {
-    setTypeFilter(""); setFocusAreaFilter(""); setGeographyFilter("")
-    setAwardRangeFilter(""); setDeadlineFilter("")
-  }
-
   const activeChips: { key: string; label: string; onRemove: () => void }[] = [
-    typeFilter       ? { key: "type",     label: `Funder type: ${FUNDER_TYPE_LABELS[typeFilter]}`,  onRemove: () => setTypeFilter("") }      : null,
-    focusAreaFilter  ? { key: "focus",    label: `Focus area: ${focusAreaFilter}`,                   onRemove: () => setFocusAreaFilter("") } : null,
-    geographyFilter  ? { key: "geo",      label: `Geography: ${geographyFilter}`,                    onRemove: () => setGeographyFilter("") } : null,
-    awardRangeFilter ? { key: "award",    label: `Award: ${AWARD_RANGE_LABELS[awardRangeFilter]}`,   onRemove: () => setAwardRangeFilter("") }: null,
-    deadlineFilter   ? { key: "deadline", label: DEADLINE_LABELS[deadlineFilter],                    onRemove: () => setDeadlineFilter("") }  : null,
+    ...typeFilters.map(t => ({ key: `type-${t}`, label: `Funder type: ${FUNDER_TYPE_LABELS[t]}`, onRemove: () => toggleTypeFilter(t) })),
+    ...focusAreaFilters.map(fa => ({ key: `focus-${fa}`, label: `Focus area: ${fa}`, onRemove: () => toggleFocusAreaFilter(fa) })),
+    ...geographyFilters.map(g => ({ key: `geo-${g}`, label: `Geography: ${g}`, onRemove: () => toggleGeographyFilter(g) })),
+    awardRangeFilter ? { key: "award", label: `Award: ${AWARD_RANGE_LABELS[awardRangeFilter]}`, onRemove: () => setAwardRangeFilter("") } : null,
+    deadlineFilter ? { key: "deadline", label: DEADLINE_LABELS[deadlineFilter], onRemove: () => setDeadlineFilter("") } : null,
   ].filter((c): c is NonNullable<typeof c> => c !== null)
 
   const segmentOppCount = primaryTab === "matches" ? sortedMatchedOpps.length : sortedOpps.length
@@ -1235,23 +1349,27 @@ function DiscoverPage() {
             {/* Filters */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: activeChips.length > 0 ? 8 : 0 }}>
               {objectType === "opportunities" && (
-                <FilterSelect value={typeFilter} onChange={(v) => setTypeFilter(v as FunderType | "")}>
-                  <option value="">Funder type</option>
-                  {(Object.keys(FUNDER_TYPE_LABELS) as FunderType[]).map(t => (
-                    <option key={t} value={t}>{FUNDER_TYPE_LABELS[t]}</option>
-                  ))}
-                </FilterSelect>
+                <MultiSelectFilter
+                  label="Funder type"
+                  options={(Object.keys(FUNDER_TYPE_LABELS) as FunderType[]).map(t => ({ value: t, label: FUNDER_TYPE_LABELS[t] }))}
+                  selected={typeFilters}
+                  onToggle={toggleTypeFilter as (v: string) => void}
+                />
               )}
 
-              <FilterSelect value={focusAreaFilter} onChange={setFocusAreaFilter}>
-                <option value="">Focus area</option>
-                {ALL_FOCUS_AREAS.map(fa => <option key={fa} value={fa}>{fa}</option>)}
-              </FilterSelect>
+              <MultiSelectFilter
+                label="Focus area"
+                options={ALL_FOCUS_AREAS.map(fa => ({ value: fa, label: fa }))}
+                selected={focusAreaFilters}
+                onToggle={toggleFocusAreaFilter}
+              />
 
-              <FilterSelect value={geographyFilter} onChange={setGeographyFilter}>
-                <option value="">Geography</option>
-                {ALL_GEOGRAPHIES.map(g => <option key={g} value={g}>{g}</option>)}
-              </FilterSelect>
+              <MultiSelectFilter
+                label="Geography"
+                options={ALL_GEOGRAPHIES.map(g => ({ value: g, label: g }))}
+                selected={geographyFilters}
+                onToggle={toggleGeographyFilter}
+              />
 
               {objectType === "opportunities" && (
                 <>
@@ -1288,7 +1406,7 @@ function DiscoverPage() {
                     <X size={11} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
                   </button>
                 ))}
-                {activeChips.length >= 2 && (
+                {activeChips.length > 0 && (
                   <button
                     type="button"
                     onClick={clearFilters}
