@@ -237,6 +237,11 @@ function CatalogueCard({ opp, onOppClick, onTrack, onHide }: {
             </p>
           )}
         </div>
+        {match?.isNew && (
+          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--evergreen)", backgroundColor: "var(--evergreen-tint)", borderRadius: 10, padding: "2px 7px", flexShrink: 0, whiteSpace: "nowrap" }}>
+            New
+          </span>
+        )}
         {opp.amount && (
           <span style={{ fontSize: 18, fontWeight: 600, color: "#2a2a2a", flexShrink: 0, letterSpacing: "-0.01em" }}>{opp.amount}</span>
         )}
@@ -330,8 +335,9 @@ function CatalogueCard({ opp, onOppClick, onTrack, onHide }: {
 
 // ── Matched funder card (Matches > Funders) ────────────────────────────────
 
-function MatchedFunderCard({ funder, onFunderClick }: {
+function MatchedFunderCard({ funder, isNew, onFunderClick }: {
   funder: Funder
+  isNew?: boolean
   onFunderClick: (funderId: string) => void
 }) {
   const tags = funder.focusAreas.slice(0, 3)
@@ -376,6 +382,11 @@ function MatchedFunderCard({ funder, onFunderClick }: {
             {FUNDER_TYPE_LABELS[funder.type]}{funder.location ? ` · ${funder.location}` : ""}
           </p>
         </div>
+        {isNew && (
+          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--evergreen)", backgroundColor: "var(--evergreen-tint)", borderRadius: 10, padding: "2px 7px", flexShrink: 0, whiteSpace: "nowrap" }}>
+            New
+          </span>
+        )}
       </div>
 
       {funder.description && (
@@ -1348,8 +1359,8 @@ function DiscoverPage() {
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 12 }}>
-                  {filteredMatchedFunders.map(({ funder }) => (
-                    <MatchedFunderCard key={funder.id} funder={funder} onFunderClick={handleFunderClick} />
+                  {filteredMatchedFunders.map(({ funder, match }) => (
+                    <MatchedFunderCard key={funder.id} funder={funder} isNew={match.isNew} onFunderClick={handleFunderClick} />
                   ))}
                 </div>
               )}
