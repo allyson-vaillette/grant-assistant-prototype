@@ -461,8 +461,8 @@ function MatchedFunderCard({ funder, isNew, onFunderClick, trackedFunderIds, onT
 
 // ── Explore table layout constants ────────────────────────────────────────
 
-const OPP_GRID_COLS = "220px 200px 80px 100px 130px 1fr auto"
-const OPP_COL_GAP = 24
+const OPP_GRID_COLS = "220px 200px 80px 100px 130px minmax(0,1fr) auto"
+const OPP_COL_GAP = 12
 const FUNDER_GRID_COLS = "260px 190px 145px 130px minmax(0,1fr) auto"
 const FUNDER_COL_GAP = 12
 const OPP_FOCUS_COL_WIDTH = 200
