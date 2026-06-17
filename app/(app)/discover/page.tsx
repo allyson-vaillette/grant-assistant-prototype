@@ -442,11 +442,56 @@ function MatchedFunderCard({ funder, isNew, onFunderClick }: {
 
 // ── Explore table layout constants ────────────────────────────────────────
 
-const OPP_GRID_COLS = "220px 160px 75px 90px 120px 1fr auto"
-const OPP_COL_GAP = 36
-const FUNDER_GRID_COLS = "250px 160px 120px 70px 1fr auto"
-const FUNDER_COL_GAP = 36
+const OPP_GRID_COLS = "220px 200px 80px 100px 130px 1fr auto"
+const OPP_COL_GAP = 24
+const FUNDER_GRID_COLS = "260px 190px 145px 130px minmax(0,1fr) auto"
+const FUNDER_COL_GAP = 12
+const OPP_FOCUS_COL_WIDTH = 200
+const FUNDER_FOCUS_COL_WIDTH = 190
 const EXPLORE_HEADER_LABEL: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: "#738498", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }
+
+// Estimates chip pixel width at 11px Inter: ~6px/char + 18px padding/border.
+// Collapses chips that won't fit into +N rather than clipping their text.
+function FocusChipList({ tags, colWidth }: { tags: string[]; colWidth: number }) {
+  const CHAR_PX = 6
+  const CHIP_OVERHEAD = 18  // 8px padding × 2 + 2px border
+  const GAP = 4
+  const est = (t: string) => t.length * CHAR_PX + CHIP_OVERHEAD
+
+  let used = 0
+  let visible = 0
+  for (let i = 0; i < tags.length; i++) {
+    const w = est(tags[i])
+    const remaining = tags.length - i - 1
+    // Reserve space for overflow badge if there will be hidden chips
+    const overflowReserve = remaining > 0 ? GAP + est(`+${remaining}`) : 0
+    if (used + (i > 0 ? GAP : 0) + w + overflowReserve <= colWidth) {
+      used += (i > 0 ? GAP : 0) + w
+      visible++
+    } else {
+      break
+    }
+  }
+
+  const overflow = tags.length - visible
+  const CHIP_STYLE: React.CSSProperties = {
+    fontSize: 11, fontWeight: 500, color: "var(--ink-tertiary)",
+    padding: "2px 8px", borderRadius: 20,
+    backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)",
+    whiteSpace: "nowrap", flexShrink: 0,
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: GAP }}>
+      {tags.slice(0, visible).map(tag => (
+        <span key={tag} style={CHIP_STYLE}>{tag}</span>
+      ))}
+      {overflow > 0 && (
+        <span style={CHIP_STYLE}>+{overflow}</span>
+      )}
+    </div>
+  )
+}
 
 // ── Explore opportunity row (Explore > Opportunities) ──────────────────────
 
@@ -462,9 +507,6 @@ function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, on
   const hideButtonVisible = rowHovered || hideButtonFocused
   const funder = getFunder(opp.funderId)
   const focusTags = opp.focusAreas ?? []
-  // TODO: populate real second focus area when data model supports multiple per opportunity
-  const visibleTags = focusTags.slice(0, 2)
-  const overflowCount = Math.max(0, focusTags.length - 2)
 
   const eligBg = opp.eligibilityLabel === "Likely eligible"
     ? "var(--evergreen-tint)"
@@ -515,19 +557,8 @@ function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, on
         </p>
       </div>
 
-      {/* Col 2: Focus area chips (up to 2 + overflow) */}
-      <div style={{ display: "flex", alignItems: "center", gap: 4, overflow: "hidden" }}>
-        {visibleTags.map(tag => (
-          <span key={tag} style={{ fontSize: 11, fontWeight: 500, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)", whiteSpace: "nowrap", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", maxWidth: 86 }}>
-            {tag}
-          </span>
-        ))}
-        {overflowCount > 0 && (
-          <span style={{ fontSize: 11, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)", whiteSpace: "nowrap", flexShrink: 0 }}>
-            +{overflowCount}
-          </span>
-        )}
-      </div>
+      {/* Col 2: Focus area chips */}
+      <FocusChipList tags={focusTags} colWidth={OPP_FOCUS_COL_WIDTH} />
 
       {/* Col 3: Award size */}
       <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -597,9 +628,6 @@ function ExploreFunderRow({ funder, isFirst: _isFirst, onFunderClick, trackedFun
 }) {
   const isFunderTracked = trackedFunderIds.has(funder.id)
   const oppCount = matchedOppCount(funder.id)
-  // TODO: populate real second focus area when data model supports multiple per funder
-  const visibleFocus = funder.focusAreas.slice(0, 2)
-  const overflowCount = Math.max(0, funder.focusAreas.length - 2)
 
   return (
     <div
@@ -644,19 +672,8 @@ function ExploreFunderRow({ funder, isFirst: _isFirst, onFunderClick, trackedFun
         </div>
       </div>
 
-      {/* Col 2: Focus area chips (up to 2 + overflow) */}
-      <div style={{ display: "flex", alignItems: "center", gap: 4, overflow: "hidden" }}>
-        {visibleFocus.map(fa => (
-          <span key={fa} style={{ fontSize: 11, fontWeight: 500, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)", whiteSpace: "nowrap", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", maxWidth: 86 }}>
-            {fa}
-          </span>
-        ))}
-        {overflowCount > 0 && (
-          <span style={{ fontSize: 11, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)", whiteSpace: "nowrap", flexShrink: 0 }}>
-            +{overflowCount}
-          </span>
-        )}
-      </div>
+      {/* Col 2: Focus area chips */}
+      <FocusChipList tags={funder.focusAreas} colWidth={FUNDER_FOCUS_COL_WIDTH} />
 
       {/* Col 3: Median award size (no "Median" prefix — header carries it) */}
       <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
