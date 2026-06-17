@@ -1,33 +1,33 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { usePathname } from "next/navigation"
+import { useEffect, useRef, useState } from "react"
 
 import {
-  Home, LayoutList, Telescope, Layers, Database, Settings,
-  Sparkles, PlusCircle, ChevronLeft, ChevronRight, Bell, X,
+  House, LayoutList, Telescope, Settings, Library,
+  Sparkles, ChevronLeft, ChevronRight, ChevronDown, Bell, X, Check,
 } from "lucide-react"
-import { NewProposalModal } from "@/components/proposals/NewProposalModal"
+import { useScope } from "@/lib/scope-context"
+import { ORG } from "@/lib/mock-data"
 
 const SIDEBAR_WIDTH = 216
 const SIDEBAR_COLLAPSED_WIDTH = 64
 
 const MAIN_NAV = [
-  { label: "Home",        href: "/home",      icon: Home       },
-  { label: "Engagements", href: "/portfolio",  icon: LayoutList },
-  { label: "Discover",    href: "/discover",   icon: Telescope  },
+  { label: "Home",    href: "/home",    icon: House      },
+  { label: "Tracker", href: "/tracker", icon: LayoutList },
+  { label: "Discover", href: "/discover", icon: Telescope },
 ] as const
 
 const WORKSPACE_NAV = [
-  { label: "Initiatives", href: "/initiatives", icon: Layers    },
-  { label: "Evidence",    href: "/evidence",    icon: Database  },
-  { label: "Settings",    href: "/settings",    icon: Settings  },
+  { label: "Library",  href: "/library",  icon: Library  },
+  { label: "Settings", href: "/settings", icon: Settings },
 ] as const
 
 // ── Notification data ──────────────────────────────────────────────────────
 
-type NotifType = "task_assigned" | "task_due_soon" | "task_overdue" | "task_completed" | "task_reassigned" | "task_commented"
+type NotifType = "task_assigned" | "task_due_soon" | "task_overdue" | "task_completed" | "task_reassigned"
 
 interface Notification {
   id: string
@@ -46,42 +46,40 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: "n1", type: "task_assigned",
     actorInitials: "MR", actorName: "Marcus R.",
-    description: "Marcus R. assigned you a task on Equitable Futures Grant",
-    opportunityName: "Equitable Futures Grant", timestamp: "2h ago", isToday: true, read: false,
-    href: "/opportunity/equitable-futures",
+    description: "Marcus R. assigned you a task on Petco Love Grant",
+    opportunityName: "Petco Love Lost & Found Grant 2026",
+    timestamp: "2h ago", isToday: true, read: false,
+    href: "/pursuit/opp-1",
   },
   {
     id: "n2", type: "task_due_soon",
     description: "Complete narrative section is due in 48 hours",
-    opportunityName: "Equitable Futures Grant", timestamp: "4h ago", isToday: true, read: false,
-    href: "/opportunity/equitable-futures",
+    opportunityName: "Petco Love Lost & Found Grant 2026",
+    timestamp: "4h ago", isToday: true, read: false,
+    href: "/pursuit/opp-1",
   },
   {
     id: "n3", type: "task_overdue",
-    description: "Get budget sign-off from finance is overdue",
-    opportunityName: "Equitable Futures Grant", timestamp: "6h ago", isToday: true, read: false,
-    href: "/opportunity/equitable-futures",
+    description: "Get budget sign-off is overdue",
+    opportunityName: "Petco Love Lost & Found Grant 2026",
+    timestamp: "6h ago", isToday: true, read: false,
+    href: "/pursuit/opp-1",
   },
   {
     id: "n4", type: "task_completed",
     actorInitials: "JK", actorName: "Jamie K.",
-    description: "Jamie K. completed Upload evaluation framework",
-    opportunityName: "Equitable Futures Grant", timestamp: "8h ago", isToday: true, read: false,
-    href: "/opportunity/equitable-futures",
+    description: "Jamie K. completed Upload 2025 annual report",
+    opportunityName: "Petco Love Lost & Found Grant 2026",
+    timestamp: "8h ago", isToday: true, read: false,
+    href: "/pursuit/opp-1",
   },
   {
     id: "n5", type: "task_reassigned",
     actorInitials: "TS", actorName: "Taylor S.",
-    description: "Collect letters of support was reassigned away from you",
-    opportunityName: "Equitable Futures Grant", timestamp: "2d ago", isToday: false, read: true,
-    href: "/opportunity/equitable-futures",
-  },
-  {
-    id: "n6", type: "task_commented",
-    actorInitials: "PK", actorName: "Priya K.",
-    description: "Priya K. commented on Draft impact narrative",
-    opportunityName: "Housing Equity Initiative", timestamp: "3d ago", isToday: false, read: true,
-    href: "/opportunity/equitable-futures",
+    description: "Follow up with program officer was reassigned to you",
+    opportunityName: "ASPCA Saving Lives Grant",
+    timestamp: "2d ago", isToday: false, read: true,
+    href: "/pursuit/opp-2",
   },
 ]
 
@@ -91,7 +89,7 @@ function notifIcon(type: NotifType): string {
   if (type === "task_overdue")    return "warning"
   if (type === "task_completed")  return "check_circle"
   if (type === "task_reassigned") return "swap_horiz"
-  return "chat"
+  return "notifications"
 }
 
 function notifIconColor(type: NotifType): string {
@@ -112,92 +110,72 @@ function NotificationTray({
   onMarkAllRead: () => void
   onMarkRead: (id: string) => void
 }) {
-  const router = useRouter()
-  const todayNotifs = notifications.filter(n => n.isToday)
+  const todayNotifs   = notifications.filter(n => n.isToday)
   const earlierNotifs = notifications.filter(n => !n.isToday)
-
-  function handleNotifClick(n: Notification) {
-    onMarkRead(n.id)
-    onClose()
-    router.push(n.href)
-  }
 
   function NotifRow({ n }: { n: Notification }) {
     const [hovered, setHovered] = useState(false)
     return (
-      <button
-        type="button"
-        onClick={() => handleNotifClick(n)}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          display: "flex", alignItems: "flex-start", gap: 10,
-          padding: "10px 16px", width: "100%", background: "none", border: "none",
-          cursor: "pointer", textAlign: "left",
-          backgroundColor: hovered ? "var(--canvas)" : !n.read ? "rgba(74,96,128,0.04)" : "transparent",
-          borderLeft: !n.read ? "2px solid var(--slate-secondary)" : "2px solid transparent",
-          transition: "background-color 150ms",
-          position: "relative",
-        }}
+      <Link
+        href={n.href}
+        onClick={() => { onMarkRead(n.id); onClose() }}
+        style={{ textDecoration: "none" }}
       >
-        {/* Actor avatar or type icon */}
-        <div style={{
-          width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-          backgroundColor: n.actorInitials ? "var(--slate-tint)" : "var(--canvas)",
-          border: "var(--border-subtle)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-          {n.actorInitials ? (
-            <span style={{ fontSize: 9, fontWeight: 700, color: "var(--slate-primary)", lineHeight: 1 }}>{n.actorInitials}</span>
-          ) : (
-            <span className="material-symbols-outlined" style={{ fontSize: 14, color: notifIconColor(n.type), lineHeight: 1, userSelect: "none" }}>
-              {notifIcon(n.type)}
-            </span>
+        <div
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          style={{
+            display: "flex", alignItems: "flex-start", gap: 10,
+            padding: "10px 16px",
+            backgroundColor: hovered ? "var(--canvas)" : !n.read ? "rgba(74,96,128,0.04)" : "transparent",
+            borderLeft: !n.read ? "2px solid var(--slate-secondary)" : "2px solid transparent",
+            transition: "background-color 150ms",
+            cursor: "pointer",
+          }}
+        >
+          <div style={{
+            width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+            backgroundColor: n.actorInitials ? "var(--slate-tint)" : "var(--canvas)",
+            border: "var(--border-subtle)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            {n.actorInitials ? (
+              <span style={{ fontSize: 9, fontWeight: 700, color: "var(--slate-primary)", lineHeight: 1 }}>{n.actorInitials}</span>
+            ) : (
+              <span className="material-symbols-outlined" style={{ fontSize: 14, color: notifIconColor(n.type), lineHeight: 1, userSelect: "none" }}>
+                {notifIcon(n.type)}
+              </span>
+            )}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: "0 0 2px", fontSize: 12, color: "var(--ink)", lineHeight: "16px", fontWeight: n.read ? 400 : 500 }}>
+              {n.description}
+            </p>
+            <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "14px" }}>
+              {n.timestamp}
+            </p>
+          </div>
+          {!n.read && (
+            <div style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "var(--slate-primary)", flexShrink: 0, marginTop: 5 }} />
           )}
         </div>
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: "0 0 2px", fontSize: 12, color: "var(--ink)", lineHeight: "16px", fontWeight: n.read ? 400 : 500 }}>
-            {n.description}
-          </p>
-          <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", lineHeight: "14px" }}>
-            {n.timestamp}
-          </p>
-        </div>
-
-        {!n.read && (
-          <div style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "var(--slate-primary)", flexShrink: 0, marginTop: 5 }} />
-        )}
-      </button>
+      </Link>
     )
   }
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        style={{ position: "fixed", inset: 0, zIndex: 44 }}
-        onClick={onClose}
-      />
-
-      {/* Tray */}
+      <div style={{ position: "fixed", inset: 0, zIndex: 44 }} onClick={onClose} />
       <div style={{
-        position: "fixed",
-        top: 0,
-        left: sidebarWidth,
-        width: 320,
-        height: "100vh",
+        position: "fixed", top: 0, left: sidebarWidth,
+        width: 320, height: "100vh",
         backgroundColor: "#FFFFFF",
         borderRight: "var(--border-subtle)",
         boxShadow: "var(--elevation-raised)",
-        zIndex: 45,
-        display: "flex",
-        flexDirection: "column",
+        zIndex: 45, display: "flex", flexDirection: "column",
         animation: "tray-slide-in 200ms ease",
       }}>
         <style>{`@keyframes tray-slide-in { from { transform: translateX(-12px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
-
-        {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 16px 12px", borderBottom: "var(--border-subtle)", flexShrink: 0 }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>Notifications</span>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -215,22 +193,16 @@ function NotificationTray({
             </button>
           </div>
         </div>
-
-        {/* Content */}
         <div style={{ flex: 1, overflowY: "auto" }}>
           {todayNotifs.length > 0 && (
             <div>
-              <p style={{ margin: 0, padding: "10px 16px 4px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
-                Today
-              </p>
+              <p style={{ margin: 0, padding: "10px 16px 4px", fontSize: 11, fontWeight: 600, color: "var(--ink-tertiary)" }}>Today</p>
               {todayNotifs.map(n => <NotifRow key={n.id} n={n} />)}
             </div>
           )}
           {earlierNotifs.length > 0 && (
             <div>
-              <p style={{ margin: 0, padding: "10px 16px 4px", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
-                Earlier
-              </p>
+              <p style={{ margin: 0, padding: "10px 16px 4px", fontSize: 11, fontWeight: 600, color: "var(--ink-tertiary)" }}>Earlier</p>
               {earlierNotifs.map(n => <NotifRow key={n.id} n={n} />)}
             </div>
           )}
@@ -240,6 +212,103 @@ function NotificationTray({
             </div>
           )}
         </div>
+      </div>
+    </>
+  )
+}
+
+// ── Scope Switcher ─────────────────────────────────────────────────────────
+
+function ScopeSwitcher({ collapsed, sidebarWidth }: { collapsed: boolean; sidebarWidth: number }) {
+  const { selectedProjectId, setSelectedProjectId, hasPrograms, scopeLabel, realProjects } = useScope()
+  const [open, setOpen] = useState(false)
+  const [dropdownTop, setDropdownTop] = useState(0)
+  const btnRef = useRef<HTMLButtonElement>(null)
+
+  function handleToggle() {
+    if (btnRef.current) {
+      setDropdownTop(btnRef.current.getBoundingClientRect().bottom + 4)
+    }
+    setOpen(v => !v)
+  }
+
+  if (collapsed) return null
+
+  if (!hasPrograms) {
+    return (
+      <div style={{ padding: "0 16px 10px" }}>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", lineHeight: "14px", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {ORG.name}
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      {open && (
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 98 }} onClick={() => setOpen(false)} />
+          <div style={{
+            position: "fixed",
+            top: dropdownTop,
+            left: 8,
+            width: sidebarWidth - 16,
+            backgroundColor: "#FFFFFF",
+            borderRadius: 8,
+            border: "1px solid var(--hair)",
+            boxShadow: "var(--elevation-raised)",
+            zIndex: 99,
+            overflow: "hidden",
+          }}>
+            <button type="button" onClick={() => { setSelectedProjectId(null); setOpen(false) }}
+              style={{
+                width: "100%", padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between",
+                background: selectedProjectId === null ? "var(--slate-tint)" : "transparent",
+                border: "none", cursor: "pointer", textAlign: "left", transition: "background 150ms",
+              }}
+              onMouseEnter={(e) => { if (selectedProjectId !== null) (e.currentTarget as HTMLButtonElement).style.background = "var(--canvas)" }}
+              onMouseLeave={(e) => { if (selectedProjectId !== null) (e.currentTarget as HTMLButtonElement).style.background = "transparent" }}
+            >
+              <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)", lineHeight: "16px" }}>{ORG.name}</span>
+              {selectedProjectId === null && <Check size={12} style={{ color: "var(--slate-primary)", flexShrink: 0 }} />}
+            </button>
+            <div style={{ height: 1, backgroundColor: "var(--hair)", margin: "2px 0" }} />
+            {realProjects.map(p => (
+              <button key={p.id} type="button" onClick={() => { setSelectedProjectId(p.id); setOpen(false) }}
+                style={{
+                  width: "100%", padding: "8px 12px 8px 20px", display: "flex", alignItems: "center", justifyContent: "space-between",
+                  background: selectedProjectId === p.id ? "var(--slate-tint)" : "transparent",
+                  border: "none", cursor: "pointer", textAlign: "left", transition: "background 150ms",
+                }}
+                onMouseEnter={(e) => { if (selectedProjectId !== p.id) (e.currentTarget as HTMLButtonElement).style.background = "var(--canvas)" }}
+                onMouseLeave={(e) => { if (selectedProjectId !== p.id) (e.currentTarget as HTMLButtonElement).style.background = "transparent" }}
+              >
+                <span style={{ fontSize: 12, color: "var(--ink-secondary)", lineHeight: "16px" }}>{p.name}</span>
+                {selectedProjectId === p.id && <Check size={12} style={{ color: "var(--slate-primary)", flexShrink: 0 }} />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      <div style={{ padding: "0 8px 8px" }}>
+        <button ref={btnRef} type="button" onClick={handleToggle}
+          style={{
+            width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "5px 8px", borderRadius: 7,
+            border: "1px solid rgba(255,255,255,0.14)",
+            background: open ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.06)",
+            cursor: "pointer", transition: "background 150ms",
+          }}
+          onMouseEnter={(e) => { if (!open) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.09)" }}
+          onMouseLeave={(e) => { if (!open) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)" }}
+        >
+          <span style={{ fontSize: 11, fontWeight: 500, color: "rgba(255,255,255,0.75)", lineHeight: "14px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, textAlign: "left" }}>
+            {scopeLabel}
+          </span>
+          <ChevronDown size={11} style={{ color: "rgba(255,255,255,0.45)", flexShrink: 0, marginLeft: 4 }} />
+        </button>
       </div>
     </>
   )
@@ -267,7 +336,9 @@ export function Sidebar() {
   }
 
   function isActive(href: string) {
-    if (href === "/home") return pathname === "/" || pathname === "/home" || pathname.startsWith("/home/")
+    if (href === "/home") return pathname === "/" || pathname === "/home"
+    if (href === "/tracker") return pathname === "/tracker" || pathname.startsWith("/tracker/") || pathname.startsWith("/pursuit/")
+    if (href === "/discover") return pathname === "/discover" || pathname.startsWith("/discover/") || pathname.startsWith("/funders/")
     return pathname === href || pathname.startsWith(href + "/")
   }
 
@@ -294,23 +365,15 @@ export function Sidebar() {
         />
       )}
 
-      <aside
-        style={{
-          width: sidebarWidth,
-          flexShrink: 0,
-          background: "var(--gradient-ai-sidebar)",
-          display: "flex",
-          flexDirection: "column",
-          height: "100vh",
-          position: "sticky",
-          top: 0,
-          zIndex: 46,
-          transition: "width 200ms ease-in-out",
-          overflow: "hidden",
-        }}
-      >
+      <aside style={{
+        width: sidebarWidth, flexShrink: 0,
+        background: "var(--sidebar-gradient)",
+        display: "flex", flexDirection: "column",
+        height: "100vh", position: "sticky", top: 0,
+        zIndex: 46, transition: "width 200ms ease-in-out", overflow: "hidden",
+      }}>
         {/* Brand */}
-        <div style={{ padding: "18px 16px 14px 16px", flexShrink: 0, display: "flex", justifyContent: collapsed ? "center" : "flex-start" }}>
+        <div style={{ padding: "18px 16px 10px 16px", flexShrink: 0, display: "flex", justifyContent: collapsed ? "center" : "flex-start" }}>
           <Link href="/home" style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }} title={collapsed ? "Grant Assistant" : undefined}>
             <div style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: "#FFFFFF", lineHeight: 1 }}>G</span>
@@ -323,44 +386,43 @@ export function Sidebar() {
           </Link>
         </div>
 
-        {/* Nav groups */}
+        {/* Scope switcher */}
+        <ScopeSwitcher collapsed={collapsed} sidebarWidth={sidebarWidth} />
+
+        {/* Nav */}
         <nav style={{ flex: 1, padding: "4px 8px", display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" }}>
           {!collapsed ? (
-            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.09em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", padding: "10px 8px 6px 8px", display: "block" }}>
-              Main
-            </span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.40)", padding: "10px 8px 6px 8px", display: "block" }}>Main</span>
           ) : <div style={{ height: 10 }} />}
 
           {MAIN_NAV.map(({ label, href, icon: Icon }) => {
             const active = isActive(href)
             return (
               <Link key={href} href={href} title={collapsed ? label : undefined}
-                style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: collapsed ? 0 : 10, padding: collapsed ? "8px 0" : "8px 10px", borderRadius: 8, textDecoration: "none", backgroundColor: active ? "rgba(255,255,255,0.12)" : "transparent", transition: "background-color 150ms" }}
+                style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: collapsed ? 0 : 10, padding: collapsed ? "8px 0" : "8px 10px", borderRadius: 8, textDecoration: "none", backgroundColor: active ? "rgba(255,255,255,0.10)" : "transparent", transition: "background-color 150ms" }}
                 onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "rgba(255,255,255,0.07)" }}
                 onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "transparent" }}
               >
-                <Icon size={16} style={{ flexShrink: 0, color: active ? "#FFFFFF" : "rgba(255,255,255,0.55)" }} />
-                {!collapsed && <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? "#FFFFFF" : "rgba(255,255,255,0.65)", lineHeight: "16px", whiteSpace: "nowrap" }}>{label}</span>}
+                <Icon size={16} style={{ flexShrink: 0, color: active ? "#F0EEEA" : "#A39FB0" }} />
+                {!collapsed && <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? "#F0EEEA" : "#A39FB0", lineHeight: "16px", whiteSpace: "nowrap" }}>{label}</span>}
               </Link>
             )
           })}
 
           {!collapsed ? (
-            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.09em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", padding: "14px 8px 6px 8px", display: "block" }}>
-              Workspace
-            </span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.40)", padding: "14px 8px 6px 8px", display: "block" }}>Workspace</span>
           ) : <div style={{ margin: "10px 4px", borderTop: "1px solid rgba(255,255,255,0.12)" }} />}
 
           {WORKSPACE_NAV.map(({ label, href, icon: Icon }) => {
             const active = isActive(href)
             return (
               <Link key={href} href={href} title={collapsed ? label : undefined}
-                style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: collapsed ? 0 : 10, padding: collapsed ? "8px 0" : "8px 10px", borderRadius: 8, textDecoration: "none", backgroundColor: active ? "rgba(255,255,255,0.12)" : "transparent", transition: "background-color 150ms" }}
+                style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: collapsed ? 0 : 10, padding: collapsed ? "8px 0" : "8px 10px", borderRadius: 8, textDecoration: "none", backgroundColor: active ? "rgba(255,255,255,0.10)" : "transparent", transition: "background-color 150ms" }}
                 onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "rgba(255,255,255,0.07)" }}
                 onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "transparent" }}
               >
-                <Icon size={16} style={{ flexShrink: 0, color: active ? "#FFFFFF" : "rgba(255,255,255,0.55)" }} />
-                {!collapsed && <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? "#FFFFFF" : "rgba(255,255,255,0.65)", lineHeight: "16px", whiteSpace: "nowrap" }}>{label}</span>}
+                <Icon size={16} style={{ flexShrink: 0, color: active ? "#F0EEEA" : "#A39FB0" }} />
+                {!collapsed && <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? "#F0EEEA" : "#A39FB0", lineHeight: "16px", whiteSpace: "nowrap" }}>{label}</span>}
               </Link>
             )
           })}
@@ -368,10 +430,7 @@ export function Sidebar() {
 
         {/* Notification Bell */}
         <div style={{ padding: collapsed ? "4px 8px 4px 8px" : "4px 10px 4px 10px", flexShrink: 0 }}>
-          <button
-            type="button"
-            onClick={() => setNotifOpen(v => !v)}
-            title={collapsed ? "Notifications" : undefined}
+          <button type="button" onClick={() => setNotifOpen(v => !v)} title={collapsed ? "Notifications" : undefined}
             style={{
               display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start",
               gap: collapsed ? 0 : 10, width: "100%", padding: collapsed ? "8px 0" : "8px 10px",
@@ -404,9 +463,6 @@ export function Sidebar() {
           </button>
         </div>
 
-        {/* New Proposal affordance */}
-        <NewProposalButton collapsed={collapsed} />
-
         {/* AI Bar */}
         <div style={{ padding: collapsed ? "0 8px 12px 8px" : "0 10px 12px 10px", flexShrink: 0 }}>
           {collapsed ? (
@@ -424,7 +480,7 @@ export function Sidebar() {
               </div>
               {aiInput && (
                 <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 7, backgroundColor: "rgba(255,255,255,0.08)", fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: "17px" }}>
-                  I can help you with grant writing, discovering opportunities, and managing your portfolio. What would you like to know?
+                  I can help you discover funders, draft proposals, and manage your grant pipeline. What would you like to know?
                 </div>
               )}
             </div>
@@ -444,7 +500,7 @@ export function Sidebar() {
           )}
         </div>
 
-        {/* Collapse / expand toggle */}
+        {/* Collapse toggle */}
         <button type="button" onClick={toggleCollapsed} title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           style={{ flexShrink: 0, width: "100%", height: 36, display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-end", padding: collapsed ? 0 : "0 16px", background: "rgba(255,255,255,0.04)", border: "none", borderTop: "1px solid rgba(255,255,255,0.06)", cursor: "pointer", color: "rgba(255,255,255,0.4)", transition: "background-color 150ms, color 150ms" }}
           onMouseEnter={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.backgroundColor = "rgba(255,255,255,0.08)"; b.style.color = "rgba(255,255,255,0.7)" }}
@@ -453,27 +509,6 @@ export function Sidebar() {
           {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
       </aside>
-    </>
-  )
-}
-
-// ── New Proposal affordance ────────────────────────────────────────────────
-
-function NewProposalButton({ collapsed }: { collapsed: boolean }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <>
-      <div style={{ padding: collapsed ? "0 8px 8px 8px" : "0 10px 8px 10px", flexShrink: 0 }}>
-        <button type="button" onClick={() => setOpen(true)} title={collapsed ? "New Proposal" : undefined}
-          style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: collapsed ? 0 : 10, width: "100%", padding: collapsed ? "8px 0" : "8px 10px", borderRadius: 8, border: "none", backgroundColor: "transparent", cursor: "pointer", transition: "background-color 150ms" }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(173,157,174,0.15)" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
-        >
-          <PlusCircle size={16} style={{ flexShrink: 0, color: "var(--plum-soft)" }} />
-          {!collapsed && <span style={{ fontSize: 13, fontWeight: 600, color: "var(--plum-soft)", lineHeight: "16px", whiteSpace: "nowrap" }}>New proposal</span>}
-        </button>
-      </div>
-      <NewProposalModal open={open} onClose={() => setOpen(false)} opportunityName="New Proposal" />
     </>
   )
 }

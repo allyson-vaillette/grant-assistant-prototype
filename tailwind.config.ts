@@ -54,8 +54,9 @@ const config: Config = {
         },
 
         /* GA 2.0 raw tokens */
-        canvas:  "var(--canvas)",
-        surface: "var(--surface-white)",
+        canvas:       "var(--canvas)",
+        surface:      "var(--surface)",
+        "surface-sunk": "var(--surface-sunk)",
 
         ink: {
           DEFAULT:   "var(--ink)",
@@ -107,15 +108,17 @@ const config: Config = {
 
       /* ── Elevation shadows ── */
       boxShadow: {
-        card:    "var(--elevation-card)",
-        raised:  "var(--elevation-raised)",
-        overlay: "var(--elevation-overlay)",
+        "lift-1":  "var(--lift-1)",
+        "lift-2":  "var(--lift-2)",
+        card:      "var(--lift-2)",
+        raised:    "var(--elevation-raised)",
+        overlay:   "var(--elevation-overlay)",
+        panel:     "var(--shadow-panel)",
       },
 
       /* ── Font family ── */
       fontFamily: {
         sans: [
-          "var(--font-inclusive-sans)",
           "var(--font-inter)",
           "system-ui",
           "sans-serif",

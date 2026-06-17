@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
-import { Inter, Lora, Inclusive_Sans } from "next/font/google"
+import { Inter, Lora } from "next/font/google"
 import "./globals.css"
-import { PasscodeGate } from "@/components/PasscodeGate"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -13,13 +12,6 @@ const lora = Lora({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   variable: "--font-lora",
-  display: "swap",
-})
-
-const inclusiveSans = Inclusive_Sans({
-  subsets: ["latin"],
-  weight: ["400"],
-  variable: "--font-inclusive-sans",
   display: "swap",
 })
 
@@ -38,8 +30,8 @@ export default function RootLayout({
       <head>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,400,0,0" />
       </head>
-      <body className={`${inter.variable} ${lora.variable} ${inclusiveSans.variable} font-sans antialiased`}>
-        <PasscodeGate>{children}</PasscodeGate>
+      <body className={`${inter.variable} ${lora.variable} font-sans antialiased`}>
+        {children}
       </body>
     </html>
   )

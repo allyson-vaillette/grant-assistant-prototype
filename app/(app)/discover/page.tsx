@@ -1,3557 +1,1603 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Info, Plus, RotateCcw, Search, Share2, SlidersHorizontal, ThumbsDown, X } from "lucide-react"
-import { NewEngagementModal, type NewEngagementData } from "@/components/proposals/NewEngagementModal"
-import { DISCOVER_FUNDERS, type DiscoverFunder } from "@/lib/funders"
+import React, { useState, useEffect, useRef, useCallback, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { ContentContainer } from "@/components/layout/content-container"
+import { Search, X, Check, CalendarDays, MapPin, EyeOff } from "lucide-react"
+import {
+  OPPORTUNITIES, MATCHES, FUNDERS, PROJECTS,
+  getFunder, getMatchForOpportunity, createPipelineOpportunity, getPipelineForOpportunity,
+  trackFunder,
+} from "@/lib/mock-data"
+import { useScope } from "@/lib/scope-context"
+import { useDiscoverFilters } from "@/lib/discover-filters-context"
+import type { Opportunity, Funder, FunderType, Match } from "@/lib/types"
+import { OpportunityPeekPanel } from "./OpportunityPeekPanel"
+import { HideOpportunityDialog, type HidePayload } from "./HideOpportunityDialog"
+import { recordHideOpportunity, undoHideOpportunity } from "./actions"
+import { FUNDER_TYPE_LABELS, AWARD_RANGE_LABELS, DEADLINE_LABELS } from "./FiltersPanel"
+import { IncompleteProfileBanner } from "@/components/IncompleteProfileBanner"
 
-// ── Types ──────────────────────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────
 
-type StatusType = "Applications open" | "Letters of inquiry open" | "Rolling deadline"
-type MatchStrength = "Strong match" | "Good match" | "Partial match"
-type ActiveTab = "opportunities" | "funders"
-
-interface WhyMatch {
-  icon: "check" | "warning"
-  text: string
-  category?: "geo" | "focus" | "award" | "eligibility" | "deadline" | "other"
+const MONTH_INDEX: Record<string, number> = {
+  Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+  Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
 }
 
-interface Initiative {
-  name: string
-  match: MatchStrength
+function parseDeadlineDate(str: string): Date | null {
+  if (!str || str === "Rolling") return null
+  const m = str.match(/^([A-Za-z]{3})\s+(\d{1,2}),\s+(\d{4})$/)
+  if (m) {
+    const monthIdx = MONTH_INDEX[m[1]]
+    if (monthIdx !== undefined) return new Date(parseInt(m[3]), monthIdx, parseInt(m[2]))
+  }
+  return null
 }
 
-interface Opportunity {
-  id: string
-  funder: string
-  status: StatusType
-  grantName: string
-  meta: string
-  initiativeTags: string[]
-  matchLabel: string
-  matchStrength: MatchStrength
-  matchDots: number
-  amountLabel: string
-  dueDateLabel: string
-  focusAreaLabel: string
-  whyMatches: WhyMatch[]
-  aboutGrant: string
-  initiatives: Initiative[]
-  fitPct: number
-  successContext?: string
+function parseAmount(str: string | undefined): number | null {
+  if (!str) return null
+  const digits = str.replace(/[^0-9]/g, "")
+  return digits ? parseInt(digits) : null
 }
 
-const FUNDER_TYPES = [
-  "Private foundation",
-  "Community foundation",
-  "Government",
-  "Corporate foundation",
-  "Public charity",
-] as const
+const ALL_FOCUS_AREAS = Array.from(new Set([
+  ...FUNDERS.flatMap(f => f.focusAreas),
+  ...OPPORTUNITIES.flatMap(o => o.focusAreas ?? []),
+])).sort()
 
-type FunderTypeFilter = (typeof FUNDER_TYPES)[number]
+const ALL_GEOGRAPHIES = Array.from(new Set(FUNDERS.map(f => f.geography))).sort()
 
-const INITIATIVE_OPTIONS = ["Rescue & Intake", "Foster Program", "Neutering"] as const
+const STRONG_MATCHES = MATCHES
+  .filter(m => m.matchStrength === "strong" && m.opportunityId)
+  .map(m => ({ match: m, opp: OPPORTUNITIES.find(o => o.id === m.opportunityId) }))
+  .filter((item): item is { match: Match; opp: Opportunity } => !!item.opp)
 
-interface CombinedFilterState {
-  initiatives: Record<string, boolean>
-  focusAreas: Record<string, boolean>
-  geography: Record<string, boolean>
-  // Opportunity-specific
-  deadline: "next-6" | "next-12" | null
-  // Funder-specific
-  funderTypes: Record<FunderTypeFilter, boolean>
-  acceptsUnsolicited: boolean
+// One entry per funder, best match score wins
+const MATCHED_FUNDERS: { match: Match; funder: Funder }[] = (() => {
+  const byFunder = new Map<string, Match>()
+  for (const match of MATCHES) {
+    const existing = byFunder.get(match.funderId)
+    if (!existing || match.matchScore > existing.matchScore) {
+      byFunder.set(match.funderId, match)
+    }
+  }
+  return Array.from(byFunder.entries())
+    .map(([funderId, match]) => ({ match, funder: getFunder(funderId) }))
+    .filter((item): item is { match: Match; funder: Funder } => !!item.funder)
+    .sort((a, b) => b.match.matchScore - a.match.matchScore)
+})()
+
+function matchedOppCount(funderId: string): number {
+  return MATCHES.filter(m => m.funderId === funderId && !!m.opportunityId).length
 }
 
-// ── Data ──────────────────────────────────────────────────────────────────
+// ── Funder type icon (Part 2) ──────────────────────────────────────────────
 
-const OPPORTUNITIES: Opportunity[] = [
-  {
-    id: "petco-love",
-    funder: "Petco Love",
-    status: "Applications open",
-    grantName: "Petco Love Lost & Found Grant 2026",
-    meta: "Up to $50,000 · Due Aug 15, 2026 · Animal Welfare",
-    initiativeTags: ["Rescue & Intake", "Foster Program"],
-    matchLabel: "Strong match — focus areas, geography, and eligibility all align",
-    matchStrength: "Strong match",
-    matchDots: 5,
-    amountLabel: "Up to $50,000",
-    dueDateLabel: "Due Aug 15, 2026",
-    focusAreaLabel: "Animal Welfare",
-    fitPct: 82,
-    successContext: "Petco Love funded roughly 35% of animal welfare applicants nationally last year.",
-    whyMatches: [
-      { icon: "check", text: "Geography — Petco Love funds nationally, you serve California. Confirmed match.", category: "geo" },
-      { icon: "check", text: "Focus areas align — Animal Welfare matches your Rescue & Intake and Foster Program initiatives", category: "focus" },
-      { icon: "check", text: "Award range — Petco Love typically awards $10K–$50K. Your typical ask is around $40K. Within range.", category: "award" },
-      { icon: "check", text: "Eligibility — 501(c)(3) required, organization size fits grant range", category: "eligibility" },
-      { icon: "warning", text: "Deadline pressure — application due in 93 days, you have no active proposal yet", category: "deadline" },
-    ],
-    aboutGrant:
-      "Petco Love Lost & Found grants support organizations working to reunite lost pets with their families. Funding prioritizes shelters and rescues with proven community impact in underserved areas, with preference for programs serving cats and dogs at scale.",
-    initiatives: [
-      { name: "Rescue & Intake", match: "Strong match" },
-      { name: "Foster Program", match: "Strong match" },
-    ],
-  },
-  {
-    id: "aspca",
-    funder: "ASPCA",
-    status: "Applications open",
-    grantName: "ASPCA Saving Lives Grant",
-    meta: "Up to $75,000 · Due Sep 30, 2026 · Animal Welfare",
-    initiativeTags: ["Rescue & Intake"],
-    matchLabel: "Good match — strong focus area alignment",
-    matchStrength: "Good match",
-    matchDots: 4,
-    amountLabel: "Up to $75,000",
-    dueDateLabel: "Due Sep 30, 2026",
-    focusAreaLabel: "Animal Welfare",
-    fitPct: 74,
-    successContext: "ASPCA Saving Lives funded about 28% of applicants in the shelter operations category last cycle.",
-    whyMatches: [
-      { icon: "check", text: "Geography — ASPCA funds nationally, California orgs are eligible. Confirmed match.", category: "geo" },
-      { icon: "check", text: "Focus areas align — Animal Welfare is a primary ASPCA funding priority", category: "focus" },
-      { icon: "check", text: "Award range — ASPCA typically awards $25K–$75K. Your typical ask is around $60K. Within range.", category: "award" },
-      { icon: "check", text: "Eligibility — 501(c)(3) required, meets organization criteria", category: "eligibility" },
-      { icon: "warning", text: "Deadline — application due in 138 days, early proposal recommended", category: "deadline" },
-    ],
-    aboutGrant:
-      "ASPCA Saving Lives grants fund shelters and rescue organizations focused on reducing euthanasia rates. Grants prioritize organizations with demonstrated data-driven intake reduction programs and strong community partnerships.",
-    initiatives: [{ name: "Rescue & Intake", match: "Strong match" }],
-  },
-  {
-    id: "ca-wellness",
-    funder: "California Wellness Foundation",
-    status: "Letters of inquiry open",
-    grantName: "Advancing Wellness in Underserved Communities",
-    meta: "$50,000–$200,000 · Due Jul 1, 2026 · Community Development, Health",
-    initiativeTags: ["Foster Program", "Neutering"],
-    matchLabel: "Partial match — geography aligns, focus areas partially overlap",
-    matchStrength: "Partial match",
-    matchDots: 3,
-    amountLabel: "$50,000–$200,000",
-    dueDateLabel: "Due Jul 1, 2026",
-    focusAreaLabel: "Community Development",
-    fitPct: 55,
-    successContext: undefined,
-    whyMatches: [
-      { icon: "check", text: "Geography — California Wellness exclusively funds California-based organizations. Confirmed match.", category: "geo" },
-      { icon: "warning", text: "Focus area — health and wellness framing required; reframe animal welfare impact accordingly", category: "focus" },
-      { icon: "check", text: "Award range — California Wellness typically awards $50K–$200K. Your typical ask fits within range.", category: "award" },
-      { icon: "check", text: "Community focus — underserved communities aligns with your service area", category: "eligibility" },
-      { icon: "warning", text: "LOI deadline — letters of inquiry due in 47 days", category: "deadline" },
-    ],
-    aboutGrant:
-      "California Wellness Foundation advances the health and wellness of Californians by making grants to nonprofits addressing the root causes of poor health in underserved communities. Animal welfare programs with strong community health components may be eligible.",
-    initiatives: [
-      { name: "Foster Program", match: "Good match" },
-      { name: "Neutering", match: "Partial match" },
-    ],
-  },
-  {
-    id: "petsmart",
-    funder: "PetSmart Charities",
-    status: "Rolling deadline",
-    grantName: "Saving Cats & Kittens Grant",
-    meta: "$10,000–$100,000 · Rolling · Animal Welfare",
-    initiativeTags: ["Rescue & Intake", "Foster Program"],
-    matchLabel: "Good match — strong alignment with rescue programs",
-    matchStrength: "Good match",
-    matchDots: 4,
-    amountLabel: "$10,000–$100,000",
-    dueDateLabel: "Rolling",
-    focusAreaLabel: "Animal Welfare",
-    fitPct: 71,
-    successContext: "PetSmart Charities approved roughly 22% of Saving Cats & Kittens applications last year.",
-    whyMatches: [
-      { icon: "check", text: "Geography — national funder, California orgs eligible. Confirmed match.", category: "geo" },
-      { icon: "check", text: "Focus areas align — cat and kitten rescue directly matches Rescue & Intake initiative", category: "focus" },
-      { icon: "check", text: "Award range — PetSmart Charities typically awards $10K–$100K. Your typical ask is within range.", category: "award" },
-      { icon: "check", text: "Rolling deadline — apply anytime, no immediate deadline pressure", category: "deadline" },
-      { icon: "warning", text: "Cat-specific — program must demonstrate significant cat and kitten focus", category: "eligibility" },
-    ],
-    aboutGrant:
-      "PetSmart Charities Saving Cats & Kittens grants support organizations running spay/neuter, foster, and rescue programs specifically for cats and kittens. Grants favor organizations with established trap-neuter-return programs and strong community partnerships.",
-    initiatives: [
-      { name: "Rescue & Intake", match: "Strong match" },
-      { name: "Foster Program", match: "Good match" },
-    ],
-  },
-]
-
-const ENGAGEMENTS = [
-  { id: "ford", name: "Ford Foundation", status: "Active" as const },
-  { id: "petco", name: "Petco Love", status: "New" as const },
-]
-
-const TEAMMATES = [
-  { id: "taylor", name: "Taylor S.", initials: "TS" },
-  { id: "marcus", name: "Marcus R.", initials: "MR" },
-  { id: "jamie",  name: "Jamie K.",  initials: "JK" },
-  { id: "alex",   name: "Alex M.",   initials: "AM" },
-]
-
-// ── Style constants ────────────────────────────────────────────────────────
-
-const STATUS_STYLE: Record<StatusType, { bg: string; color: string }> = {
-  "Applications open":       { bg: "var(--evergreen-tint)", color: "var(--evergreen)" },
-  "Letters of inquiry open": { bg: "var(--amber-light)",    color: "var(--amber)"     },
-  "Rolling deadline":        { bg: "var(--slate-tint)",     color: "var(--slate-secondary)" },
+const FUNDER_ICON_MAP: Record<FunderType, string> = {
+  private_foundation:   "account_balance",
+  corporate_foundation: "corporate_fare",
+  public_charity:       "volunteer_activism",
+  community_foundation: "groups",
+  government:           "gavel",
 }
 
-// ── Icon components ────────────────────────────────────────────────────────
-
-function CheckCircle() {
+function FunderTypeIcon({ type }: { type: FunderType }) {
+  const icon = FUNDER_ICON_MAP[type] ?? "account_balance"
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden style={{ flexShrink: 0, marginTop: 2 }}>
-      <circle cx="7" cy="7" r="6.5" fill="var(--slate-tint)" stroke="var(--slate-secondary)" strokeWidth="0.75" />
-      <path d="M4.5 7.2l1.7 1.7 3.3-3.3" stroke="var(--slate-secondary)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <span style={{
+      display: "inline-flex", alignItems: "center", justifyContent: "center",
+      width: 32, height: 32, borderRadius: "50%",
+      backgroundColor: "#EEF2F6", flexShrink: 0,
+    }}>
+      <span className="material-symbols-outlined" style={{ fontSize: 18, color: "#4A6080", lineHeight: 1, userSelect: "none" }}>
+        {icon}
+      </span>
+    </span>
   )
 }
 
-function WarningCircle() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden style={{ flexShrink: 0, marginTop: 2 }}>
-      <circle cx="7" cy="7" r="6.5" fill="var(--amber-light)" stroke="var(--amber)" strokeWidth="0.75" />
-      <path d="M7 4.5v3" stroke="var(--amber)" strokeWidth="1.2" strokeLinecap="round" />
-      <circle cx="7" cy="9.5" r="0.8" fill="var(--amber)" />
-    </svg>
-  )
-}
+// ── Program picker pill (Part 1) ───────────────────────────────────────────
 
-function CheckboxIcon({ checked }: { checked: boolean }) {
-  return (
-    <div
-      style={{
-        width: 14,
-        height: 14,
-        borderRadius: 3,
-        flexShrink: 0,
-        backgroundColor: checked ? "var(--slate-primary)" : "transparent",
-        border: `1.5px solid ${checked ? "var(--slate-primary)" : "var(--ink-tertiary)"}`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        transition: "background-color 150ms, border-color 150ms",
-      }}
-    >
-      {checked && (
-        <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-          <path d="M1.5 4.2l1.7 1.6L6.5 2" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      )}
-    </div>
-  )
-}
-
-function MatchDots({ filled }: { filled: number }) {
-  const [showTip, setShowTip] = useState(false)
-  const tipLabel = filled >= 5 ? "Strong match" : filled >= 4 ? "Good match" : "Partial match"
-  return (
-    <div
-      style={{ position: "relative", display: "inline-flex", gap: 3, alignItems: "center", flexShrink: 0 }}
-      onMouseEnter={() => setShowTip(true)}
-      onMouseLeave={() => setShowTip(false)}
-    >
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div
-          key={i}
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            backgroundColor: i < filled ? "var(--slate-secondary)" : "var(--slate-light)",
-            transition: "background-color 150ms",
-          }}
-        />
-      ))}
-      {showTip && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: "calc(100% + 6px)",
-            left: "50%",
-            transform: "translateX(-50%)",
-            backgroundColor: "#1C2E26",
-            color: "#FFFFFF",
-            fontSize: 11,
-            fontWeight: 500,
-            padding: "4px 8px",
-            borderRadius: 6,
-            whiteSpace: "nowrap",
-            zIndex: 100,
-            pointerEvents: "none",
-            boxShadow: "0 2px 8px rgba(28,46,38,0.2)",
-          }}
-        >
-          {tipLabel}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Opportunity Card ────────────────────────────────────────────────────────
-
-function OpportunityCard({
-  opp,
-  isSelected,
-  isNotRelevant,
-  onClick,
-  onNotRelevant,
-  onShare,
-}: {
-  opp: Opportunity
-  isSelected: boolean
-  isNotRelevant: boolean
-  onClick: () => void
-  onNotRelevant: () => void
-  onShare: () => void
-}) {
-  const [isHovered, setIsHovered] = useState(false)
-
-  const statusStyle = STATUS_STYLE[opp.status]
-  const matchColor =
-    opp.matchStrength === "Partial match" ? "var(--slate)" : "var(--slate-secondary)"
-  const showMatchLabel = opp.matchStrength === "Strong match"
+function ProgramPickerPill({ activeProjectId, newCount }: { activeProjectId: string; newCount: number }) {
+  const [open, setOpen] = useState(false)
+  const project = PROJECTS.find(p => p.id === activeProjectId) ?? PROJECTS[0]
+  const name = project?.name ?? "Spay/Neuter Program"
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-        width: "100%",
-        padding: "14px 16px 14px 14px",
-        borderRadius: 12,
-        backgroundColor: isSelected ? "var(--slate-tint)" : "#FFFFFF",
-        border: isSelected
-          ? "1.5px solid var(--slate-secondary)"
-          : isHovered
-          ? "1px solid rgba(74,96,128,0.35)"
-          : "1px solid var(--border-default)",
-        borderLeft: isSelected
-          ? "3px solid var(--slate-secondary)"
-          : "3px solid transparent",
-        boxShadow: isSelected
-          ? "0px 3px 10px rgba(28,24,64,0.1)"
-          : isHovered
-          ? "0px 2px 8px rgba(28,24,64,0.07)"
-          : "0px 1px 3px rgba(28,24,64,0.04)",
-        cursor: "pointer",
-        textAlign: "left",
-        transition: "border-color 150ms ease-in-out, box-shadow 150ms ease-in-out, background-color 150ms ease-in-out",
-      }}
-    >
-      {/* Funder + status + share (hover-revealed) */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-        <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)", lineHeight: "16px" }}>
-          {opp.funder}
-        </span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-          {isHovered && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onShare() }}
-              title="Share this opportunity"
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: "2px 4px",
-                borderRadius: 5,
-                display: "flex",
-                alignItems: "center",
-                color: "var(--ink-tertiary)",
-                transition: "color 150ms, background-color 150ms",
-              }}
-              onMouseEnter={(e) => {
-                const el = e.currentTarget as HTMLButtonElement
-                el.style.color = "var(--slate-secondary)"
-                el.style.backgroundColor = "var(--slate-tint)"
-              }}
-              onMouseLeave={(e) => {
-                const el = e.currentTarget as HTMLButtonElement
-                el.style.color = "var(--ink-tertiary)"
-                el.style.backgroundColor = "transparent"
-              }}
-            >
-              <Share2 size={12} />
-            </button>
-          )}
-          <span
-            style={{
-              flexShrink: 0,
-              borderRadius: "var(--radius-pill)",
-              padding: "3px 9px",
-              backgroundColor: statusStyle.bg,
-              fontSize: 11,
-              fontWeight: 500,
-              color: statusStyle.color,
-              letterSpacing: "0.02em",
-              lineHeight: "14px",
-            }}
-          >
-            {opp.status}
-          </span>
-        </div>
-      </div>
-
-      {/* Grant name */}
-      <div
-        style={{
-          fontSize: 14,
-          fontWeight: 600,
-          color: "var(--ink)",
-          lineHeight: "18px",
-          letterSpacing: "-0.01em",
-        }}
-      >
-        {opp.grantName}
-      </div>
-
-      {/* Meta */}
-      <div style={{ fontSize: 12, color: "var(--slate)", lineHeight: "16px" }}>{opp.meta}</div>
-
-      {/* Tags + dots + match label */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            {showMatchLabel && (
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                  color: "var(--slate-secondary)",
-                  lineHeight: "12px",
-                }}
-              >
-                Matches your initiatives
-              </span>
-            )}
-            {opp.initiativeTags.map((tag) => (
-              <span
-                key={tag}
-                style={{
-                  borderRadius: "var(--radius-pill)",
-                  padding: "3px 9px",
-                  backgroundColor: "var(--slate-tint)",
-                  fontSize: 11,
-                  fontWeight: 500,
-                  color: "var(--slate-primary)",
-                  lineHeight: "14px",
-                }}
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-          <MatchDots filled={opp.matchDots} />
-        </div>
-        <div
-          style={{
-            fontSize: 12,
-            color: matchColor,
-            lineHeight: "16px",
-            fontStyle: "italic",
-          }}
-        >
-          {opp.matchLabel}
-        </div>
-      </div>
-
-      {/* Not relevant */}
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onNotRelevant() }}
-          title={isNotRelevant ? "Re-evaluate this opportunity" : "Mark as not relevant"}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: "2px 4px",
-            borderRadius: 5,
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            color: isNotRelevant ? "var(--plum-soft)" : "var(--ink-tertiary)",
-            fontSize: 11,
-            transition: "color 150ms, background-color 150ms",
-          }}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget as HTMLButtonElement
-            if (!isNotRelevant) {
-              el.style.color = "#C0302A"
-              el.style.backgroundColor = "#FEEAEA"
-            }
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget as HTMLButtonElement
-            el.style.color = isNotRelevant ? "var(--plum-soft)" : "var(--ink-tertiary)"
-            el.style.backgroundColor = "transparent"
-          }}
-        >
-          <ThumbsDown
-            size={11}
-            fill={isNotRelevant ? "var(--plum-soft)" : "none"}
-            color={isNotRelevant ? "var(--plum-soft)" : "currentColor"}
-          />
-          <span>Not relevant</span>
-        </button>
-      </div>
-    </button>
-  )
-}
-
-// ── Funder Card ─────────────────────────────────────────────────────────────
-
-function FunderCard({
-  funder,
-  isSelected,
-  isNotRelevant,
-  onClick,
-  onNotRelevant,
-}: {
-  funder: DiscoverFunder
-  isSelected: boolean
-  isNotRelevant: boolean
-  onClick: () => void
-  onNotRelevant: () => void
-}) {
-  const [isHovered, setIsHovered] = useState(false)
-
-  const matchColor =
-    funder.matchStrength === "Partial match" ? "var(--slate)" : "var(--slate-secondary)"
-  const showMatchLabel = funder.matchStrength === "Strong match"
-  const matchedInitiatives = funder.initiatives.filter(
-    (i) => i.match === "Strong match" || i.match === "Good match"
-  )
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-        width: "100%",
-        padding: "14px 16px 14px 14px",
-        borderRadius: 12,
-        backgroundColor: "var(--surface)",
-        border: isSelected
-          ? "1.5px solid rgba(90,138,53,0.3)"
-          : isHovered
-          ? "1px solid rgba(90,138,53,0.2)"
-          : "1px solid var(--border-default)",
-        borderLeft: isSelected
-          ? "3px solid var(--slate-secondary)"
-          : "3px solid transparent",
-        boxShadow:
-          isSelected || isHovered
-            ? "0px 2px 8px rgba(28,24,64,0.07)"
-            : "0px 1px 3px rgba(28,24,64,0.04)",
-        cursor: "pointer",
-        textAlign: "left",
-        transition: "border-color 150ms ease-in-out, box-shadow 150ms ease-in-out",
-      }}
-    >
-      {/* Funder type chip + (no status equivalent — chip sits right) */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
-        <span
-          style={{
-            flexShrink: 0,
-            borderRadius: "var(--radius-pill)",
-            padding: "3px 9px",
-            backgroundColor: "var(--slate-tint)",
-            fontSize: 11,
-            fontWeight: 500,
-            color: "var(--slate-primary)",
-            letterSpacing: "0.02em",
-            lineHeight: "14px",
-          }}
-        >
-          {funder.type}
-        </span>
-      </div>
-
-      {/* Funder name (prominent) */}
-      <div
-        style={{
-          fontSize: 14,
-          fontWeight: 600,
-          color: "var(--ink)",
-          lineHeight: "18px",
-          letterSpacing: "-0.01em",
-        }}
-      >
-        {funder.name}
-      </div>
-
-      {/* Geography + funding range meta */}
-      <div style={{ fontSize: 12, color: "var(--slate)", lineHeight: "16px" }}>
-        {funder.geography} · {funder.fundingRange}
-      </div>
-
-      {/* Focus area chips */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-        {funder.focusAreas.slice(0, 3).map((area) => (
-          <span
-            key={area}
-            style={{
-              borderRadius: "var(--radius-pill)",
-              padding: "3px 8px",
-              backgroundColor: "var(--slate-tint)",
-              fontSize: 11,
-              fontWeight: 500,
-              color: "var(--slate-primary)",
-              lineHeight: "14px",
-            }}
-          >
-            {area}
-          </span>
-        ))}
-      </div>
-
-      {/* Initiative match + dots */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            {showMatchLabel && (
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                  color: "var(--slate-secondary)",
-                  lineHeight: "12px",
-                }}
-              >
-                Matches your initiatives
-              </span>
-            )}
-            {matchedInitiatives.slice(0, 2).map((init) => (
-              <span
-                key={init.name}
-                style={{
-                  borderRadius: "var(--radius-pill)",
-                  padding: "3px 9px",
-                  backgroundColor: "var(--slate-tint)",
-                  fontSize: 11,
-                  fontWeight: 500,
-                  color: "var(--slate-primary)",
-                  lineHeight: "14px",
-                }}
-              >
-                {init.name}
-              </span>
-            ))}
-          </div>
-          <MatchDots filled={funder.matchDots} />
-        </div>
-        <div
-          style={{
-            fontSize: 12,
-            color: matchColor,
-            lineHeight: "16px",
-            fontStyle: "italic",
-          }}
-        >
-          {funder.matchLabel}
-        </div>
-      </div>
-
-      {/* Not relevant */}
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onNotRelevant() }}
-          title={isNotRelevant ? "Re-evaluate this funder" : "Mark as not relevant"}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: "2px 4px",
-            borderRadius: 5,
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            color: isNotRelevant ? "var(--plum-soft)" : "var(--ink-tertiary)",
-            fontSize: 11,
-            transition: "color 150ms, background-color 150ms",
-          }}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget as HTMLButtonElement
-            if (!isNotRelevant) {
-              el.style.color = "#C0302A"
-              el.style.backgroundColor = "#FEEAEA"
-            }
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget as HTMLButtonElement
-            el.style.color = isNotRelevant ? "var(--plum-soft)" : "var(--ink-tertiary)"
-            el.style.backgroundColor = "transparent"
-          }}
-        >
-          <ThumbsDown
-            size={11}
-            fill={isNotRelevant ? "var(--plum-soft)" : "none"}
-            color={isNotRelevant ? "var(--plum-soft)" : "currentColor"}
-          />
-          <span>Not relevant</span>
-        </button>
-      </div>
-    </button>
-  )
-}
-
-// ── Track This Popover ─────────────────────────────────────────────────────
-
-function TrackPopover({ onCancel, onSelect }: { onCancel: () => void; onSelect: () => void }) {
-  return (
-    <div
-      style={{
-        position: "absolute",
-        bottom: "calc(100% + 8px)",
-        left: 0,
-        right: 0,
-        backgroundColor: "#FFFFFF",
-        borderRadius: 12,
-        boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-        padding: "16px",
-        zIndex: 30,
-      }}
-    >
-      <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", margin: "0 0 3px 0" }}>
-        Add to engagement
-      </p>
-      <p style={{ fontSize: 12, color: "var(--ink-tertiary)", margin: "0 0 12px 0", lineHeight: "16px" }}>
-        Select an existing engagement or create new
-      </p>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 12 }}>
-        {ENGAGEMENTS.map((eng) => (
-          <div
-            key={eng.id}
-            onClick={onSelect}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "9px 10px",
-              borderRadius: "var(--radius-button)",
-              cursor: "pointer",
-              backgroundColor: "var(--canvas)",
-            }}
-          >
-            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{eng.name}</span>
-            {eng.status === "New" ? (
-              <span
-                style={{
-                  borderRadius: "var(--radius-pill)",
-                  padding: "2px 8px",
-                  backgroundColor: "var(--slate-tint)",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: "var(--slate-primary)",
-                }}
-              >
-                New
-              </span>
-            ) : (
-              <span style={{ fontSize: 12, color: "var(--slate)" }}>{eng.status}</span>
-            )}
-          </div>
-        ))}
-
-        <div
-          style={{
-            padding: "9px 10px",
-            cursor: "pointer",
-            fontSize: 13,
-            fontWeight: 500,
-            color: "var(--slate-secondary)",
-          }}
-        >
-          + Create new engagement
-        </div>
-      </div>
-
+    <div style={{ position: "relative", flexShrink: 0 }}>
       <button
         type="button"
-        onClick={onCancel}
+        onClick={() => setOpen(o => !o)}
         style={{
-          background: "none",
-          border: "none",
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "6px 10px 6px 12px", borderRadius: 8,
+          border: "1px solid rgba(42,42,42,0.1)", backgroundColor: "#fff",
           cursor: "pointer",
-          fontSize: 13,
-          color: "var(--slate)",
-          padding: 0,
         }}
       >
-        Cancel
+        <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#4A6080", flexShrink: 0 }} />
+        <span style={{ fontSize: 13, fontWeight: 500, color: "#2a2a2a", whiteSpace: "nowrap" }}>{name}</span>
+        {newCount > 0 && (
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#3c5e4c", backgroundColor: "#EEF2F6", borderRadius: 10, padding: "1px 6px", whiteSpace: "nowrap" }}>
+            {newCount} new
+          </span>
+        )}
+        <span className="material-symbols-outlined" style={{ fontSize: 16, color: "#738498", userSelect: "none", flexShrink: 0 }}>expand_more</span>
+      </button>
+
+      {open && (
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 29 }} onClick={() => setOpen(false)} />
+          <div style={{
+            position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30,
+            backgroundColor: "#fff", border: "1px solid rgba(42,42,42,0.1)",
+            borderRadius: 8, boxShadow: "0 4px 12px rgba(42,42,42,0.10)",
+            minWidth: 220, overflow: "hidden",
+          }}>
+            {PROJECTS.map((p, i) => {
+              const pNew = p.id === activeProjectId ? newCount : 0
+              const pTotal = p.id === activeProjectId ? STRONG_MATCHES.length : 0
+              return (
+                <div key={p.id} style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  padding: "9px 14px",
+                  borderTop: i > 0 ? "1px solid rgba(42,42,42,0.06)" : "none",
+                }}>
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: p.id === activeProjectId ? 600 : 400, color: "#2a2a2a", minWidth: 0 }}>{p.name}</span>
+                  {pNew > 0 && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#3c5e4c", backgroundColor: "#EEF2F6", borderRadius: 10, padding: "1px 6px", whiteSpace: "nowrap" }}>
+                      {pNew} new
+                    </span>
+                  )}
+                  <span style={{ fontSize: 11, color: "#738498", whiteSpace: "nowrap" }}>{pTotal} total</span>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── daysLabel ──────────────────────────────────────────────────────────────
+
+function daysLabel(deadline: string | undefined): string {
+  if (!deadline) return ""
+  if (deadline === "Rolling") return "Rolling"
+  const date = parseDeadlineDate(deadline)
+  if (!date) return deadline
+  const now = new Date(); now.setHours(0, 0, 0, 0)
+  date.setHours(0, 0, 0, 0)
+  const days = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+  const short = deadline.replace(/,\s*\d{4}$/, "")
+  if (days < 0) return short
+  return `${short} · ${days}d`
+}
+
+// ── Catalogue card (Matches > Opportunities) ───────────────────────────────
+
+function CatalogueCard({ opp, onOppClick, onTrack, onHide }: {
+  opp: Opportunity
+  onOppClick: (oppId: string, el: HTMLElement) => void
+  onTrack: (oppId: string) => void
+  onHide: (oppId: string) => void
+}) {
+  const [cardHovered, setCardHovered] = useState(false)
+  const [hideButtonFocused, setHideButtonFocused] = useState(false)
+  const hideButtonVisible = cardHovered || hideButtonFocused
+  const funder = getFunder(opp.funderId)
+  const match = getMatchForOpportunity(opp.id)
+  const matchReasons = match?.matchReasons ?? []
+
+  const eligColor = opp.eligibilityLabel === "Likely eligible"
+    ? "var(--evergreen)"
+    : opp.eligibilityLabel === "Invitation required"
+    ? "var(--amber)"
+    : "var(--ink-tertiary)"
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={(e) => onOppClick(opp.id, e.currentTarget)}
+      onKeyDown={(e) => e.key === "Enter" && onOppClick(opp.id, e.currentTarget as HTMLElement)}
+      style={{
+        padding: "14px 16px",
+        backgroundColor: "var(--surface)",
+        border: "1px solid var(--hair)",
+        borderRadius: 12,
+        cursor: "pointer",
+        display: "flex", flexDirection: "column",
+        transition: "border-color 150ms, box-shadow 150ms",
+      }}
+      onMouseEnter={(e) => {
+        setCardHovered(true)
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = "var(--slate-light)"
+        el.style.boxShadow = "var(--shadow-sm)"
+      }}
+      onMouseLeave={(e) => {
+        setCardHovered(false)
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = "var(--hair)"
+        el.style.boxShadow = "none"
+      }}
+    >
+      {/* Header: icon + funder identity + amount */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        {funder && <FunderTypeIcon type={funder.type} />}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {funder?.name}
+          </p>
+          {funder && (
+            <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {FUNDER_TYPE_LABELS[funder.type]}{funder.location ? ` · ${funder.location}` : ""}
+            </p>
+          )}
+        </div>
+        {match?.isNew && (
+          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--evergreen)", backgroundColor: "var(--evergreen-tint)", borderRadius: 10, padding: "2px 7px", flexShrink: 0, whiteSpace: "nowrap" }}>
+            New
+          </span>
+        )}
+        {opp.amount && (
+          <span style={{ fontSize: 18, fontWeight: 600, color: "#2a2a2a", flexShrink: 0, letterSpacing: "-0.01em" }}>{opp.amount}</span>
+        )}
+      </div>
+
+      <p style={{ margin: "0 0 6px", fontSize: 13, fontWeight: 600, color: "var(--ink)", lineHeight: "18px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+        {opp.name}
+      </p>
+
+      {/* Structured match reasons list */}
+      {matchReasons.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 10 }}>
+          {matchReasons.map((reason, i) => (
+            <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 13, color: "#3c5e4c", flexShrink: 0, lineHeight: "17px", userSelect: "none" }}>check</span>
+              <span style={{ fontSize: 12, lineHeight: "17px" }}>
+                {reason.label ? (
+                  <><span style={{ fontWeight: 600, color: "#2a2a2a" }}>{reason.label}:</span>{" "}<span style={{ fontWeight: 400, color: "#4d6585" }}>{reason.value}</span></>
+                ) : (
+                  <span style={{ fontWeight: 400, color: "#4d6585" }}>{reason.value}</span>
+                )}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ borderTop: "0.5px solid var(--hair)", margin: "0 0 10px" }} />
+
+      {/* Meta row: deadline + eligibility only */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 8 }}>
+        {opp.deadline && (
+          <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--ink-tertiary)" }}>
+            <CalendarDays size={12} />
+            {daysLabel(opp.deadline)}
+          </span>
+        )}
+        {opp.eligibilityLabel && (
+          <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: eligColor }}>
+            <Check size={12} />
+            {opp.eligibilityLabel}
+          </span>
+        )}
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: "auto" }}>
+        {/* Hide — quiet affordance, revealed on hover or keyboard focus */}
+        <button
+          type="button"
+          aria-label={`Hide ${opp.name}`}
+          onClick={(e) => { e.stopPropagation(); onHide(opp.id) }}
+          onFocus={() => setHideButtonFocused(true)}
+          onBlur={() => setHideButtonFocused(false)}
+          style={{
+            display: "flex", alignItems: "center", gap: 4,
+            background: "none", border: "none", cursor: "pointer",
+            padding: "4px 2px", marginRight: "auto",
+            fontSize: 12, color: "var(--ink-tertiary)",
+            opacity: hideButtonVisible ? 1 : 0,
+            pointerEvents: hideButtonVisible ? "auto" : "none",
+            transition: "opacity 120ms, color 120ms",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-secondary)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
+        >
+          <EyeOff size={13} />
+          <span>Hide</span>
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onOppClick(opp.id, e.currentTarget as HTMLElement) }}
+          style={{ padding: "5px 12px", borderRadius: 6, border: "1px solid var(--hair-2)", backgroundColor: "transparent", fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)", cursor: "pointer", transition: "background-color 120ms" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+        >
+          View details
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onTrack(opp.id) }}
+          style={{ padding: "5px 14px", borderRadius: 6, border: "1px solid var(--slate-primary)", backgroundColor: "var(--slate-primary)", fontSize: 12, fontWeight: 600, color: "#ffffff", cursor: "pointer", transition: "background-color 120ms, border-color 120ms" }}
+          onMouseEnter={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--slate-secondary)"; el.style.borderColor = "var(--slate-secondary)" }}
+          onMouseLeave={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--slate-primary)"; el.style.borderColor = "var(--slate-primary)" }}
+        >
+          Track
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Matched funder card (Matches > Funders) ────────────────────────────────
+
+function MatchedFunderCard({ funder, isNew, onFunderClick }: {
+  funder: Funder
+  isNew?: boolean
+  onFunderClick: (funderId: string) => void
+}) {
+  const tags = funder.focusAreas.slice(0, 3)
+  const oppCount = matchedOppCount(funder.id)
+  const geoShort = funder.geography === "National (U.S.)" || funder.geography === "National (U.S.) + Canada"
+    ? "National"
+    : funder.geography
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onFunderClick(funder.id)}
+      onKeyDown={(e) => e.key === "Enter" && onFunderClick(funder.id)}
+      style={{
+        padding: "14px 16px",
+        backgroundColor: "var(--surface)",
+        border: "1px solid var(--hair)",
+        borderRadius: 12,
+        cursor: "pointer",
+        display: "flex", flexDirection: "column",
+        transition: "border-color 150ms, box-shadow 150ms",
+      }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = "var(--slate-light)"
+        el.style.boxShadow = "var(--shadow-sm)"
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = "var(--hair)"
+        el.style.boxShadow = "none"
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <FunderTypeIcon type={funder.type} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {funder.name}
+          </p>
+          <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {FUNDER_TYPE_LABELS[funder.type]}{funder.location ? ` · ${funder.location}` : ""}
+          </p>
+        </div>
+        {isNew && (
+          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--evergreen)", backgroundColor: "var(--evergreen-tint)", borderRadius: 10, padding: "2px 7px", flexShrink: 0, whiteSpace: "nowrap" }}>
+            New
+          </span>
+        )}
+      </div>
+
+      {funder.description && (
+        <p style={{ margin: "0 0 10px", fontSize: 12, color: "var(--ink-secondary)", lineHeight: "17px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+          {funder.description}
+        </p>
+      )}
+
+      <div style={{ borderTop: "0.5px solid var(--hair)", margin: "0 0 10px" }} />
+
+      {tags.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 10 }}>
+          {tags.map(tag => (
+            <span key={tag} style={{ fontSize: 11, fontWeight: 500, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)" }}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginBottom: 8 }}>
+        {funder.fundingRange && (
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-secondary)" }}>{funder.fundingRange}</span>
+        )}
+        {geoShort && (
+          <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--ink-tertiary)" }}>
+            <MapPin size={12} />
+            {geoShort}
+          </span>
+        )}
+        {oppCount > 0 && (
+          <span style={{ fontSize: 11, color: "var(--slate-secondary)", fontWeight: 500 }}>
+            {oppCount} open {oppCount === 1 ? "grant" : "grants"}
+          </span>
+        )}
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "auto" }}>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onFunderClick(funder.id) }}
+          style={{ padding: "5px 12px", borderRadius: 6, border: "1px solid var(--hair-2)", backgroundColor: "transparent", fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)", cursor: "pointer", transition: "background-color 120ms" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
+        >
+          View funder
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Explore opportunity row (Explore > Opportunities) ──────────────────────
+
+function ExploreOpportunityRow({ opp, isFirst: _isFirst, onOppClick, onTrack, onHide }: {
+  opp: Opportunity
+  isFirst: boolean
+  onOppClick: (oppId: string, el: HTMLElement) => void
+  onTrack: (oppId: string) => void
+  onHide: (oppId: string) => void
+}) {
+  const router = useRouter()
+  const [rowHovered, setRowHovered] = useState(false)
+  const [hideButtonFocused, setHideButtonFocused] = useState(false)
+  const hideButtonVisible = rowHovered || hideButtonFocused
+  const funder = getFunder(opp.funderId)
+  const match = getMatchForOpportunity(opp.id)
+  const focusTags = opp.focusAreas ?? []
+  const visibleTags = focusTags.slice(0, 1)
+  const overflowCount = Math.max(0, focusTags.length - 1)
+
+  const eligBg = opp.eligibilityLabel === "Likely eligible"
+    ? "var(--evergreen-tint)"
+    : "var(--amber-light)"
+  const eligColor = opp.eligibilityLabel === "Likely eligible"
+    ? "var(--evergreen)"
+    : "var(--amber)"
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={(e) => onOppClick(opp.id, e.currentTarget)}
+      onKeyDown={(e) => e.key === "Enter" && onOppClick(opp.id, e.currentTarget as HTMLElement)}
+      style={{
+        display: "flex", alignItems: "center", gap: 14,
+        padding: "11px 16px",
+        backgroundColor: "var(--surface)",
+        border: "1px solid var(--hair)",
+        borderRadius: 10,
+        marginBottom: 6,
+        cursor: "pointer",
+        transition: "border-color 120ms, box-shadow 120ms",
+      }}
+      onMouseEnter={(e) => {
+        setRowHovered(true)
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = "var(--hair-2)"
+        el.style.boxShadow = "var(--lift-1)"
+      }}
+      onMouseLeave={(e) => {
+        setRowHovered(false)
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = "var(--hair)"
+        el.style.boxShadow = "none"
+      }}
+    >
+      {/* Left: title + funder */}
+      <div style={{ flex: "0 0 240px", minWidth: 0 }}>
+        <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {opp.name}
+        </p>
+        <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {funder?.name}{funder ? ` · ${FUNDER_TYPE_LABELS[funder.type]}` : ""}
+        </p>
+      </div>
+
+      {/* Focus area tags */}
+      <div style={{ flex: "0 0 140px", display: "flex", alignItems: "center", gap: 4, overflow: "hidden" }}>
+        {visibleTags.map(tag => (
+          <span key={tag} style={{ fontSize: 11, fontWeight: 500, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)", whiteSpace: "nowrap", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", maxWidth: 100 }}>
+            {tag}
+          </span>
+        ))}
+        {overflowCount > 0 && (
+          <span style={{ fontSize: 11, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)", whiteSpace: "nowrap", flexShrink: 0 }}>
+            +{overflowCount}
+          </span>
+        )}
+      </div>
+
+      {/* Spacer */}
+      <div style={{ flex: 1 }} />
+
+      {/* Right cluster */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+        {opp.amount && (
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap", minWidth: 70, textAlign: "right" }}>
+            {opp.amount}
+          </span>
+        )}
+        {opp.deadline && (
+          <span style={{ fontSize: 12, color: "var(--ink-tertiary)", whiteSpace: "nowrap", minWidth: 90 }}>
+            {daysLabel(opp.deadline)}
+          </span>
+        )}
+        {opp.eligibilityLabel && (
+          <span style={{ fontSize: 11, fontWeight: 500, color: eligColor, padding: "3px 9px", borderRadius: 20, backgroundColor: eligBg, whiteSpace: "nowrap" }}>
+            {opp.eligibilityLabel}
+          </span>
+        )}
+        {/* Hide — revealed on hover or keyboard focus */}
+        <button
+          type="button"
+          aria-label={`Hide ${opp.name}`}
+          onClick={(e) => { e.stopPropagation(); onHide(opp.id) }}
+          onFocus={() => setHideButtonFocused(true)}
+          onBlur={() => setHideButtonFocused(false)}
+          style={{
+            display: "flex", alignItems: "center", gap: 3,
+            background: "none", border: "none", cursor: "pointer",
+            padding: "2px 4px",
+            fontSize: 11, color: "var(--ink-tertiary)",
+            opacity: hideButtonVisible ? 1 : 0,
+            pointerEvents: hideButtonVisible ? "auto" : "none",
+            transition: "opacity 120ms, color 120ms",
+            whiteSpace: "nowrap",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-secondary)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
+        >
+          <EyeOff size={12} />
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onTrack(opp.id) }}
+          style={{ padding: "5px 14px", borderRadius: 6, border: "none", backgroundColor: "var(--slate-primary)", fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer", whiteSpace: "nowrap", transition: "background-color 120ms" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-secondary)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
+        >
+          Track
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Explore funder row (Explore > Funders) ─────────────────────────────────
+
+function ExploreFunderRow({ funder, isFirst: _isFirst, onFunderClick, trackedFunderIds, onTrackFunder }: {
+  funder: Funder
+  isFirst: boolean
+  onFunderClick: (funderId: string) => void
+  trackedFunderIds: Set<string>
+  onTrackFunder: (funderId: string) => void
+}) {
+  const isFunderTracked = trackedFunderIds.has(funder.id)
+  const oppCount = matchedOppCount(funder.id)
+  const visibleFocus = funder.focusAreas.slice(0, 1)
+  const overflowCount = Math.max(0, funder.focusAreas.length - 1)
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onFunderClick(funder.id)}
+      onKeyDown={(e) => e.key === "Enter" && onFunderClick(funder.id)}
+      style={{
+        display: "flex", alignItems: "center", gap: 14,
+        padding: "11px 16px",
+        backgroundColor: "var(--surface)",
+        border: "1px solid var(--hair)",
+        borderRadius: 10,
+        marginBottom: 6,
+        cursor: "pointer",
+        transition: "border-color 120ms, box-shadow 120ms",
+      }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = "var(--hair-2)"
+        el.style.boxShadow = "var(--lift-1)"
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = "var(--hair)"
+        el.style.boxShadow = "none"
+      }}
+    >
+      {/* Left: funder identity */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "0 0 260px", minWidth: 0 }}>
+        <FunderTypeIcon type={funder.type} />
+        <div style={{ minWidth: 0 }}>
+          <p style={{ margin: "0 0 1px", fontSize: 13, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {funder.name}
+          </p>
+          <p style={{ margin: 0, fontSize: 11, color: "var(--ink-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {FUNDER_TYPE_LABELS[funder.type]}{funder.location ? ` · ${funder.location}` : ""}
+          </p>
+        </div>
+      </div>
+
+      {/* Focus areas */}
+      <div style={{ flex: "0 0 140px", display: "flex", alignItems: "center", gap: 4, overflow: "hidden" }}>
+        {visibleFocus.map(fa => (
+          <span key={fa} style={{ fontSize: 11, fontWeight: 500, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)", whiteSpace: "nowrap", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", maxWidth: 100 }}>
+            {fa}
+          </span>
+        ))}
+        {overflowCount > 0 && (
+          <span style={{ fontSize: 11, color: "var(--ink-tertiary)", padding: "2px 8px", borderRadius: 20, backgroundColor: "var(--canvas)", border: "1px solid var(--hair-2)", whiteSpace: "nowrap", flexShrink: 0 }}>
+            +{overflowCount}
+          </span>
+        )}
+      </div>
+
+      {/* Spacer */}
+      <div style={{ flex: 1 }} />
+
+      {/* Right */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+        {funder.fundingRange && (
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap" }}>
+            {funder.fundingRange}
+          </span>
+        )}
+        {oppCount > 0 && (
+          <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>
+            {oppCount} open {oppCount === 1 ? "grant" : "grants"}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); if (!isFunderTracked) onTrackFunder(funder.id) }}
+          style={{
+            padding: "5px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: isFunderTracked ? "default" : "pointer", whiteSpace: "nowrap",
+            transition: "background-color 120ms, color 120ms",
+            border: "1px solid var(--hair-2)",
+            backgroundColor: isFunderTracked ? "var(--canvas)" : "transparent",
+            color: isFunderTracked ? "var(--ink-tertiary)" : "var(--ink-secondary)",
+          }}
+          onMouseEnter={(e) => { if (!isFunderTracked) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--ink)" } }}
+          onMouseLeave={(e) => { if (!isFunderTracked) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-secondary)" } }}
+        >
+          {isFunderTracked ? "Watching" : "Track funder"}
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onFunderClick(funder.id) }}
+          style={{ padding: "5px 14px", borderRadius: 6, border: "none", backgroundColor: "var(--slate-primary)", fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer", whiteSpace: "nowrap", transition: "background-color 120ms" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-secondary)" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
+        >
+          View funder
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Filter select ──────────────────────────────────────────────────────────
+
+function FilterSelect({ value, onChange, children, minWidth }: {
+  value: string
+  onChange: (v: string) => void
+  children: React.ReactNode
+  minWidth?: number
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={{
+        padding: "7px 30px 7px 10px",
+        borderRadius: "var(--radius-input)",
+        border: "1px solid var(--hair-2)",
+        backgroundColor: "var(--surface)",
+        fontSize: 12,
+        color: value ? "var(--ink)" : "var(--ink-secondary)",
+        outline: "none",
+        cursor: "pointer",
+        minWidth: minWidth ?? 0,
+        appearance: "none",
+        backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0.5 0.5L5 5.5L9.5 0.5' stroke='%23909AA4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E\")",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "right 10px center",
+      }}
+    >
+      {children}
+    </select>
+  )
+}
+
+// ── Multi-select filter dropdown ───────────────────────────────────────────
+
+function MultiSelectFilter({
+  label,
+  options,
+  selected,
+  onToggle,
+}: {
+  label: string
+  options: { value: string; label: string }[]
+  selected: string[]
+  onToggle: (value: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handleOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleOutside)
+    return () => document.removeEventListener("mousedown", handleOutside)
+  }, [open])
+
+  const count = selected.length
+  const isActive = count > 0
+
+  return (
+    <div ref={containerRef} style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen(prev => !prev)}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 5,
+          padding: "7px 10px",
+          borderRadius: "var(--radius-input)",
+          border: isActive ? "1px solid rgba(74,96,128,0.4)" : "1px solid var(--hair-2)",
+          backgroundColor: isActive ? "var(--slate-tint)" : "var(--surface)",
+          fontSize: 12,
+          fontWeight: isActive ? 600 : 400,
+          color: isActive ? "var(--slate-secondary)" : "var(--ink-secondary)",
+          cursor: "pointer",
+          whiteSpace: "nowrap",
+          transition: "background-color 120ms",
+        }}
+      >
+        {label}
+        {isActive ? (
+          <span style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            minWidth: 16, height: 16, padding: "0 3px",
+            borderRadius: 8,
+            backgroundColor: "var(--slate-secondary)",
+            color: "#fff",
+            fontSize: 10, fontWeight: 700,
+          }}>
+            {count}
+          </span>
+        ) : (
+          <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{ flexShrink: 0 }}>
+            <path d="M0.5 0.5L5 5.5L9.5 0.5" stroke="#909AA4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </button>
+
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 50,
+          backgroundColor: "var(--surface)",
+          border: "1px solid var(--hair-2)",
+          borderRadius: "var(--radius-input)",
+          boxShadow: "0 4px 16px rgba(28,24,64,0.12)",
+          minWidth: 200,
+          padding: "4px 0",
+          maxHeight: 280,
+          overflowY: "auto",
+        }}>
+          {options.map(opt => {
+            const checked = selected.includes(opt.value)
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onToggle(opt.value)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  width: "100%", padding: "7px 12px",
+                  background: "none", border: "none", cursor: "pointer",
+                  fontSize: 13,
+                  color: checked ? "var(--slate-secondary)" : "var(--ink)",
+                  fontWeight: checked ? 600 : 400,
+                  textAlign: "left",
+                  transition: "background-color 80ms",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "" }}
+              >
+                <span style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  width: 16, height: 16, flexShrink: 0,
+                  borderRadius: 3,
+                  border: checked ? "1.5px solid var(--slate-secondary)" : "1.5px solid var(--hair-2)",
+                  backgroundColor: checked ? "var(--slate-tint)" : "transparent",
+                  transition: "background-color 80ms, border-color 80ms",
+                }}>
+                  {checked && <Check size={11} style={{ color: "var(--slate-secondary)" }} />}
+                </span>
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Undo toast ─────────────────────────────────────────────────────────────
+
+function UndoToast({ oppName, onUndo, onDismiss }: {
+  oppName: string
+  onUndo: () => void
+  onDismiss: () => void
+}) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      style={{
+        position: "fixed", bottom: 24, left: "50%",
+        transform: "translateX(-50%)",
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "10px 14px",
+        backgroundColor: "var(--ink)",
+        borderRadius: 10,
+        boxShadow: "0 4px 20px rgba(28,24,64,0.22)",
+        zIndex: 200,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <EyeOff size={14} style={{ color: "rgba(255,255,255,0.55)", flexShrink: 0 }} />
+      <span style={{ fontSize: 13, color: "#fff" }}>Opportunity hidden</span>
+      <button
+        type="button"
+        onClick={onUndo}
+        style={{
+          background: "none", border: "none", cursor: "pointer",
+          fontSize: 13, fontWeight: 600,
+          color: "var(--slate-tint)",
+          padding: "0 2px",
+          transition: "color 120ms",
+        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#fff" }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-tint)" }}
+      >
+        Undo
+      </button>
+      <button
+        type="button"
+        aria-label="Dismiss"
+        onClick={onDismiss}
+        style={{
+          background: "none", border: "none", cursor: "pointer",
+          color: "rgba(255,255,255,0.45)", padding: "0 2px",
+          display: "flex", alignItems: "center",
+          transition: "color 120ms",
+        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.80)" }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.45)" }}
+      >
+        <X size={13} />
       </button>
     </div>
   )
 }
 
-// ── Not Relevant Modal ─────────────────────────────────────────────────────
+// ── Discover page (inner) ──────────────────────────────────────────────────
 
-const NOT_RELEVANT_REASONS = [
-  "Wrong location",
-  "No longer open",
-  "Invite only",
-  "Doesn't match our initiatives",
-  "Other",
-] as const
-
-type NotRelevantReason = (typeof NOT_RELEVANT_REASONS)[number]
-
-function NotRelevantModal({
-  onCancel,
-  onConfirm,
-}: {
-  onCancel: () => void
-  onConfirm: (reason: NotRelevantReason, otherText: string, removeFromList: boolean) => void
-}) {
-  const [selectedReason, setSelectedReason] = useState<NotRelevantReason | null>(null)
-  const [otherText, setOtherText] = useState("")
-  const [removeFromList, setRemoveFromList] = useState(true)
-
-  const canSubmit = selectedReason !== null
-
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        backgroundColor: "rgba(28,24,64,0.35)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 50,
-      }}
-      onClick={onCancel}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          backgroundColor: "#FFFFFF",
-          borderRadius: 14,
-          padding: "24px 28px",
-          width: 420,
-          boxShadow: "0px 16px 48px rgba(28,24,64,0.18)",
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-        }}
-      >
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-          <div>
-            <h3 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
-              Why isn&apos;t this a good fit?
-            </h3>
-            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)", lineHeight: "18px" }}>
-              Your feedback helps us surface better matches.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onCancel}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 4,
-              borderRadius: 6,
-              color: "var(--ink-tertiary)",
-              display: "flex",
-              flexShrink: 0,
-            }}
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Reason list */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {NOT_RELEVANT_REASONS.map((reason) => {
-            const isActive = selectedReason === reason
-            return (
-              <button
-                key={reason}
-                type="button"
-                onClick={() => setSelectedReason(reason)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "10px 12px",
-                  borderRadius: 8,
-                  border: isActive ? "1.5px solid var(--slate-secondary)" : "1.5px solid transparent",
-                  backgroundColor: isActive ? "var(--slate-tint)" : "transparent",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  transition: "background-color 150ms, border-color 150ms",
-                }}
-              >
-                <div
-                  style={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: "50%",
-                    border: isActive ? "none" : "1.5px solid var(--ink-tertiary)",
-                    backgroundColor: isActive ? "var(--slate-secondary)" : "transparent",
-                    flexShrink: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    transition: "background-color 150ms",
-                  }}
-                >
-                  {isActive && (
-                    <div
-                      style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "#FFFFFF" }}
-                    />
-                  )}
-                </div>
-                <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{reason}</span>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Optional "Other" text input */}
-        {selectedReason === "Other" && (
-          <input
-            type="text"
-            value={otherText}
-            onChange={(e) => setOtherText(e.target.value)}
-            placeholder="Tell us more (optional)"
-            style={{
-              width: "100%",
-              padding: "9px 12px",
-              borderRadius: 8,
-              border: "1px solid var(--border-default)",
-              fontSize: 13,
-              color: "var(--ink)",
-              backgroundColor: "var(--canvas)",
-              outline: "none",
-              boxSizing: "border-box",
-            }}
-          />
-        )}
-
-        {/* Divider */}
-        <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
-
-        {/* Remove from list checkbox */}
-        <div>
-          <button
-            type="button"
-            onClick={() => setRemoveFromList((v) => !v)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-            }}
-          >
-            <CheckboxIcon checked={removeFromList} />
-            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Remove from my list</span>
-          </button>
-          <p style={{ margin: "6px 0 0 24px", fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "16px" }}>
-            You can always find this again in Discover.
-          </p>
-        </div>
-
-        {/* Footer */}
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button
-            type="button"
-            onClick={onCancel}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "var(--radius-button)",
-              border: "var(--border-subtle)",
-              backgroundColor: "transparent",
-              fontSize: 13,
-              color: "var(--ink)",
-              cursor: "pointer",
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (selectedReason) onConfirm(selectedReason, otherText, removeFromList)
-            }}
-            disabled={!canSubmit}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "var(--radius-button)",
-              border: "none",
-              backgroundColor: canSubmit ? "var(--slate-primary)" : "var(--slate-tint)",
-              fontSize: 13,
-              fontWeight: 600,
-              color: canSubmit ? "#FFFFFF" : "var(--ink-tertiary)",
-              cursor: canSubmit ? "pointer" : "not-allowed",
-              transition: "background-color 150ms, color 150ms",
-            }}
-          >
-            Submit feedback
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Share Discover Modal ────────────────────────────────────────────────────
-
-function ShareDiscoverModal({
-  oppName,
-  onClose,
-  onShare,
-}: {
-  oppName: string
-  onClose: () => void
-  onShare: (teammate: string) => void
-}) {
-  const [query, setQuery] = useState("")
-  const [selected, setSelected] = useState<typeof TEAMMATES[number] | null>(null)
-  const [note, setNote] = useState("")
-  const [listOpen, setListOpen] = useState(false)
-
-  const filtered = TEAMMATES.filter((t) =>
-    t.name.toLowerCase().includes(query.toLowerCase())
-  )
-
-  function handleSelect(t: typeof TEAMMATES[number]) {
-    setSelected(t)
-    setQuery(t.name)
-    setListOpen(false)
-  }
-
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        backgroundColor: "rgba(28,24,64,0.35)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 200,
-      }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div
-        style={{
-          width: 400,
-          backgroundColor: "#FFFFFF",
-          borderRadius: 14,
-          boxShadow: "0 16px 48px rgba(28,24,64,0.18)",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 0" }}>
-          <div>
-            <h2 style={{ margin: "0 0 2px", fontSize: 17, fontWeight: 600, color: "var(--ink)" }}>
-              Share opportunity
-            </h2>
-            <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", lineHeight: "16px" }}>
-              {oppName}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              width: 28,
-              height: 28,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: 6,
-              border: "var(--border-subtle)",
-              backgroundColor: "transparent",
-              cursor: "pointer",
-              flexShrink: 0,
-            }}
-          >
-            <X size={14} color="var(--ink-secondary)" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div style={{ padding: "20px 24px 0" }}>
-          <div style={{ marginBottom: 16, position: "relative" }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--ink)", marginBottom: 6 }}>
-              Teammate
-            </label>
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => { setQuery(e.target.value); setSelected(null); setListOpen(true) }}
-              onFocus={() => setListOpen(true)}
-              onBlur={() => setTimeout(() => setListOpen(false), 150)}
-              placeholder="Search by name..."
-              style={{
-                width: "100%",
-                padding: "9px 12px",
-                borderRadius: 9,
-                border: "1px solid var(--border-default)",
-                fontSize: 13,
-                color: "var(--ink)",
-                outline: "none",
-                boxSizing: "border-box" as const,
-              }}
-            />
-            {listOpen && filtered.length > 0 && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "calc(100% + 4px)",
-                  left: 0,
-                  right: 0,
-                  backgroundColor: "#FFFFFF",
-                  borderRadius: 10,
-                  boxShadow: "0 8px 24px rgba(28,24,64,0.12)",
-                  zIndex: 300,
-                  overflow: "hidden",
-                }}
-              >
-                {filtered.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onMouseDown={() => handleSelect(t)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      width: "100%",
-                      padding: "10px 14px",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      transition: "background-color 100ms",
-                    }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
-                  >
-                    <div
-                      style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: "50%",
-                        background: "var(--gradient-avatar, linear-gradient(135deg, #5B45C8, #6BA8A4))",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <span style={{ fontSize: 9, fontWeight: 700, color: "#FFFFFF", lineHeight: 1 }}>
-                        {t.initials}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: 13, color: "var(--ink)" }}>{t.name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div style={{ marginBottom: 24 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--ink)", marginBottom: 6 }}>
-              Note{" "}
-              <span style={{ fontWeight: 400, color: "var(--ink-tertiary)" }}>(optional)</span>
-            </label>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Add a message..."
-              rows={3}
-              style={{
-                width: "100%",
-                padding: "9px 12px",
-                borderRadius: 9,
-                border: "1px solid var(--border-default)",
-                fontSize: 13,
-                color: "var(--ink)",
-                outline: "none",
-                resize: "none" as const,
-                lineHeight: "19px",
-                boxSizing: "border-box" as const,
-                fontFamily: "inherit",
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "16px 24px 20px",
-            borderTop: "var(--border-subtle)",
-          }}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              padding: "8px 18px",
-              borderRadius: 8,
-              border: "var(--border-subtle)",
-              backgroundColor: "transparent",
-              fontSize: 13,
-              color: "var(--ink)",
-              cursor: "pointer",
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={!selected}
-            onClick={() => { if (selected) { onShare(selected.name); onClose() } }}
-            style={{
-              padding: "8px 18px",
-              borderRadius: 8,
-              border: "none",
-              backgroundColor: selected ? "var(--slate-primary)" : "var(--slate-tint)",
-              fontSize: 13,
-              fontWeight: 500,
-              color: selected ? "#FFFFFF" : "var(--ink-tertiary)",
-              cursor: selected ? "pointer" : "not-allowed",
-              transition: "background-color 150ms",
-            }}
-          >
-            Share
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Toast ───────────────────────────────────────────────────────────────────
-
-function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
-  useEffect(() => {
-    const t = setTimeout(onDismiss, 3000)
-    return () => clearTimeout(t)
-  }, [onDismiss])
-
-  return (
-    <div
-      style={{
-        position: "fixed",
-        bottom: 28,
-        left: "50%",
-        transform: "translateX(-50%)",
-        backgroundColor: "var(--ink)",
-        color: "#FFFFFF",
-        borderRadius: 10,
-        padding: "10px 20px",
-        fontSize: 13,
-        fontWeight: 500,
-        boxShadow: "0px 6px 20px rgba(28,24,64,0.22)",
-        zIndex: 60,
-        whiteSpace: "nowrap",
-        pointerEvents: "none",
-      }}
-    >
-      {message}
-    </div>
-  )
-}
-
-// ── View Toggle ─────────────────────────────────────────────────────────────
-
-function ViewToggle({
-  activeTab,
-  onSwitch,
-}: {
-  activeTab: ActiveTab
-  onSwitch: (tab: ActiveTab) => void
-}) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        borderRadius: 9,
-        border: "1px solid var(--border-default)",
-        overflow: "hidden",
-        width: "fit-content",
-      }}
-    >
-      {(["opportunities", "funders"] as const).map((tab) => {
-        const isActive = activeTab === tab
-        return (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => onSwitch(tab)}
-            style={{
-              padding: "7px 18px",
-              border: "none",
-              backgroundColor: isActive ? "var(--slate-primary)" : "transparent",
-              color: isActive ? "#FFFFFF" : "var(--ink-secondary)",
-              fontSize: 13,
-              fontWeight: isActive ? 600 : 400,
-              cursor: "pointer",
-              transition: "background-color 150ms, color 150ms",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {tab === "opportunities" ? "Opportunities" : "Funders"}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-// ── Opportunity Detail Panel ────────────────────────────────────────────────
-
-function DetailPanel({
-  opp,
-  showPopover,
-  onTrackClick,
-  onCancelPopover,
-  onSelectEngagement,
-  onViewFunderProfile,
-}: {
-  opp: Opportunity
-  showPopover: boolean
-  onTrackClick: () => void
-  onCancelPopover: () => void
-  onSelectEngagement: () => void
-  onViewFunderProfile?: () => void
-}) {
-  const [methodologyOpen, setMethodologyOpen] = useState(false)
-
-  const CATEGORY_ORDER = ["geo", "focus", "award", "eligibility", "deadline", "other"]
-  const sortedMatches = [...opp.whyMatches].sort((a, b) => {
-    const ai = CATEGORY_ORDER.indexOf(a.category ?? "other")
-    const bi = CATEGORY_ORDER.indexOf(b.category ?? "other")
-    return ai - bi
-  })
-
-  const fitLabel = opp.fitPct >= 75 ? "Strong match" : opp.fitPct >= 60 ? "Good match" : "Partial match"
-  const fitColor = opp.fitPct >= 75 ? "var(--slate-primary)" : opp.fitPct >= 60 ? "var(--slate-secondary)" : "var(--slate)"
-
-  return (
-    <div
-      style={{
-        width: 320,
-        flexShrink: 0,
-        display: "flex",
-        flexDirection: "column",
-        borderLeft: "var(--border-subtle)",
-        backgroundColor: "var(--canvas)",
-        overflow: "hidden",
-      }}
-    >
-      {/* Scrollable body */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "20px 20px 0 20px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 14,
-        }}
-      >
-        {/* Header: funder + title + meta tags */}
-        <div>
-          <div style={{ marginBottom: 6 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: onViewFunderProfile ? 4 : 0 }}>
-              <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)" }}>
-                {opp.funder}
-              </span>
-              <ExternalLink size={11} color="var(--ink-tertiary)" />
-            </div>
-            {onViewFunderProfile && (
-              <button
-                type="button"
-                onClick={onViewFunderProfile}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 3,
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 0,
-                  fontSize: 11,
-                  fontWeight: 500,
-                  color: "var(--slate-secondary)",
-                  transition: "color 150ms",
-                }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-primary)" }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
-              >
-                View funder profile
-                <ChevronRight size={10} />
-              </button>
-            )}
-          </div>
-          <h3
-            style={{
-              margin: "0 0 10px 0",
-              fontSize: 17,
-              fontWeight: 600,
-              letterSpacing: "-0.025em",
-              lineHeight: "22px",
-              color: "var(--ink)",
-              fontFamily: "var(--font-lora)",
-            }}
-          >
-            {opp.grantName}
-          </h3>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {[opp.amountLabel, opp.dueDateLabel, opp.focusAreaLabel].map((label) => (
-              <span
-                key={label}
-                style={{
-                  borderRadius: "var(--radius-pill)",
-                  padding: "4px 10px",
-                  backgroundColor: "var(--slate-tint)",
-                  fontSize: 12,
-                  fontWeight: 500,
-                  color: "var(--slate-primary)",
-                  lineHeight: "16px",
-                }}
-              >
-                {label}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
-
-        {/* Fit score + Why this matches */}
-        <div>
-          {/* Fit score card */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              backgroundColor: "#FFFFFF",
-              boxShadow: "var(--shadow-card)",
-              borderRadius: 10,
-              padding: "12px 14px",
-              marginBottom: 12,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div>
-                <p style={{ margin: "0 0 2px", fontSize: 24, fontWeight: 700, color: fitColor, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                  {opp.fitPct}%
-                </p>
-                <p style={{ margin: 0, fontSize: 11, color: "var(--ink-secondary)", fontWeight: 500 }}>{fitLabel}</p>
-              </div>
-              <div style={{ width: 72, height: 5, borderRadius: 3, backgroundColor: "var(--slate-tint)", overflow: "hidden" }}>
-                <div style={{ height: "100%", borderRadius: 3, backgroundColor: fitColor, width: `${opp.fitPct}%`, transition: "width 300ms ease" }} />
-              </div>
-            </div>
-            <div style={{ position: "relative" }}>
-              <button
-                type="button"
-                onClick={() => setMethodologyOpen((v) => !v)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 3,
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "3px 6px",
-                  borderRadius: 5,
-                  fontSize: 11,
-                  color: "var(--ink-tertiary)",
-                  transition: "color 150ms, background-color 150ms",
-                }}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget as HTMLButtonElement
-                  el.style.color = "var(--slate-secondary)"
-                  el.style.backgroundColor = "var(--slate-tint)"
-                }}
-                onMouseLeave={(e) => {
-                  const el = e.currentTarget as HTMLButtonElement
-                  el.style.color = "var(--ink-tertiary)"
-                  el.style.backgroundColor = "transparent"
-                }}
-              >
-                <Info size={11} />
-                How?
-              </button>
-              {methodologyOpen && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "calc(100% + 6px)",
-                    right: 0,
-                    width: 240,
-                    backgroundColor: "#FFFFFF",
-                    borderRadius: 10,
-                    boxShadow: "0 8px 24px rgba(28,24,64,0.14)",
-                    padding: "12px 14px",
-                    zIndex: 50,
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <p style={{ margin: "0 0 7px", fontSize: 12, fontWeight: 600, color: "var(--ink)" }}>
-                    How match score is calculated
-                  </p>
-                  <p style={{ margin: "0 0 6px", fontSize: 11, color: "var(--ink-secondary)", lineHeight: "17px" }}>
-                    Grant Assistant analyzes your organization profile and initiative data against the funder&apos;s documented priorities, geographic focus, award range, and eligibility requirements.
-                  </p>
-                  <p style={{ margin: 0, fontSize: 11, color: "var(--ink-secondary)", lineHeight: "17px" }}>
-                    Scores above 70% indicate strong overall fit across four dimensions: geographic match, financial fit, focus area alignment, and eligibility.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <p style={sectionLabelStyle}>Why this matches you</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {sortedMatches.map((item, i) => (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  alignItems: "flex-start",
-                  padding: item.category === "geo" && item.icon === "warning" ? "8px 10px" : undefined,
-                  borderRadius: item.category === "geo" && item.icon === "warning" ? 7 : undefined,
-                  backgroundColor: item.category === "geo" && item.icon === "warning" ? "rgba(220,88,36,0.07)" : undefined,
-                  border: item.category === "geo" && item.icon === "warning" ? "1px solid rgba(220,88,36,0.2)" : undefined,
-                }}
-              >
-                {item.icon === "check" ? <CheckCircle /> : <WarningCircle />}
-                <span style={{ fontSize: 12, color: "var(--ink)", lineHeight: "18px" }}>{item.text}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Funder success context */}
-          {opp.successContext && (
-            <div
-              style={{
-                marginTop: 10,
-                padding: "9px 12px",
-                borderRadius: 8,
-                backgroundColor: "#FFFFFF",
-                boxShadow: "var(--shadow-card)",
-                fontSize: 12,
-                color: "var(--ink-secondary)",
-                lineHeight: "18px",
-              }}
-            >
-              {opp.successContext}
-            </div>
-          )}
-        </div>
-
-        <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
-
-        {/* About this grant */}
-        <div>
-          <p style={sectionLabelStyle}>About this grant</p>
-          <p style={{ fontSize: 12, color: "var(--ink)", lineHeight: "19px", margin: 0 }}>
-            {opp.aboutGrant}
-          </p>
-        </div>
-
-        <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
-
-        {/* Your initiatives */}
-        <div style={{ paddingBottom: 20 }}>
-          <p style={sectionLabelStyle}>Your initiatives</p>
-          <div>
-            {opp.initiatives.map((init, i) => (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "9px 0",
-                  borderBottom:
-                    i < opp.initiatives.length - 1
-                      ? "var(--border-subtle)"
-                      : "none",
-                }}
-              >
-                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>
-                  {init.name}
-                </span>
-                <span
-                  style={{
-                    fontSize: 12,
-                    color:
-                      init.match === "Partial match"
-                        ? "var(--slate)"
-                        : "var(--slate-secondary)",
-                  }}
-                >
-                  {init.match}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Sticky footer: Track This */}
-      <div
-        style={{
-          flexShrink: 0,
-          position: "relative",
-          borderTop: "var(--border-subtle)",
-          padding: "14px 20px",
-          backgroundColor: "var(--canvas)",
-        }}
-      >
-        {showPopover && <TrackPopover onCancel={onCancelPopover} onSelect={onSelectEngagement} />}
-
-        <button
-          type="button"
-          onClick={onTrackClick}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            width: "100%",
-            height: 40,
-            borderRadius: 10,
-            backgroundColor: "var(--slate-primary)",
-            border: "none",
-            cursor: "pointer",
-            marginBottom: 8,
-            transition: "background-color 150ms",
-          }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-secondary)" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
-        >
-          <Plus size={15} color="#FFFFFF" style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF", lineHeight: "18px" }}>
-            Track This
-          </span>
-        </button>
-
-        <p style={{ fontSize: 12, color: "var(--ink-tertiary)", textAlign: "center", margin: 0 }}>
-          Already tracking a similar opportunity
-        </p>
-      </div>
-    </div>
-  )
-}
-
-// ── Funder Extended Data ────────────────────────────────────────────────────
-
-interface FunderWhatTheyFund {
-  locations: string[]
-  orgTypes: string[]
-  programTypes: string[]
-  typicalGrantRange: string
-}
-
-interface FunderGivingHistory {
-  statLine: string
-  trendNote: string
-  pastGrantees?: { name: string; amount: string }[]
-}
-
-interface FunderLeadershipContact {
-  name: string
-  title: string
-}
-
-type RelationshipStatus = "New" | "Cultivating" | "Established" | "Lapsed"
-
-interface FunderRelationshipData {
-  status: RelationshipStatus
-  owner: string
-  contacts: { name: string; role: string }[]
-  notes: { preview: string; date: string }[]
-  engagements: { name: string; stage: string }[]
-}
-
-interface FunderExtendedData {
-  whatTheyFund?: FunderWhatTheyFund
-  givingHistory?: FunderGivingHistory
-  leadership?: FunderLeadershipContact[]
-  relationship?: FunderRelationshipData
-}
-
-const RELATIONSHIP_BADGE: Record<RelationshipStatus, { bg: string; color: string }> = {
-  New:         { bg: "#EBF0F5", color: "#4A6080" },
-  Cultivating: { bg: "#FEF3DC", color: "#C47A10" },
-  Established: { bg: "#E0EDE6", color: "#3C5E4C" },
-  Lapsed:      { bg: "#F5F5F6", color: "#8A8A99" },
-}
-
-const FUNDER_EXTENDED: Record<string, FunderExtendedData> = {
-  "petco-love-funder": {
-    whatTheyFund: {
-      locations: ["National (U.S.)"],
-      orgTypes: ["501(c)(3) shelters and rescues", "Humane societies", "Spay/neuter clinics"],
-      programTypes: ["Animal rescue and reunification", "Spay/neuter programs", "Community pet services"],
-      typicalGrantRange: "$5,000 – $50,000 typical award",
-    },
-    givingHistory: {
-      statLine: "Awarded $2.3M across 84 grants in 2023",
-      trendNote: "Giving has remained stable over the past 3 years",
-      pastGrantees: [
-        { name: "Austin Pets Alive!", amount: "$40,000" },
-        { name: "San Diego Humane Society", amount: "$35,000" },
-        { name: "Best Friends Animal Society", amount: "$50,000" },
-      ],
-    },
-    leadership: [
-      { name: "Susanne Kogut", title: "President" },
-      { name: "Kim Bemoore", title: "Grants Manager" },
-    ],
-    relationship: {
-      status: "Cultivating",
-      owner: "Taylor S.",
-      contacts: [
-        { name: "Kim Bemoore", role: "Grants Manager" },
-        { name: "Jamie Ortega", role: "Program Officer" },
-      ],
-      notes: [
-        { preview: "Had a great call with Kim — she mentioned they're prioritizing spay/neuter this cycle.", date: "May 12, 2026" },
-        { preview: "Sent follow-up email after the Animal Welfare Summit.", date: "Apr 4, 2026" },
-      ],
-      engagements: [
-        { name: "Petco Love Lost & Found Grant 2026", stage: "Active" },
-      ],
-    },
-  },
-  "aspca-funder": {
-    whatTheyFund: {
-      locations: ["National (U.S.)"],
-      orgTypes: ["Animal shelters", "Rescue organizations", "Community programs"],
-      programTypes: ["Intake reduction", "Foster network expansion", "Community cat management"],
-      typicalGrantRange: "$5,000 – $75,000 typical award",
-    },
-    givingHistory: {
-      statLine: "Awarded $4.1M across 120 grants in 2023",
-      trendNote: "Giving has increased steadily over the past 3 years",
-      pastGrantees: [
-        { name: "KC Pet Project", amount: "$75,000" },
-        { name: "Humane Society of Memphis", amount: "$55,000" },
-        { name: "Nevada Humane Society", amount: "$60,000" },
-      ],
-    },
-    leadership: [
-      { name: "Matthew Bershadker", title: "President & CEO" },
-      { name: "Gail Buchwald", title: "Senior VP, Companion Animals" },
-    ],
-  },
-  "maddies-fund": {
-    whatTheyFund: {
-      locations: ["National (U.S.)"],
-      orgTypes: ["Shelters", "Rescue coalitions", "Veterinary programs"],
-      programTypes: ["No-kill lifesaving", "Data-driven intake reduction", "Coalition building"],
-      typicalGrantRange: "$25,000 – $200,000 typical award",
-    },
-    givingHistory: {
-      statLine: "Awarded $7.8M across 63 grants in 2023",
-      trendNote: "Giving has declined slightly over the past 2 years",
-      pastGrantees: [
-        { name: "Humane Society of Silicon Valley", amount: "$150,000" },
-        { name: "Animal Care Centers of NYC", amount: "$200,000" },
-        { name: "Stray Cat Alliance", amount: "$85,000" },
-      ],
-    },
-    leadership: [
-      { name: "Rich Avanzino", title: "President" },
-      { name: "Tawnya Mann", title: "Program Officer" },
-    ],
-  },
-  "found-animals": {
-    whatTheyFund: {
-      locations: ["Los Angeles County", "Southern California"],
-      orgTypes: ["501(c)(3) nonprofits", "Animal welfare organizations"],
-      programTypes: ["Spay/neuter services", "Microchipping", "Community education"],
-      typicalGrantRange: "$10,000 – $75,000 typical award",
-    },
-    givingHistory: {
-      statLine: "Awarded $1.2M across 28 grants in 2023",
-      trendNote: "Giving has remained stable over the past 2 years",
-      pastGrantees: [
-        { name: "Downtown Dog Rescue", amount: "$60,000" },
-        { name: "Rescue From the Hart", amount: "$45,000" },
-      ],
-    },
-    leadership: [
-      { name: "Gary Michelson", title: "Founder" },
-      { name: "Michelle Sobel", title: "Executive Director" },
-    ],
-  },
-  "petsmart-charities-funder": {
-    whatTheyFund: {
-      locations: ["National (U.S.)", "Canada"],
-      orgTypes: ["Animal shelters", "Rescue groups", "Humane societies"],
-      programTypes: ["Cat & kitten rescue", "TNR programs", "Adoption programs", "Spay/neuter"],
-      typicalGrantRange: "$10,000 – $100,000 typical award",
-    },
-    givingHistory: {
-      statLine: "Awarded $5.6M across 212 grants in 2023",
-      trendNote: "Giving has grown significantly over the past 3 years",
-      pastGrantees: [
-        { name: "Alley Cat Allies", amount: "$100,000" },
-        { name: "Animal Humane Society", amount: "$80,000" },
-        { name: "Tree House Humane Society", amount: "$65,000" },
-      ],
-    },
-    leadership: [
-      { name: "Aimee Gilbreath", title: "President" },
-      { name: "Dan Cooney", title: "Head of Grantmaking" },
-    ],
-  },
-  "hsus": {
-    whatTheyFund: {
-      locations: ["National (U.S.)"],
-      orgTypes: ["Shelters", "Rescue organizations", "Advocacy groups"],
-      programTypes: ["Shelter reform", "Anti-cruelty programs", "Adoption promotion"],
-      typicalGrantRange: "$5,000 – $30,000 typical award",
-    },
-    givingHistory: {
-      statLine: "Awarded $890K across 47 grants in 2023",
-      trendNote: "Giving has declined over the past 3 years",
-    },
-  },
-  "ca-wellness-funder": {
-    whatTheyFund: {
-      locations: ["California only"],
-      orgTypes: ["Nonprofits serving underserved communities", "Health advocacy organizations"],
-      programTypes: ["Community health programs", "Mental health services", "Reproductive health"],
-      typicalGrantRange: "$50,000 – $200,000 typical award",
-    },
-    givingHistory: {
-      statLine: "Awarded $18.4M across 93 grants in 2023",
-      trendNote: "Giving has remained stable over the past 3 years",
-      pastGrantees: [
-        { name: "Community Health Initiative of CA", amount: "$175,000" },
-        { name: "Esperanza Health Center", amount: "$150,000" },
-      ],
-    },
-    leadership: [
-      { name: "Judy Belk", title: "President & CEO" },
-      { name: "Karen Jones", title: "Director of Programs" },
-    ],
-  },
-  "north-shore": {
-    whatTheyFund: {
-      locations: ["National (U.S.)"],
-      orgTypes: ["Animal shelters", "Rescue organizations"],
-      programTypes: ["No-kill lifesaving", "Shelter capacity building", "Rescue coordination"],
-      typicalGrantRange: "$10,000 – $50,000 typical award",
-    },
-    givingHistory: {
-      statLine: "Awarded $1.6M across 44 grants in 2023",
-      trendNote: "Giving has declined over the past 2 years",
-      pastGrantees: [
-        { name: "Lehigh Valley Humane Society", amount: "$45,000" },
-        { name: "Paws New York", amount: "$40,000" },
-      ],
-    },
-    leadership: [
-      { name: "Joanne Yohannan", title: "Senior Vice President" },
-      { name: "Aileen Gabbey", title: "Grants Director" },
-    ],
-  },
-}
-
-// ── Funder Detail Panel ─────────────────────────────────────────────────────
-
-function FunderDetailPanel({
-  funder,
-  onCreateEngagement,
-  onBack,
-}: {
-  funder: DiscoverFunder
-  onCreateEngagement: (funderName: string) => void
-  onOpportunityClick: (oppId: string) => void
-  onBack?: () => void
-}) {
+function DiscoverPage() {
   const router = useRouter()
-  const extended = FUNDER_EXTENDED[funder.id] ?? {}
-  const isTracked = !!extended.relationship
+  const searchParams = useSearchParams()
+  const { scopeLabel, selectedProjectId } = useScope()
+
+  const {
+    primaryTab, setPrimaryTab,
+    objectType, setObjectType,
+    query, setQuery,
+    typeFilters, toggleTypeFilter,
+    focusAreaFilters, toggleFocusAreaFilter,
+    geographyFilters, toggleGeographyFilter,
+    awardRangeFilter, setAwardRangeFilter,
+    deadlineFilter, setDeadlineFilter,
+    sortBy, setSortBy,
+    clearFilters, hasActiveFilters,
+  } = useDiscoverFilters()
 
-  const [openSections, setOpenSections] = useState({
-    locations: true,
-    orgTypes: true,
-    programTypes: true,
-    leadership: true,
-  })
-  const [relStatus, setRelStatus] = useState<RelationshipStatus>(
-    extended.relationship?.status ?? "New"
-  )
-  const [relStatusOpen, setRelStatusOpen] = useState(false)
-
-  useEffect(() => {
-    setOpenSections({ locations: true, orgTypes: true, programTypes: true, leadership: true })
-    setRelStatus(FUNDER_EXTENDED[funder.id]?.relationship?.status ?? "New")
-    setRelStatusOpen(false)
-  }, [funder.id])
-
-  function toggleSect(key: keyof typeof openSections) {
-    setOpenSections((s) => ({ ...s, [key]: !s[key] }))
-  }
-
-  const wtf = extended.whatTheyFund
-  const gh = extended.givingHistory
-  const leadership = extended.leadership
-  const rel = extended.relationship
-
-  const outlineChip: React.CSSProperties = {
-    borderRadius: "var(--radius-pill)",
-    padding: "3px 9px",
-    backgroundColor: "#FFFFFF",
-    border: "var(--border-subtle)",
-    fontSize: 11,
-    fontWeight: 500,
-    color: "var(--ink-secondary)",
-  }
-
-  return (
-    <div style={{ width: 320, flexShrink: 0, display: "flex", flexDirection: "column", borderLeft: "var(--border-subtle)", backgroundColor: "var(--canvas)", overflow: "hidden" }}>
-      {/* Back nav */}
-      {onBack && (
-        <div style={{ flexShrink: 0, padding: "8px 12px", borderBottom: "var(--border-subtle)", backgroundColor: "var(--canvas)" }}>
-          <button
-            type="button"
-            onClick={onBack}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: "4px 6px",
-              borderRadius: 6,
-              fontSize: 12,
-              fontWeight: 500,
-              color: "var(--ink-secondary)",
-              transition: "color 150ms, background-color 150ms",
-            }}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget as HTMLButtonElement
-              el.style.color = "var(--ink)"
-              el.style.backgroundColor = "rgba(28,46,38,0.06)"
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget as HTMLButtonElement
-              el.style.color = "var(--ink-secondary)"
-              el.style.backgroundColor = "transparent"
-            }}
-          >
-            <ChevronLeft size={13} />
-            Back to opportunity
-          </button>
-        </div>
-      )}
-      {/* Scrollable body */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 0 20px", display: "flex", flexDirection: "column", gap: 14, minHeight: 0 }}>
-
-        {/* ── Header ── */}
-        <div>
-          <h3 style={{ margin: "0 0 8px 0", fontSize: 17, fontWeight: 600, letterSpacing: "-0.025em", lineHeight: "22px", color: "var(--ink)", fontFamily: "var(--font-lora)" }}>
-            {funder.name}
-          </h3>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-            <span style={{ display: "inline-block", borderRadius: "var(--radius-pill)", padding: "4px 10px", backgroundColor: "var(--slate-tint)", fontSize: 12, fontWeight: 500, color: "var(--slate-primary)" }}>
-              {funder.type}
-            </span>
-            <a href={funder.website} target="_blank" rel="noopener noreferrer"
-              style={{ display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none", fontSize: 12, color: "var(--slate-secondary)" }}
-            >
-              Website <ExternalLink size={11} />
-            </a>
-          </div>
-        </div>
-
-        <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
-
-        {/* ── About ── */}
-        <div>
-          <p style={sectionLabelStyle}>About</p>
-          <p style={{ fontSize: 12, color: "var(--ink)", lineHeight: "19px", margin: 0 }}>{funder.description}</p>
-        </div>
-
-        {/* ── Alignment ── */}
-        {funder.whyMatches.length > 0 && (
-          <>
-            <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
-            <div>
-              <p style={sectionLabelStyle}>Alignment with your organization</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {funder.whyMatches.map((item, i) => (
-                  <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                    {item.icon === "check" ? <CheckCircle /> : <WarningCircle />}
-                    <span style={{ fontSize: 12, color: "var(--ink)", lineHeight: "18px" }}>{item.text}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* ── What They Fund ── */}
-        {wtf && (
-          <>
-            <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
-            <div>
-              <p style={sectionLabelStyle}>What they fund</p>
-              <p style={{ margin: "0 0 12px", fontSize: 12, color: "var(--ink-secondary)", fontWeight: 500 }}>{wtf.typicalGrantRange}</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-
-                {/* Locations */}
-                <div>
-                  <button type="button" onClick={() => toggleSect("locations")}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "none", border: "none", padding: "0 0 6px", cursor: "pointer" }}
-                  >
-                    <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)" }}>Locations funded</span>
-                    <ChevronDown size={11} color="var(--ink-tertiary)" style={{ transform: openSections.locations ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 150ms", flexShrink: 0 }} />
-                  </button>
-                  {openSections.locations && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                      {wtf.locations.map((loc) => <span key={loc} style={outlineChip}>{loc}</span>)}
-                    </div>
-                  )}
-                </div>
-
-                {/* Org types */}
-                <div>
-                  <button type="button" onClick={() => toggleSect("orgTypes")}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "none", border: "none", padding: "0 0 6px", cursor: "pointer" }}
-                  >
-                    <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)" }}>Types of organizations funded</span>
-                    <ChevronDown size={11} color="var(--ink-tertiary)" style={{ transform: openSections.orgTypes ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 150ms", flexShrink: 0 }} />
-                  </button>
-                  {openSections.orgTypes && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                      {wtf.orgTypes.map((ot) => <span key={ot} style={outlineChip}>{ot}</span>)}
-                    </div>
-                  )}
-                </div>
-
-                {/* Program types */}
-                <div>
-                  <button type="button" onClick={() => toggleSect("programTypes")}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "none", border: "none", padding: "0 0 6px", cursor: "pointer" }}
-                  >
-                    <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)" }}>Types of programs funded</span>
-                    <ChevronDown size={11} color="var(--ink-tertiary)" style={{ transform: openSections.programTypes ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 150ms", flexShrink: 0 }} />
-                  </button>
-                  {openSections.programTypes && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                      {wtf.programTypes.map((pt) => <span key={pt} style={outlineChip}>{pt}</span>)}
-                    </div>
-                  )}
-                </div>
-
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* ── Giving History ── */}
-        {gh && (
-          <>
-            <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
-            <div>
-              <p style={sectionLabelStyle}>Giving history</p>
-              <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{gh.statLine}</p>
-              <p style={{ margin: gh.pastGrantees ? "0 0 14px" : 0, fontSize: 12, color: "var(--ink-secondary)", lineHeight: "18px", fontStyle: "italic" }}>{gh.trendNote}</p>
-              {gh.pastGrantees && gh.pastGrantees.length > 0 && (
-                <div>
-                  <p style={{ fontSize: 9, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)", margin: "0 0 8px" }}>Past grantee snapshot</p>
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    {gh.pastGrantees.map((g, i) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: i < gh.pastGrantees!.length - 1 ? "var(--border-subtle)" : "none" }}>
-                        <span style={{ fontSize: 12, color: "var(--ink)" }}>{g.name}</span>
-                        <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink-secondary)", flexShrink: 0, marginLeft: 8 }}>{g.amount}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* ── Leadership ── */}
-        {leadership && leadership.length > 0 && (
-          <>
-            <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
-            <div>
-              <button type="button" onClick={() => toggleSect("leadership")}
-                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", marginBottom: openSections.leadership ? 10 : 0 }}
-              >
-                <p style={{ ...sectionLabelStyle, margin: 0 }}>Leadership</p>
-                <ChevronDown size={11} color="var(--ink-tertiary)" style={{ transform: openSections.leadership ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 150ms", flexShrink: 0 }} />
-              </button>
-              {openSections.leadership && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  {leadership.map((c, i) => (
-                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{c.name}</span>
-                      <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>{c.title}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* ── Our Relationship ── */}
-        <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
-        <div style={{ paddingBottom: 20 }}>
-          <p style={sectionLabelStyle}>Our relationship</p>
-
-          {isTracked && rel ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-
-              {/* Status chip + owner */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <div style={{ position: "relative" }}>
-                  <button type="button" onClick={() => setRelStatusOpen((v) => !v)}
-                    style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, backgroundColor: RELATIONSHIP_BADGE[relStatus].bg, color: RELATIONSHIP_BADGE[relStatus].color, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 500 }}
-                  >
-                    {relStatus}
-                    <ChevronDown size={10} color={RELATIONSHIP_BADGE[relStatus].color} style={{ transform: relStatusOpen ? "rotate(180deg)" : "none", transition: "transform 150ms" }} />
-                  </button>
-                  {relStatusOpen && (
-                    <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, backgroundColor: "#FFFFFF", borderRadius: 8, boxShadow: "0 8px 24px rgba(28,24,64,0.12)", zIndex: 30, overflow: "hidden", minWidth: 130 }}>
-                      {(["New", "Cultivating", "Established", "Lapsed"] as RelationshipStatus[]).filter((s) => s !== relStatus).map((s) => (
-                        <button key={s} type="button" onClick={() => { setRelStatus(s); setRelStatusOpen(false) }}
-                          style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
-                          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
-                          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" }}
-                        >
-                          <span style={{ borderRadius: 20, padding: "2px 8px", backgroundColor: RELATIONSHIP_BADGE[s].bg, color: RELATIONSHIP_BADGE[s].color, fontSize: 11, fontWeight: 500 }}>{s}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <span style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>{rel.owner}</span>
-              </div>
-
-              {/* Contacts */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
-                  <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)" }}>Contacts</span>
-                  <button type="button" style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 500, color: "var(--slate-secondary)", padding: 0 }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "underline" }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "none" }}
-                  >+ Add</button>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {rel.contacts.map((c, i) => (
-                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)" }}>{c.name}</span>
-                      <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>{c.role}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
-                  <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)" }}>Notes</span>
-                  <button type="button" style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 500, color: "var(--slate-secondary)", padding: 0 }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "underline" }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "none" }}
-                  >+ Add note</button>
-                </div>
-                {rel.notes.length === 0 ? (
-                  <p style={{ margin: 0, fontSize: 12, color: "var(--ink-tertiary)", fontStyle: "italic" }}>No notes yet</p>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                    {rel.notes.slice(0, 2).map((note, i) => (
-                      <div key={i} style={{ padding: "9px 12px", borderRadius: 8, backgroundColor: "#FFFFFF", boxShadow: "var(--shadow-card)" }}>
-                        <p style={{ margin: "0 0 3px", fontSize: 12, color: "var(--ink)", lineHeight: "17px" }}>{note.preview}</p>
-                        <span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>{note.date}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Engagement history */}
-              {rel.engagements.length > 0 && (
-                <div>
-                  <span style={{ display: "block", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "var(--ink-tertiary)", marginBottom: 7 }}>Engagement history</span>
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    {rel.engagements.map((eng, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 0", borderBottom: i < rel.engagements.length - 1 ? "var(--border-subtle)" : "none" }}>
-                        <span style={{ fontSize: 12, color: "var(--ink)", flex: 1, lineHeight: "16px" }}>{eng.name}</span>
-                        <span style={{ borderRadius: 20, padding: "2px 8px", backgroundColor: "#EBF0F5", fontSize: 11, fontWeight: 500, color: "#4A6080", flexShrink: 0 }}>{eng.stage}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            </div>
-          ) : (
-            /* State A: not yet tracked */
-            <button type="button" onClick={() => onCreateEngagement(funder.name)}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", padding: "9px 0", borderRadius: 10, backgroundColor: "var(--slate-primary)", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#FFFFFF", transition: "background-color 150ms" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-secondary)" }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
-            >
-              <Plus size={13} color="#FFFFFF" />
-              Track This Funder
-            </button>
-          )}
-        </div>
-
-      </div>
-
-      {/* ── Sticky footer ── */}
-      <div style={{ flexShrink: 0, borderTop: "var(--border-subtle)", padding: "14px 20px", backgroundColor: "var(--canvas)" }}>
-        <button type="button"
-          onClick={() => isTracked ? router.push("/portfolio") : onCreateEngagement(funder.name)}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", height: 40, borderRadius: 10, backgroundColor: "var(--slate-primary)", border: "none", cursor: "pointer", marginBottom: isTracked ? 8 : 0, transition: "background-color 150ms" }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-secondary)" }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-primary)" }}
-        >
-          {isTracked ? (
-            <span style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF", lineHeight: "18px" }}>View in Portfolio</span>
-          ) : (
-            <>
-              <Plus size={15} color="#FFFFFF" style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF", lineHeight: "18px" }}>Track This Funder</span>
-            </>
-          )}
-        </button>
-        {isTracked && (
-          <p style={{ fontSize: 12, color: "var(--ink-tertiary)", textAlign: "center", margin: 0 }}>Already in your portfolio</p>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ── Filter Sidebar ─────────────────────────────────────────────────────────
-
-function FilterSidebar({
-  activeTab,
-  stagedFilters,
-  appliedFilters,
-  onStagedChange,
-  onApply,
-  onClearAll,
-  collapsed,
-  onToggleCollapse,
-}: {
-  activeTab: ActiveTab
-  stagedFilters: CombinedFilterState
-  appliedFilters: CombinedFilterState
-  onStagedChange: (next: CombinedFilterState) => void
-  onApply: () => void
-  onClearAll: () => void
-  collapsed: boolean
-  onToggleCollapse: () => void
-}) {
-  const hasPending = JSON.stringify(stagedFilters) !== JSON.stringify(appliedFilters)
-
-  const [openSections, setOpenSections] = useState({
-    initiatives: true,
-    focusAreas: true,
-    geography: true,
-    fundingRange: true,
-    funderTypes: true,
-  })
-
-  function toggleSection(key: keyof typeof openSections) {
-    setOpenSections((s) => ({ ...s, [key]: !s[key] }))
-  }
-
-  function toggleInitiative(key: string) {
-    onStagedChange({ ...stagedFilters, initiatives: { ...stagedFilters.initiatives, [key]: !stagedFilters.initiatives[key] } })
-  }
-
-  function toggleFocus(key: string) {
-    onStagedChange({ ...stagedFilters, focusAreas: { ...stagedFilters.focusAreas, [key]: !stagedFilters.focusAreas[key] } })
-  }
-
-  function toggleGeo(key: string) {
-    onStagedChange({ ...stagedFilters, geography: { ...stagedFilters.geography, [key]: !stagedFilters.geography[key] } })
-  }
-
-  function setDeadline(val: CombinedFilterState["deadline"]) {
-    onStagedChange({ ...stagedFilters, deadline: stagedFilters.deadline === val ? null : val })
-  }
-
-  function toggleFunderType(key: FunderTypeFilter) {
-    onStagedChange({ ...stagedFilters, funderTypes: { ...stagedFilters.funderTypes, [key]: !stagedFilters.funderTypes[key] } })
-  }
-
-  function toggleUnsolicited() {
-    onStagedChange({ ...stagedFilters, acceptsUnsolicited: !stagedFilters.acceptsUnsolicited })
-  }
-
-  const hasAppliedFilters =
-    Object.values(appliedFilters.initiatives).some(Boolean) ||
-    Object.values(appliedFilters.focusAreas).some(Boolean) ||
-    Object.values(appliedFilters.geography).some(Boolean) ||
-    appliedFilters.deadline !== null ||
-    Object.values(appliedFilters.funderTypes).some(Boolean) ||
-    appliedFilters.acceptsUnsolicited
-
-  return (
-    <aside
-      style={{
-        width: collapsed ? 40 : 268,
-        flexShrink: 0,
-        backgroundColor: "var(--canvas)",
-        borderRight: "1px solid var(--border-default)",
-        display: "flex",
-        flexDirection: "row",
-        overflow: "hidden",
-        transition: "width 200ms ease-in-out",
-      }}
-    >
-      {/* Chevron strip */}
-      <div
-        style={{
-          width: 40,
-          flexShrink: 0,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          paddingTop: 18,
-        }}
-      >
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          title={collapsed ? "Expand filters" : "Collapse filters"}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: 4,
-            borderRadius: 6,
-            color: "var(--ink-tertiary)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "color 150ms, background-color 150ms",
-          }}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget as HTMLButtonElement
-            el.style.color = "var(--ink-secondary)"
-            el.style.backgroundColor = "var(--slate-tint)"
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget as HTMLButtonElement
-            el.style.color = "var(--ink-tertiary)"
-            el.style.backgroundColor = "transparent"
-          }}
-        >
-          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </button>
-
-        {collapsed && (
-          <div style={{ position: "relative", marginTop: 8 }}>
-            <SlidersHorizontal size={14} color="var(--ink-tertiary)" />
-            {(hasAppliedFilters || hasPending) && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: -2,
-                  right: -2,
-                  width: 5,
-                  height: 5,
-                  borderRadius: "50%",
-                  backgroundColor: hasPending ? "var(--amber)" : "var(--slate-primary)",
-                  border: "1.5px solid var(--canvas)",
-                }}
-              />
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Filter content: scrollable sections + sticky footer */}
-      <div
-        style={{
-          flex: 1,
-          minWidth: 0,
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
-      >
-        {/* Fixed header */}
-        <div style={{ padding: "20px 16px 12px 0", flexShrink: 0, display: "flex", alignItems: "center" }}>
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 600,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "var(--ink-tertiary)",
-            }}
-          >
-            Filters
-          </span>
-        </div>
-
-        {/* Scrollable filter sections */}
-        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 20,
-              padding: "0 16px 20px 0",
-            }}
-          >
-            {/* Initiatives — shared, always first */}
-            <div>
-              <button type="button" onClick={() => toggleSection("initiatives")} style={sectionToggleStyle}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Initiatives</span>
-                <ChevronDown
-                  size={12}
-                  color="var(--ink-tertiary)"
-                  style={{
-                    transform: openSections.initiatives ? "rotate(0deg)" : "rotate(-90deg)",
-                    transition: "transform 150ms",
-                  }}
-                />
-              </button>
-              {openSections.initiatives && (
-                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
-                  {INITIATIVE_OPTIONS.map((name) => (
-                    <button key={name} type="button" onClick={() => toggleInitiative(name)} style={checkRowStyle}>
-                      <CheckboxIcon checked={stagedFilters.initiatives[name] ?? false} />
-                      <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
-
-            {/* Focus Areas — shared */}
-            <div>
-              <button type="button" onClick={() => toggleSection("focusAreas")} style={sectionToggleStyle}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Focus Areas</span>
-                <ChevronDown
-                  size={12}
-                  color="var(--ink-tertiary)"
-                  style={{
-                    transform: openSections.focusAreas ? "rotate(0deg)" : "rotate(-90deg)",
-                    transition: "transform 150ms",
-                  }}
-                />
-              </button>
-              {openSections.focusAreas && (
-                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
-                  {Object.entries(stagedFilters.focusAreas).map(([label, checked]) => (
-                    <button key={label} type="button" onClick={() => toggleFocus(label)} style={checkRowStyle}>
-                      <CheckboxIcon checked={checked} />
-                      <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
-
-            {/* Geography — shared */}
-            <div>
-              <button type="button" onClick={() => toggleSection("geography")} style={sectionToggleStyle}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Geography</span>
-                <ChevronDown
-                  size={12}
-                  color="var(--ink-tertiary)"
-                  style={{
-                    transform: openSections.geography ? "rotate(0deg)" : "rotate(-90deg)",
-                    transition: "transform 150ms",
-                  }}
-                />
-              </button>
-              {openSections.geography && (
-                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
-                  {Object.entries(stagedFilters.geography).map(([label, checked]) => (
-                    <button key={label} type="button" onClick={() => toggleGeo(label)} style={checkRowStyle}>
-                      <CheckboxIcon checked={checked} />
-                      <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
-
-            {activeTab === "opportunities" ? (
-              <>
-                {/* Funding Range — opportunities */}
-                <div>
-                  <button type="button" onClick={() => toggleSection("fundingRange")} style={sectionToggleStyle}>
-                    <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Funding Range</span>
-                    <ChevronDown
-                      size={12}
-                      color="var(--ink-tertiary)"
-                      style={{
-                        transform: openSections.fundingRange ? "rotate(0deg)" : "rotate(-90deg)",
-                        transition: "transform 150ms",
-                      }}
-                    />
-                  </button>
-                  {openSections.fundingRange && (
-                    <div style={{ marginTop: 10 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                        <span style={{ fontSize: 12, color: "var(--slate)" }}>$25,000</span>
-                        <span style={{ fontSize: 12, color: "var(--slate)" }}>$150,000</span>
-                      </div>
-                      <div style={{ position: "relative", height: 4, borderRadius: 2, backgroundColor: "var(--slate-light)" }}>
-                        <div style={{ position: "absolute", left: 0, width: "75%", height: "100%", borderRadius: 2, backgroundColor: "var(--slate-primary)" }} />
-                        <div
-                          style={{
-                            position: "absolute",
-                            left: "calc(75% - 6px)",
-                            top: -4,
-                            width: 12,
-                            height: 12,
-                            borderRadius: "50%",
-                            backgroundColor: "var(--slate-primary)",
-                            border: "2px solid var(--surface)",
-                            boxShadow: "0 1px 3px rgba(28,24,64,0.15)",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
-
-                {/* Deadline — opportunities only */}
-                <div>
-                  <p style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", margin: "0 0 10px 0" }}>
-                    Deadline
-                  </p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    {(["next-6", "next-12"] as const).map((val) => {
-                      const isActive = stagedFilters.deadline === val
-                      const label = val === "next-6" ? "Next 6 months" : "Next 12 months"
-                      return (
-                        <button
-                          key={val}
-                          type="button"
-                          onClick={() => setDeadline(val)}
-                          style={{
-                            borderRadius: "var(--radius-pill)",
-                            padding: "6px 14px",
-                            border: isActive ? "none" : "1px solid var(--border-default)",
-                            backgroundColor: isActive ? "var(--slate-primary)" : "transparent",
-                            fontSize: 12,
-                            fontWeight: isActive ? 500 : 400,
-                            color: isActive ? "#FFFFFF" : "var(--ink)",
-                            cursor: "pointer",
-                            textAlign: "left",
-                            transition: "background-color 150ms, color 150ms",
-                          }}
-                        >
-                          {label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Funder Type — funders only */}
-                <div>
-                  <button type="button" onClick={() => toggleSection("funderTypes")} style={sectionToggleStyle}>
-                    <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Funder Type</span>
-                    <ChevronDown
-                      size={12}
-                      color="var(--ink-tertiary)"
-                      style={{
-                        transform: openSections.funderTypes ? "rotate(0deg)" : "rotate(-90deg)",
-                        transition: "transform 150ms",
-                      }}
-                    />
-                  </button>
-                  {openSections.funderTypes && (
-                    <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
-                      {FUNDER_TYPES.map((ft) => (
-                        <button key={ft} type="button" onClick={() => toggleFunderType(ft)} style={checkRowStyle}>
-                          <CheckboxIcon checked={stagedFilters.funderTypes[ft] ?? false} />
-                          <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>{ft}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
-
-                {/* Funding Range — funders */}
-                <div>
-                  <button type="button" onClick={() => toggleSection("fundingRange")} style={sectionToggleStyle}>
-                    <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>Funding Range</span>
-                    <ChevronDown
-                      size={12}
-                      color="var(--ink-tertiary)"
-                      style={{
-                        transform: openSections.fundingRange ? "rotate(0deg)" : "rotate(-90deg)",
-                        transition: "transform 150ms",
-                      }}
-                    />
-                  </button>
-                  {openSections.fundingRange && (
-                    <div style={{ marginTop: 10 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                        <span style={{ fontSize: 12, color: "var(--slate)" }}>$10,000</span>
-                        <span style={{ fontSize: 12, color: "var(--slate)" }}>$200,000</span>
-                      </div>
-                      <div style={{ position: "relative", height: 4, borderRadius: 2, backgroundColor: "var(--slate-light)" }}>
-                        <div style={{ position: "absolute", left: 0, width: "80%", height: "100%", borderRadius: 2, backgroundColor: "var(--slate-primary)" }} />
-                        <div
-                          style={{
-                            position: "absolute",
-                            left: "calc(80% - 6px)",
-                            top: -4,
-                            width: 12,
-                            height: 12,
-                            borderRadius: "50%",
-                            backgroundColor: "var(--slate-primary)",
-                            border: "2px solid var(--surface)",
-                            boxShadow: "0 1px 3px rgba(28,24,64,0.15)",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ height: 1, backgroundColor: "rgba(42, 42, 42, 0.08)" }} />
-
-                {/* Accepts unsolicited — funders only */}
-                <div>
-                  <p style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", margin: "0 0 10px 0" }}>
-                    Application
-                  </p>
-                  <button type="button" onClick={toggleUnsolicited} style={checkRowStyle}>
-                    <CheckboxIcon checked={stagedFilters.acceptsUnsolicited} />
-                    <span style={{ fontSize: 13, color: "var(--ink)", lineHeight: "16px" }}>
-                      Accepts unsolicited
-                    </span>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Sticky footer: Apply + Clear */}
-        <div
-          style={{
-            flexShrink: 0,
-            borderTop: "var(--border-subtle)",
-            padding: "12px 16px 16px 0",
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-          }}
-        >
-          <button
-            type="button"
-            onClick={onApply}
-            style={{
-              width: "100%",
-              padding: "9px 14px",
-              borderRadius: "var(--radius-button)",
-              border: "none",
-              backgroundColor: hasPending ? "var(--slate-primary)" : "var(--slate-tint)",
-              color: hasPending ? "#FFFFFF" : "var(--ink-secondary)",
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "pointer",
-              position: "relative",
-              transition: "background-color 150ms, color 150ms",
-            }}
-            onMouseEnter={(e) => {
-              if (hasPending) (e.currentTarget as HTMLButtonElement).style.opacity = "0.88"
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.opacity = "1"
-            }}
-          >
-            Apply filters
-            {hasPending && (
-              <span
-                style={{
-                  position: "absolute",
-                  top: -3,
-                  right: -3,
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  backgroundColor: "var(--amber)",
-                  border: "1.5px solid var(--canvas)",
-                }}
-              />
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={onClearAll}
-            style={{
-              background: "none",
-              border: "none",
-              padding: 0,
-              cursor: "pointer",
-              fontSize: 13,
-              color: "var(--slate-secondary)",
-              textAlign: "center",
-              width: "100%",
-            }}
-          >
-            Clear all
-          </button>
-        </div>
-      </div>
-    </aside>
-  )
-}
-
-// ── Shared style objects ───────────────────────────────────────────────────
-
-const sectionLabelStyle: React.CSSProperties = {
-  fontSize: 10,
-  fontWeight: 600,
-  letterSpacing: "0.07em",
-  textTransform: "uppercase",
-  color: "var(--ink-tertiary)",
-  margin: "0 0 10px 0",
-}
-
-const sectionToggleStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  width: "100%",
-  background: "none",
-  border: "none",
-  padding: 0,
-  cursor: "pointer",
-}
-
-const checkRowStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  background: "none",
-  border: "none",
-  padding: 0,
-  cursor: "pointer",
-  textAlign: "left",
-  width: "100%",
-}
-
-// ── Default filter state ───────────────────────────────────────────────────
-
-const DEFAULT_COMBINED_FILTERS: CombinedFilterState = {
-  initiatives: {
-    "Rescue & Intake": false,
-    "Foster Program": false,
-    "Neutering": false,
-  },
-  focusAreas: {
-    "Animal Welfare": true,
-    "Community Development": true,
-    Education: false,
-    Health: false,
-    Environment: false,
-  },
-  geography: {
-    California: true,
-    National: true,
-    International: false,
-  },
-  deadline: "next-6",
-  funderTypes: {
-    "Private foundation": false,
-    "Community foundation": false,
-    Government: false,
-    "Corporate foundation": false,
-    "Public charity": false,
-  },
-  acceptsUnsolicited: false,
-}
-
-const EMPTY_COMBINED_FILTERS: CombinedFilterState = {
-  initiatives: { "Rescue & Intake": false, "Foster Program": false, "Neutering": false },
-  focusAreas: { "Animal Welfare": false, "Community Development": false, Education: false, Health: false, Environment: false },
-  geography: { California: false, National: false, International: false },
-  deadline: null,
-  funderTypes: { "Private foundation": false, "Community foundation": false, Government: false, "Corporate foundation": false, "Public charity": false },
-  acceptsUnsolicited: false,
-}
-
-// ── Page ───────────────────────────────────────────────────────────────────
-
-export default function DiscoverPage() {
-  const router = useRouter()
-
-  // Tab
-  const [activeTab, setActiveTab] = useState<ActiveTab>("opportunities")
-
-  // Opportunities state
-  const [selectedId, setSelectedId] = useState("petco-love")
-  const [viewFunderFromOpp, setViewFunderFromOpp] = useState(false)
-  const [showPopover, setShowPopover] = useState(false)
   const [hiddenOppIds, setHiddenOppIds] = useState<Set<string>>(new Set())
-  const [dismissingOppIds, setDismissingOppIds] = useState<Set<string>>(new Set())
-  const [notRelevantOppModalFor, setNotRelevantOppModalFor] = useState<string | null>(null)
-  const [notRelevantOppIds, setNotRelevantOppIds] = useState<Set<string>>(new Set())
-  const [shareOppId, setShareOppId] = useState<string | null>(null)
-  const [showHiddenView, setShowHiddenView] = useState(false)
+  const [hideDialogOpp, setHideDialogOpp] = useState<typeof OPPORTUNITIES[number] | null>(null)
+  const [toast, setToast] = useState<{ oppId: string; oppName: string } | null>(null)
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Funders state
-  const [selectedFunderId, setSelectedFunderId] = useState<string>(DISCOVER_FUNDERS[0]?.id ?? "")
-  const [hiddenFunderIds, setHiddenFunderIds] = useState<Set<string>>(new Set())
-  const [dismissingFunderIds, setDismissingFunderIds] = useState<Set<string>>(new Set())
-  const [notRelevantFunderModalFor, setNotRelevantFunderModalFor] = useState<string | null>(null)
-  const [notRelevantFunderIds, setNotRelevantFunderIds] = useState<Set<string>>(new Set())
+  const lastFocusedRef = useRef<HTMLElement | null>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const browseToolbarSentinelRef = useRef<HTMLDivElement>(null)
+  const [browseToolbarStuck, setBrowseToolbarStuck] = useState(false)
 
-  // Shared / layout state
-  const [stagedFilters, setStagedFilters] = useState<CombinedFilterState>(DEFAULT_COMBINED_FILTERS)
-  const [appliedFilters, setAppliedFilters] = useState<CombinedFilterState>(DEFAULT_COMBINED_FILTERS)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [toast, setToast] = useState<string | null>(null)
-  const [filterCollapsed, setFilterCollapsed] = useState(false)
+  const selectedOppId = searchParams.get("opp")
+  const selectedFunderId = searchParams.get("funder")
+  const panelOpen = !!(selectedOppId || selectedFunderId)
 
-  // Engagement modal
-  const [showEngagementModal, setShowEngagementModal] = useState(false)
-  const [engagementModalFunderName, setEngagementModalFunderName] = useState("")
+  const prevPanelRef = useRef<boolean>(false)
+  useEffect(() => {
+    if (prevPanelRef.current && !panelOpen) lastFocusedRef.current?.focus()
+    prevPanelRef.current = panelOpen
+  }, [panelOpen])
 
   useEffect(() => {
-    const stored = localStorage.getItem("discover-filter-collapsed")
-    if (stored !== null) setFilterCollapsed(stored === "true")
+    const sentinel = browseToolbarSentinelRef.current
+    const root = scrollContainerRef.current
+    if (!sentinel || !root) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setBrowseToolbarStuck(!entry.isIntersecting),
+      { root, threshold: 0 },
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [primaryTab, objectType])
+
+  const handleOppClick = useCallback((oppId: string, el: HTMLElement) => {
+    lastFocusedRef.current = el
+    router.push(`/discover?opp=${oppId}`)
+  }, [router])
+
+  const handleClose = useCallback(() => {
+    router.push("/discover")
+  }, [router])
+
+  const handleFunderClick = useCallback((funderId: string) => {
+    router.push(`/discover?funder=${funderId}`)
+  }, [router])
+
+  const [trackedOppIds, setTrackedOppIds] = useState<Set<string>>(() => new Set())
+  const [trackedFunderIds, setTrackedFunderIds] = useState<Set<string>>(() => new Set())
+
+  const handleTrack = useCallback((oppId: string) => {
+    createPipelineOpportunity(oppId, selectedProjectId ?? "proj-general")
+    setTrackedOppIds(prev => new Set([...prev, oppId]))
+  }, [selectedProjectId])
+
+  const handleTrackFunder = useCallback((funderId: string) => {
+    trackFunder(funderId)
+    setTrackedFunderIds(prev => new Set([...prev, funderId]))
   }, [])
 
-  useEffect(() => {
-    setViewFunderFromOpp(false)
-    setShowPopover(false)
-  }, [selectedId])
+  const handleHideClick = useCallback((oppId: string) => {
+    const opp = OPPORTUNITIES.find(o => o.id === oppId) ?? null
+    setHideDialogOpp(opp)
+  }, [])
 
-  function handleToggleFilter() {
-    setFilterCollapsed((v) => {
-      const next = !v
-      localStorage.setItem("discover-filter-collapsed", String(next))
-      return next
-    })
-  }
+  const handleHideConfirm = useCallback((payload: HidePayload) => {
+    setHiddenOppIds(prev => { const next = new Set(prev); next.add(payload.opportunityId); return next })
+    setHideDialogOpp(null)
 
-  const visibleOpps = OPPORTUNITIES.filter((o) => !hiddenOppIds.has(o.id))
-  const visibleFunders = DISCOVER_FUNDERS.filter((f) => !hiddenFunderIds.has(f.id))
+    const opp = OPPORTUNITIES.find(o => o.id === payload.opportunityId)
+    if (opp) {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+      setToast({ oppId: payload.opportunityId, oppName: opp.name })
+      toastTimeoutRef.current = setTimeout(() => setToast(null), 6000)
+    }
 
-  // ── Applied-filter + search derived results ──
-  const activeInit = Object.entries(appliedFilters.initiatives).filter(([, v]) => v).map(([k]) => k)
-  const activeFocus = Object.entries(appliedFilters.focusAreas).filter(([, v]) => v).map(([k]) => k)
-  const activeGeo = Object.entries(appliedFilters.geography).filter(([, v]) => v).map(([k]) => k)
-  const activeTypes = Object.entries(appliedFilters.funderTypes).filter(([, v]) => v).map(([k]) => k)
-  const q = searchQuery.trim().toLowerCase()
+    recordHideOpportunity(payload)
+  }, [])
 
-  const filteredOpps = visibleOpps.filter((opp) => {
-    if (activeInit.length > 0 && !opp.initiativeTags.some((t) => activeInit.includes(t))) return false
-    if (activeFocus.length > 0 && !activeFocus.some((f) => opp.focusAreaLabel.includes(f) || opp.meta.toLowerCase().includes(f.toLowerCase()))) return false
-    if (q && !opp.grantName.toLowerCase().includes(q) && !opp.funder.toLowerCase().includes(q) && !opp.aboutGrant.toLowerCase().includes(q) && !opp.meta.toLowerCase().includes(q)) return false
+  const handleHideUndo = useCallback(() => {
+    if (!toast) return
+    const { oppId } = toast
+    setHiddenOppIds(prev => { const next = new Set(prev); next.delete(oppId); return next })
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+    setToast(null)
+    undoHideOpportunity(oppId)
+  }, [toast])
+
+  const dismissToast = useCallback(() => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+    setToast(null)
+  }, [])
+
+  const handleRestoreAll = useCallback(() => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+    setHiddenOppIds(new Set())
+    setToast(null)
+  }, [])
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  // Filtered + sorted opportunities
+  const filtered: Opportunity[] = OPPORTUNITIES.filter((opp) => {
+    const funder = getFunder(opp.funderId)
+    if (!funder) return false
+    if (typeFilters.length > 0 && !typeFilters.includes(funder.type)) return false
+    if (focusAreaFilters.length > 0) {
+      const inFunder = funder.focusAreas.some(fa => focusAreaFilters.includes(fa))
+      const inOpp = (opp.focusAreas ?? []).some(fa => focusAreaFilters.includes(fa))
+      if (!inFunder && !inOpp) return false
+    }
+    if (geographyFilters.length > 0 && !geographyFilters.includes(funder.geography)) return false
+    if (awardRangeFilter) {
+      const amt = parseAmount(opp.amount)
+      if (amt === null) return false
+      if (awardRangeFilter === "under-25k" && amt >= 25000) return false
+      if (awardRangeFilter === "25k-50k" && (amt < 25000 || amt > 50000)) return false
+      if (awardRangeFilter === "over-50k" && amt <= 50000) return false
+    }
+    if (deadlineFilter) {
+      const days = parseInt(deadlineFilter)
+      const deadline = parseDeadlineDate(opp.deadline ?? "")
+      if (!deadline) return false
+      deadline.setHours(0, 0, 0, 0)
+      const msPerDay = 1000 * 60 * 60 * 24
+      const daysUntil = Math.ceil((deadline.getTime() - today.getTime()) / msPerDay)
+      if (daysUntil < 0 || daysUntil > days) return false
+    }
+    if (query.trim()) {
+      const q = query.toLowerCase()
+      const searchable = [
+        opp.name, funder.name, funder.description ?? "", opp.description ?? "",
+        ...(opp.focusAreas ?? []), ...funder.focusAreas, opp.eligibility ?? "",
+      ].join(" ").toLowerCase()
+      if (!searchable.includes(q)) return false
+    }
     return true
   })
 
-  const filteredFunders = visibleFunders.filter((funder) => {
-    if (activeInit.length > 0 && !funder.initiatives.some((i) => activeInit.includes(i.name))) return false
-    if (activeFocus.length > 0 && !funder.focusAreas.some((a) => activeFocus.includes(a))) return false
-    if (activeTypes.length > 0 && !activeTypes.includes(funder.type)) return false
-    if (appliedFilters.acceptsUnsolicited && !funder.acceptsUnsolicited) return false
-    if (activeGeo.length > 0 && !activeGeo.some((g) => funder.geography.toLowerCase().includes(g.toLowerCase()))) return false
-    if (q && !funder.name.toLowerCase().includes(q) && !funder.focusAreas.join(" ").toLowerCase().includes(q) && !funder.description.toLowerCase().includes(q)) return false
+  const visibleOpps = filtered.filter(opp => !hiddenOppIds.has(opp.id) && !getPipelineForOpportunity(opp.id) && !trackedOppIds.has(opp.id))
+  const sortedOpps = [...visibleOpps].sort((a, b) => {
+    if (sortBy === "deadline") {
+      const da = parseDeadlineDate(a.deadline ?? "")
+      const db = parseDeadlineDate(b.deadline ?? "")
+      if (!da && !db) return 0
+      if (!da) return 1
+      if (!db) return -1
+      return da.getTime() - db.getTime()
+    }
+    if (sortBy === "award") {
+      return (parseAmount(b.amount) ?? -1) - (parseAmount(a.amount) ?? -1)
+    }
+    const sa = getMatchForOpportunity(a.id)?.matchScore ?? 0
+    const sb = getMatchForOpportunity(b.id)?.matchScore ?? 0
+    return sb - sa
+  })
+
+  // Filtered + sorted funders
+  const filteredFunders = FUNDERS.filter((funder) => {
+    if (focusAreaFilters.length > 0 && !funder.focusAreas.some(fa => focusAreaFilters.includes(fa))) return false
+    if (geographyFilters.length > 0 && !geographyFilters.includes(funder.geography)) return false
+    if (query.trim()) {
+      const q = query.toLowerCase()
+      const searchable = [funder.name, funder.description ?? "", ...funder.focusAreas, funder.geography].join(" ").toLowerCase()
+      if (!searchable.includes(q)) return false
+    }
     return true
   })
 
-  // ── Applied filter chips ──
-  const filterChips: { label: string; key: string; onRemove: () => void }[] = []
-  for (const [k, v] of Object.entries(appliedFilters.initiatives)) {
-    if (v) filterChips.push({ label: k, key: `init:${k}`, onRemove: () => removeChip({ ...appliedFilters, initiatives: { ...appliedFilters.initiatives, [k]: false } }) })
-  }
-  for (const [k, v] of Object.entries(appliedFilters.focusAreas)) {
-    if (v) filterChips.push({ label: k, key: `focus:${k}`, onRemove: () => removeChip({ ...appliedFilters, focusAreas: { ...appliedFilters.focusAreas, [k]: false } }) })
-  }
-  for (const [k, v] of Object.entries(appliedFilters.geography)) {
-    if (v) filterChips.push({ label: k, key: `geo:${k}`, onRemove: () => removeChip({ ...appliedFilters, geography: { ...appliedFilters.geography, [k]: false } }) })
-  }
-  if (appliedFilters.deadline) {
-    const deadlineLabel = appliedFilters.deadline === "next-6" ? "Next 6 months" : "Next 12 months"
-    filterChips.push({ label: deadlineLabel, key: "deadline", onRemove: () => removeChip({ ...appliedFilters, deadline: null }) })
-  }
-  for (const [k, v] of Object.entries(appliedFilters.funderTypes)) {
-    if (v) filterChips.push({ label: k, key: `type:${k}`, onRemove: () => removeChip({ ...appliedFilters, funderTypes: { ...appliedFilters.funderTypes, [k as FunderTypeFilter]: false } }) })
-  }
-  if (appliedFilters.acceptsUnsolicited) {
-    filterChips.push({ label: "Accepts unsolicited", key: "unsolicited", onRemove: () => removeChip({ ...appliedFilters, acceptsUnsolicited: false }) })
-  }
+  const sortedFunders = [...filteredFunders].sort((a, b) => {
+    const ma = MATCHES.find(m => m.funderId === a.id)?.matchScore ?? 0
+    const mb = MATCHES.find(m => m.funderId === b.id)?.matchScore ?? 0
+    return mb - ma
+  })
 
-  const selectedOpp =
-    filteredOpps.find((o) => o.id === selectedId) ??
-    filteredOpps[0] ??
-    OPPORTUNITIES[0]
-
-  const selectedFunder =
-    filteredFunders.find((f) => f.id === selectedFunderId) ??
-    filteredFunders[0] ??
-    DISCOVER_FUNDERS[0]
-
-  const oppFunder = DISCOVER_FUNDERS.find((f) => f.name === selectedOpp.funder)
-
-  function handleTabSwitch(tab: ActiveTab) {
-    if (tab === activeTab) return
-    setActiveTab(tab)
-    setShowPopover(false)
-    setShowHiddenView(false)
-    setViewFunderFromOpp(false)
-    // Carry over initiatives/focus/geo; reset tab-specific filters; discard staged
-    const carried: CombinedFilterState = {
-      initiatives: appliedFilters.initiatives,
-      focusAreas: appliedFilters.focusAreas,
-      geography: appliedFilters.geography,
-      deadline: null,
-      funderTypes: Object.fromEntries(FUNDER_TYPES.map((k) => [k, false])) as Record<FunderTypeFilter, boolean>,
-      acceptsUnsolicited: false,
+  const filteredMatchedOpps = STRONG_MATCHES.filter(({ opp }) => {
+    const funder = getFunder(opp.funderId)
+    if (!funder) return false
+    if (typeFilters.length > 0 && !typeFilters.includes(funder.type)) return false
+    if (focusAreaFilters.length > 0) {
+      const inFunder = funder.focusAreas.some(fa => focusAreaFilters.includes(fa))
+      const inOpp = (opp.focusAreas ?? []).some(fa => focusAreaFilters.includes(fa))
+      if (!inFunder && !inOpp) return false
     }
-    setAppliedFilters(carried)
-    setStagedFilters(carried)
-    // Reset right panel to first card of the new tab
-    if (tab === "funders") {
-      const first = DISCOVER_FUNDERS.find((f) => !hiddenFunderIds.has(f.id))
-      if (first) setSelectedFunderId(first.id)
-    } else {
-      const first = OPPORTUNITIES.find((o) => !hiddenOppIds.has(o.id))
-      if (first) setSelectedId(first.id)
+    if (geographyFilters.length > 0 && !geographyFilters.includes(funder.geography)) return false
+    if (awardRangeFilter) {
+      const amt = parseAmount(opp.amount)
+      if (amt === null) return false
+      if (awardRangeFilter === "under-25k" && amt >= 25000) return false
+      if (awardRangeFilter === "25k-50k" && (amt < 25000 || amt > 50000)) return false
+      if (awardRangeFilter === "over-50k" && amt <= 50000) return false
     }
-  }
-
-  // ── Opportunity handlers ──
-
-  function handleOppCardClick(id: string) {
-    setSelectedId(id)
-    setShowPopover(false)
-  }
-
-  function handleSelectEngagement() {
-    setShowPopover(false)
-    setToast("Added to portfolio")
-    router.push("/opportunity/equitable-futures")
-  }
-
-  function handleOppNotRelevantConfirm(
-    _reason: NotRelevantReason,
-    _otherText: string,
-    removeFromList: boolean,
-  ) {
-    const id = notRelevantOppModalFor
-    if (!id) return
-
-    if (removeFromList) {
-      setDismissingOppIds((prev) => new Set(Array.from(prev).concat(id)))
-      setTimeout(() => {
-        setHiddenOppIds((prev) => new Set(Array.from(prev).concat(id)))
-        setDismissingOppIds((prev) => {
-          const next = new Set(Array.from(prev))
-          next.delete(id)
-          return next
-        })
-        if (selectedId === id) {
-          const next = visibleOpps.find((o) => o.id !== id)
-          if (next) setSelectedId(next.id)
-        }
-      }, 220)
-    } else {
-      setNotRelevantOppIds((prev) => new Set(Array.from(prev).concat(id)))
+    if (deadlineFilter) {
+      const days = parseInt(deadlineFilter)
+      const deadline = parseDeadlineDate(opp.deadline ?? "")
+      if (!deadline) return false
+      deadline.setHours(0, 0, 0, 0)
+      const msPerDay = 1000 * 60 * 60 * 24
+      const daysUntil = Math.ceil((deadline.getTime() - today.getTime()) / msPerDay)
+      if (daysUntil < 0 || daysUntil > days) return false
     }
-
-    setNotRelevantOppModalFor(null)
-  }
-
-  // ── Funder handlers ──
-
-  function handleFunderCardClick(id: string) {
-    setSelectedFunderId(id)
-  }
-
-  function handleFunderNotRelevantConfirm(
-    _reason: NotRelevantReason,
-    _otherText: string,
-    removeFromList: boolean,
-  ) {
-    const id = notRelevantFunderModalFor
-    if (!id) return
-
-    if (removeFromList) {
-      setDismissingFunderIds((prev) => new Set(Array.from(prev).concat(id)))
-      setTimeout(() => {
-        setHiddenFunderIds((prev) => new Set(Array.from(prev).concat(id)))
-        setDismissingFunderIds((prev) => {
-          const next = new Set(Array.from(prev))
-          next.delete(id)
-          return next
-        })
-        if (selectedFunderId === id) {
-          const next = visibleFunders.find((f) => f.id !== id)
-          if (next) setSelectedFunderId(next.id)
-        }
-      }, 220)
-    } else {
-      setNotRelevantFunderIds((prev) => new Set(Array.from(prev).concat(id)))
+    if (query.trim()) {
+      const q = query.toLowerCase()
+      const searchable = [
+        opp.name, funder.name, funder.description ?? "", opp.description ?? "",
+        ...(opp.focusAreas ?? []), ...funder.focusAreas, opp.eligibility ?? "",
+      ].join(" ").toLowerCase()
+      if (!searchable.includes(q)) return false
     }
+    return true
+  })
 
-    setNotRelevantFunderModalFor(null)
-  }
-
-  function handleOpportunityClickFromFunderPanel(oppId: string) {
-    setActiveTab("opportunities")
-    if (oppId && OPPORTUNITIES.some((o) => o.id === oppId)) {
-      setSelectedId(oppId)
-    } else {
-      const first = OPPORTUNITIES.find((o) => !hiddenOppIds.has(o.id))
-      if (first) setSelectedId(first.id)
+  const visibleMatchedOpps = filteredMatchedOpps.filter(({ opp }) => !hiddenOppIds.has(opp.id) && !getPipelineForOpportunity(opp.id) && !trackedOppIds.has(opp.id))
+  const sortedMatchedOpps = [...visibleMatchedOpps].sort((a, b) => {
+    if (sortBy === "deadline") {
+      const da = parseDeadlineDate(a.opp.deadline ?? "")
+      const db = parseDeadlineDate(b.opp.deadline ?? "")
+      if (!da && !db) return 0
+      if (!da) return 1
+      if (!db) return -1
+      return da.getTime() - db.getTime()
     }
-  }
+    if (sortBy === "award") {
+      return (parseAmount(b.opp.amount) ?? -1) - (parseAmount(a.opp.amount) ?? -1)
+    }
+    return b.match.matchScore - a.match.matchScore
+  })
 
-  function handleCreateEngagement(funderName: string) {
-    setEngagementModalFunderName(funderName)
-    setShowEngagementModal(true)
-  }
+  const filteredMatchedFunders = MATCHED_FUNDERS.filter(({ funder }) => {
+    if (focusAreaFilters.length > 0 && !funder.focusAreas.some(fa => focusAreaFilters.includes(fa))) return false
+    if (geographyFilters.length > 0 && !geographyFilters.includes(funder.geography)) return false
+    if (query.trim()) {
+      const q = query.toLowerCase()
+      const searchable = [funder.name, funder.description ?? "", ...funder.focusAreas, funder.geography].join(" ").toLowerCase()
+      if (!searchable.includes(q)) return false
+    }
+    return true
+  })
 
-  function handleEngagementCreated(_data: NewEngagementData) { // eslint-disable-line @typescript-eslint/no-unused-vars
-    setToast("Engagement created")
-  }
+  const activeChips: { key: string; label: string; onRemove: () => void }[] = [
+    ...typeFilters.map(t => ({ key: `type-${t}`, label: `Funder type: ${FUNDER_TYPE_LABELS[t]}`, onRemove: () => toggleTypeFilter(t) })),
+    ...focusAreaFilters.map(fa => ({ key: `focus-${fa}`, label: `Focus area: ${fa}`, onRemove: () => toggleFocusAreaFilter(fa) })),
+    ...geographyFilters.map(g => ({ key: `geo-${g}`, label: `Geography: ${g}`, onRemove: () => toggleGeographyFilter(g) })),
+    awardRangeFilter ? { key: "award", label: `Award: ${AWARD_RANGE_LABELS[awardRangeFilter]}`, onRemove: () => setAwardRangeFilter("") } : null,
+    deadlineFilter ? { key: "deadline", label: DEADLINE_LABELS[deadlineFilter], onRemove: () => setDeadlineFilter("") } : null,
+  ].filter((c): c is NonNullable<typeof c> => c !== null)
 
-  function handleShareOpp(teammate: string) {
-    setToast(`Opportunity shared with ${teammate}`)
-  }
-
-  // ── Filter actions ──
-
-  function handleApplyFilters() {
-    setAppliedFilters(stagedFilters)
-  }
-
-  function handleClearFilters() {
-    setStagedFilters(EMPTY_COMBINED_FILTERS)
-    setAppliedFilters(EMPTY_COMBINED_FILTERS)
-  }
-
-  function removeChip(updated: CombinedFilterState) {
-    setAppliedFilters(updated)
-    setStagedFilters(updated)
-  }
+  const segmentOppCount = primaryTab === "matches" ? sortedMatchedOpps.length : sortedOpps.length
+  const segmentFunderCount = primaryTab === "matches" ? filteredMatchedFunders.length : sortedFunders.length
+  const newCount = new Set([
+    ...sortedMatchedOpps.filter(({ match }) => match.isNew).map(({ match }) => match.id),
+    ...filteredMatchedFunders.filter(({ match }) => match.isNew).map(({ match }) => match.id),
+  ]).size
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        flex: 1,
-        overflow: "hidden",
-        minHeight: 0,
-        backgroundColor: "#FFFFFF",
-      }}
-    >
-      {/* ── View Toggle Header ── */}
-      <div
-        style={{
-          flexShrink: 0,
-          padding: "10px 20px",
-          borderBottom: "var(--border-subtle)",
-          backgroundColor: "#FFFFFF",
-          display: "flex",
-          alignItems: "center",
-        }}
-      >
-        <ViewToggle activeTab={activeTab} onSwitch={handleTabSwitch} />
-      </div>
+    <div style={{ height: "100%", position: "relative", overflow: "hidden", backgroundColor: "var(--canvas)" }}>
 
-      {/* ── Three-column layout ── */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          overflow: "hidden",
-          minHeight: 0,
-        }}
-      >
-        {/* Filter Sidebar */}
-        <FilterSidebar
-          activeTab={activeTab}
-          stagedFilters={stagedFilters}
-          appliedFilters={appliedFilters}
-          onStagedChange={setStagedFilters}
-          onApply={handleApplyFilters}
-          onClearAll={handleClearFilters}
-          collapsed={filterCollapsed}
-          onToggleCollapse={handleToggleFilter}
-        />
+      <div ref={scrollContainerRef} style={{ height: "100%", overflowY: "auto" }}>
+        <ContentContainer style={{ padding: "36px 40px 80px" }}>
 
-        {/* Center: results list */}
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            borderRight: "var(--border-subtle)",
-            backgroundColor: "#FFFFFF",
-          }}
-        >
-          {/* Results header */}
-          <div
-            style={{
-              flexShrink: 0,
-              padding: "14px 20px",
+          <IncompleteProfileBanner />
+
+          {/* Page header */}
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 20 }}>
+            <div>
+              <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700, color: "var(--ink)" }}>
+                Discover
+              </h1>
+              <p style={{ margin: 0, fontSize: 13, color: "var(--ink-tertiary)" }}>
+                Funding opportunities for {scopeLabel}
+              </p>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, marginTop: 4 }}>
+              <ProgramPickerPill
+                activeProjectId={selectedProjectId ?? "proj-general"}
+                newCount={newCount}
+              />
+              {hiddenOppIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={handleRestoreAll}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "6px 12px", borderRadius: 8,
+                    border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)",
+                    fontSize: 12, color: "var(--ink-secondary)", cursor: "pointer",
+                    transition: "background-color 120ms, color 120ms",
+                  }}
+                  onMouseEnter={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--canvas)"; el.style.color = "var(--ink)" }}
+                  onMouseLeave={(e) => { const el = e.currentTarget as HTMLButtonElement; el.style.backgroundColor = "var(--surface)"; el.style.color = "var(--ink-secondary)" }}
+                >
+                  <EyeOff size={13} style={{ color: "var(--ink-tertiary)" }} />
+                  {hiddenOppIds.size} hidden · Restore
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Single control band */}
+          <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid var(--hair)", marginBottom: 24 }}>
+
+            {/* Left: primary underlined tabs */}
+            <div style={{ display: "flex", gap: 24, flex: 1 }}>
+              {(["matches", "explore"] as const).map(tab => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setPrimaryTab(tab)}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    background: "none", border: "none", cursor: "pointer",
+                    padding: "0 0 10px",
+                    fontSize: 14,
+                    fontWeight: primaryTab === tab ? 600 : 400,
+                    color: primaryTab === tab ? "var(--slate-primary)" : "var(--ink-tertiary)",
+                    borderBottom: primaryTab === tab ? "2px solid var(--slate-primary)" : "2px solid transparent",
+                    marginBottom: -1,
+                    transition: "color 120ms",
+                  }}
+                >
+                  {tab === "matches" ? (
+                    <>
+                      Matches
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, backgroundColor: "#f0f3f6", borderRadius: 10, padding: "1px 6px" }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "#3c5e4c", lineHeight: 1 }}>{newCount} New</span>
+                        <span style={{ fontSize: 10, color: "#b7c0ca", lineHeight: 1 }}>|</span>
+                        <span style={{ fontSize: 11, fontWeight: 400, color: "#738498", lineHeight: 1 }}>{sortedMatchedOpps.length + filteredMatchedFunders.length} Total</span>
+                      </span>
+                    </>
+                  ) : "Explore"}
+                </button>
+              ))}
+            </div>
+
+            {/* Right: segmented control */}
+            <div style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
-              backgroundColor: "#FFFFFF",
-              borderBottom: "var(--border-subtle)",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {activeTab === "opportunities" && showHiddenView ? (
-                <button
-                  type="button"
-                  onClick={() => setShowHiddenView(false)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    fontSize: 13,
-                    color: "var(--slate-secondary)",
-                    padding: 0,
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "underline" }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.textDecoration = "none" }}
-                >
-                  ‹ Back to opportunities
-                </button>
-              ) : (
-                <span style={{ fontSize: 13, color: "var(--ink-secondary)", lineHeight: "16px" }}>
-                  {activeTab === "opportunities"
-                    ? `${filteredOpps.length} opportunities matching your initiatives`
-                    : `${filteredFunders.length} funders matching your initiatives`}
-                </span>
-              )}
-              {activeTab === "opportunities" && !showHiddenView && hiddenOppIds.size > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowHiddenView(true)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    background: "none",
-                    cursor: "pointer",
-                    fontSize: 12,
-                    color: "var(--ink-tertiary)",
-                    padding: "3px 7px",
-                    borderRadius: 6,
-                    border: "var(--border-subtle)",
-                    backgroundColor: "var(--canvas)",
-                    transition: "color 150ms, background-color 150ms",
-                  }}
-                  onMouseEnter={(e) => {
-                    const el = e.currentTarget as HTMLButtonElement
-                    el.style.color = "var(--ink-secondary)"
-                    el.style.backgroundColor = "var(--slate-tint)"
-                  }}
-                  onMouseLeave={(e) => {
-                    const el = e.currentTarget as HTMLButtonElement
-                    el.style.color = "var(--ink-tertiary)"
-                    el.style.backgroundColor = "var(--canvas)"
-                  }}
-                >
-                  View hidden ({hiddenOppIds.size})
-                </button>
-              )}
-            </div>
-            <button
-              type="button"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                borderRadius: "var(--radius-button)",
-                padding: "6px 12px",
-                backgroundColor: "#FFFFFF",
-                border: "var(--border-subtle)",
-                fontSize: 13,
-                color: "var(--ink)",
-                cursor: "pointer",
-                transition: "background-color 150ms",
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--canvas)" }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#FFFFFF" }}
-            >
-              <span>Sort: Relevance</span>
-              <ChevronDown size={12} color="var(--ink-tertiary)" />
-            </button>
-          </div>
-
-          {/* Search bar */}
-          <div
-            style={{
-              flexShrink: 0,
-              padding: "10px 20px",
-              borderBottom: "var(--border-subtle)",
-              backgroundColor: "#FFFFFF",
-            }}
-          >
-            <div style={{ position: "relative" }}>
-              <div
-                style={{
-                  position: "absolute",
-                  left: 11,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  pointerEvents: "none",
-                  display: "flex",
-                  alignItems: "center",
-                }}
-              >
-                <Search size={14} color="var(--ink-tertiary)" />
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search opportunities and funders..."
-                style={{
-                  width: "100%",
-                  paddingLeft: 34,
-                  paddingRight: 12,
-                  paddingTop: 7,
-                  paddingBottom: 7,
-                  fontSize: 13,
-                  fontFamily: "var(--font-inter), system-ui, sans-serif",
-                  color: "var(--ink)",
-                  backgroundColor: "var(--canvas)",
-                  border: "1px solid var(--border-default)",
-                  borderRadius: "var(--radius-input)",
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Applied filter chips */}
-          {filterChips.length > 0 && (
-            <div
-              style={{
-                flexShrink: 0,
-                padding: "8px 20px",
-                borderBottom: "var(--border-subtle)",
-                backgroundColor: "#FFFFFF",
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 6,
-                alignItems: "center",
-              }}
-            >
-              {filterChips.map((chip) => (
-                <span
-                  key={chip.key}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 5,
-                    padding: "4px 8px 4px 10px",
-                    borderRadius: "var(--radius-pill)",
-                    backgroundColor: "var(--plum-tint)",
-                    fontSize: 12,
-                    fontWeight: 500,
-                    color: "var(--plum-soft)",
-                    lineHeight: "16px",
-                  }}
-                >
-                  {chip.label}
+              backgroundColor: "rgba(28,24,64,0.06)",
+              borderRadius: 8,
+              padding: 3,
+              gap: 1,
+              marginBottom: 10,
+            }}>
+              {(["opportunities", "funders"] as const).map(type => {
+                const isActive = objectType === type
+                const count = type === "opportunities" ? segmentOppCount : segmentFunderCount
+                return (
                   <button
+                    key={type}
                     type="button"
-                    onClick={chip.onRemove}
+                    onClick={() => setObjectType(type)}
                     style={{
-                      background: "none",
+                      display: "flex", alignItems: "center", gap: 6,
+                      background: isActive ? "white" : "transparent",
                       border: "none",
+                      borderRadius: 6,
                       cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      padding: 0,
-                      color: "var(--plum-soft)",
+                      padding: "4px 12px",
+                      fontSize: 12,
+                      fontWeight: isActive ? 600 : 400,
+                      color: isActive ? "var(--slate-primary)" : "var(--ink-tertiary)",
+                      boxShadow: isActive ? "0 1px 3px rgba(28,24,64,0.10), 0 0 0 0.5px rgba(28,24,64,0.08)" : "none",
+                      transition: "background 120ms, color 120ms, box-shadow 120ms",
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    <X size={11} />
+                    {type === "opportunities" ? "Opportunities" : "Funders"}
+                    {count !== null && (
+                      <span style={{
+                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                        minWidth: 17, height: 17, padding: "0 4px", borderRadius: 10,
+                        fontSize: 10, fontWeight: 700,
+                        backgroundColor: "var(--evergreen-tint)", color: "var(--evergreen)",
+                      }}>
+                        {count}
+                      </span>
+                    )}
                   </button>
-                </span>
-              ))}
-              {filterChips.length > 1 && (
-                <button
-                  type="button"
-                  onClick={handleClearFilters}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    fontSize: 12,
-                    color: "var(--slate-secondary)",
-                    padding: "4px 2px",
-                    textDecoration: "underline",
-                  }}
-                >
-                  Clear all
-                </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Shared search + filter toolbar */}
+          <div ref={browseToolbarSentinelRef} aria-hidden="true" style={{ height: 1, marginBottom: -1 }} />
+
+          <div style={{
+            position: "sticky", top: 0, zIndex: 10,
+            backgroundColor: "var(--canvas)",
+            marginLeft: -40, marginRight: -40,
+            paddingLeft: 40, paddingRight: 40,
+            paddingTop: 8, paddingBottom: browseToolbarStuck ? 10 : 8,
+            transition: "box-shadow 150ms",
+            boxShadow: browseToolbarStuck ? "0 1px 0 var(--hair), 0 2px 12px rgba(28,24,64,0.06)" : "none",
+          }}>
+            {/* Search + Sort */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: "var(--radius-input)", border: "1px solid var(--hair-2)", backgroundColor: "var(--surface)" }}>
+                <Search size={13} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={objectType === "opportunities" ? "Search opportunities" : "Search funders"}
+                  style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 13, color: "var(--ink)", lineHeight: "17px" }}
+                />
+                {query && (
+                  <button type="button" onClick={() => setQuery("")} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "var(--ink-tertiary)", padding: 0 }}>
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                <span style={{ fontSize: 11, color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>Sort</span>
+                <FilterSelect value={sortBy} onChange={(v) => setSortBy(v as "match" | "deadline" | "award")}>
+                  <option value="match">Best fit</option>
+                  {objectType === "opportunities" && (
+                    <>
+                      <option value="deadline">Soonest deadline</option>
+                      <option value="award">Largest award</option>
+                    </>
+                  )}
+                </FilterSelect>
+              </div>
+            </div>
+
+            {/* Filters */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: activeChips.length > 0 ? 8 : 0 }}>
+              {objectType === "opportunities" && (
+                <MultiSelectFilter
+                  label="Funder type"
+                  options={(Object.keys(FUNDER_TYPE_LABELS) as FunderType[]).map(t => ({ value: t, label: FUNDER_TYPE_LABELS[t] }))}
+                  selected={typeFilters}
+                  onToggle={toggleTypeFilter as (v: string) => void}
+                />
+              )}
+
+              <MultiSelectFilter
+                label="Focus area"
+                options={ALL_FOCUS_AREAS.map(fa => ({ value: fa, label: fa }))}
+                selected={focusAreaFilters}
+                onToggle={toggleFocusAreaFilter}
+              />
+
+              <MultiSelectFilter
+                label="Geography"
+                options={ALL_GEOGRAPHIES.map(g => ({ value: g, label: g }))}
+                selected={geographyFilters}
+                onToggle={toggleGeographyFilter}
+              />
+
+              {objectType === "opportunities" && (
+                <>
+                  <FilterSelect value={awardRangeFilter} onChange={setAwardRangeFilter}>
+                    <option value="">Award size</option>
+                    <option value="under-25k">Up to $25k</option>
+                    <option value="25k-50k">$25k to $50k</option>
+                    <option value="over-50k">Over $50k</option>
+                  </FilterSelect>
+
+                  <FilterSelect value={deadlineFilter} onChange={setDeadlineFilter}>
+                    <option value="">Deadline</option>
+                    <option value="30">Within 30 days</option>
+                    <option value="60">Within 60 days</option>
+                    <option value="90">Within 90 days</option>
+                  </FilterSelect>
+                </>
+              )}
+            </div>
+
+            {/* Active filter chips */}
+            {activeChips.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                {activeChips.map(chip => (
+                  <button
+                    key={chip.key}
+                    type="button"
+                    onClick={chip.onRemove}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 8px 4px 10px", borderRadius: 20, backgroundColor: "var(--slate-tint)", border: "1px solid var(--hair-2)", fontSize: 12, color: "var(--slate-secondary)", cursor: "pointer", transition: "background-color 120ms" }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--hair-2)" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-tint)" }}
+                  >
+                    {chip.label}
+                    <X size={11} style={{ color: "var(--ink-tertiary)", flexShrink: 0 }} />
+                  </button>
+                ))}
+                {activeChips.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: "4px 6px", fontSize: 12, color: "var(--ink-tertiary)", transition: "color 120ms" }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--slate-secondary)" }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-tertiary)" }}
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Matches > Opportunities */}
+          {primaryTab === "matches" && objectType === "opportunities" && (
+            <section style={{ marginTop: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
+                <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+                  Matched opportunities
+                </h2>
+                <span style={{ fontSize: 14, color: "var(--hair-2)" }}>·</span>
+                <span style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-tertiary)" }}>{sortedMatchedOpps.length}</span>
+              </div>
+
+              {sortedMatchedOpps.length === 0 ? (
+                <div style={{ padding: "36px 0", textAlign: "center" }}>
+                  <p style={{ margin: "0 0 8px", fontSize: 13, color: "var(--ink-tertiary)" }}>
+                    {(hasActiveFilters || query.trim()) ? "No matches fit these criteria." : "No matches yet."}
+                  </p>
+                  {(hasActiveFilters || query.trim()) && (
+                    <button type="button" onClick={() => { clearFilters(); setQuery("") }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--slate-secondary)", textDecoration: "underline", padding: 0 }}>
+                      Clear search and filters
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 12 }}>
+                  {sortedMatchedOpps.map(({ opp }) => (
+                    <CatalogueCard key={opp.id} opp={opp} onOppClick={handleOppClick} onTrack={handleTrack} onHide={handleHideClick} />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Matches > Funders */}
+          {primaryTab === "matches" && objectType === "funders" && (
+            <section style={{ marginTop: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
+                <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+                  Matched funders
+                </h2>
+                <span style={{ fontSize: 14, color: "var(--hair-2)" }}>·</span>
+                <span style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-tertiary)" }}>{filteredMatchedFunders.length}</span>
+              </div>
+
+              {filteredMatchedFunders.length === 0 ? (
+                <div style={{ padding: "36px 0", textAlign: "center" }}>
+                  <p style={{ margin: "0 0 8px", fontSize: 13, color: "var(--ink-tertiary)" }}>
+                    {(hasActiveFilters || query.trim()) ? "No matched funders fit these criteria." : "No matched funders yet."}
+                  </p>
+                  {(hasActiveFilters || query.trim()) && (
+                    <button type="button" onClick={() => { clearFilters(); setQuery("") }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--slate-secondary)", textDecoration: "underline", padding: 0 }}>
+                      Clear search and filters
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 12 }}>
+                  {filteredMatchedFunders.map(({ funder, match }) => (
+                    <MatchedFunderCard key={funder.id} funder={funder} isNew={match.isNew} onFunderClick={handleFunderClick} />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Explore > Opportunities */}
+          {primaryTab === "explore" && objectType === "opportunities" && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
+                <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+                  All opportunities
+                </h2>
+                <span style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-tertiary)" }}>{sortedOpps.length}</span>
+              </div>
+              {sortedOpps.length > 0 ? (
+                <div>
+                  {sortedOpps.map((opp, i) => (
+                    <ExploreOpportunityRow
+                      key={opp.id}
+                      opp={opp}
+                      isFirst={i === 0}
+                      onOppClick={handleOppClick}
+                      onTrack={handleTrack}
+                      onHide={handleHideClick}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div style={{ padding: "56px 0", textAlign: "center" }}>
+                  <p style={{ margin: "0 0 8px", fontSize: 13, color: "var(--ink-tertiary)" }}>No results match these filters.</p>
+                  {hasActiveFilters && (
+                    <button type="button" onClick={clearFilters} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--slate-secondary)", textDecoration: "underline", padding: 0 }}>
+                      Clear all filters
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )}
 
-          {/* Cards */}
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: "16px 20px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 10,
-            }}
-          >
-            {activeTab === "opportunities"
-              ? showHiddenView
-                ? /* Hidden view */
-                  Array.from(hiddenOppIds).map((id) => {
-                    const opp = OPPORTUNITIES.find((o) => o.id === id)
-                    if (!opp) return null
-                    return (
-                      <div key={id} style={{ position: "relative" }}>
-                        <OpportunityCard
-                          opp={opp}
-                          isSelected={opp.id === selectedId}
-                          isNotRelevant={false}
-                          onClick={() => handleOppCardClick(opp.id)}
-                          onNotRelevant={() => {}}
-                          onShare={() => setShareOppId(opp.id)}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setHiddenOppIds((prev) => {
-                              const next = new Set(Array.from(prev))
-                              next.delete(id)
-                              return next
-                            })
-                          }}
-                          style={{
-                            position: "absolute",
-                            bottom: 10,
-                            right: 12,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 4,
-                            background: "none",
-                            border: "var(--border-subtle)",
-                            borderRadius: 6,
-                            cursor: "pointer",
-                            padding: "4px 9px",
-                            fontSize: 11,
-                            fontWeight: 500,
-                            color: "var(--slate-secondary)",
-                            backgroundColor: "#FFFFFF",
-                            transition: "background-color 150ms",
-                          }}
-                          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--slate-tint)" }}
-                          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#FFFFFF" }}
-                        >
-                          <RotateCcw size={10} />
-                          Unhide
-                        </button>
-                      </div>
-                    )
-                  })
-                : /* Normal view */
-                  filteredOpps.map((opp) => {
-                    const isDismissing = dismissingOppIds.has(opp.id)
-                    return (
-                      <div
-                        key={opp.id}
-                        style={{
-                          opacity: isDismissing ? 0 : 1,
-                          maxHeight: isDismissing ? 0 : "2000px",
-                          overflow: isDismissing ? "hidden" : "visible",
-                          transition: "opacity 200ms ease-in-out, max-height 200ms ease-in-out",
-                        }}
-                      >
-                        <OpportunityCard
-                          opp={opp}
-                          isSelected={opp.id === selectedId}
-                          isNotRelevant={notRelevantOppIds.has(opp.id)}
-                          onClick={() => handleOppCardClick(opp.id)}
-                          onNotRelevant={() => setNotRelevantOppModalFor(opp.id)}
-                          onShare={() => setShareOppId(opp.id)}
-                        />
-                      </div>
-                    )
-                  })
-              : filteredFunders.map((funder) => {
-                  const isDismissing = dismissingFunderIds.has(funder.id)
-                  return (
-                    <div
+          {/* Explore > Funders */}
+          {primaryTab === "explore" && objectType === "funders" && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
+                <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+                  All funders
+                </h2>
+                <span style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-tertiary)" }}>{sortedFunders.length}</span>
+              </div>
+              {sortedFunders.length > 0 ? (
+                <div>
+                  {sortedFunders.map((funder, i) => (
+                    <ExploreFunderRow
                       key={funder.id}
-                      style={{
-                        opacity: isDismissing ? 0 : 1,
-                        maxHeight: isDismissing ? 0 : "2000px",
-                        overflow: isDismissing ? "hidden" : "visible",
-                        transition: "opacity 200ms ease-in-out, max-height 200ms ease-in-out",
-                      }}
-                    >
-                      <FunderCard
-                        funder={funder}
-                        isSelected={funder.id === selectedFunderId}
-                        isNotRelevant={notRelevantFunderIds.has(funder.id)}
-                        onClick={() => handleFunderCardClick(funder.id)}
-                        onNotRelevant={() => setNotRelevantFunderModalFor(funder.id)}
-                      />
-                    </div>
-                  )
-                })}
-          </div>
-        </div>
+                      funder={funder}
+                      isFirst={i === 0}
+                      onFunderClick={handleFunderClick}
+                      trackedFunderIds={trackedFunderIds}
+                      onTrackFunder={handleTrackFunder}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div style={{ padding: "56px 0", textAlign: "center" }}>
+                  <p style={{ margin: "0 0 8px", fontSize: 13, color: "var(--ink-tertiary)" }}>No funders match these filters.</p>
+                  {hasActiveFilters && (
+                    <button type="button" onClick={clearFilters} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--slate-secondary)", textDecoration: "underline", padding: 0 }}>
+                      Clear all filters
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
-        {/* Right panel */}
-        {activeTab === "opportunities" ? (
-          viewFunderFromOpp && oppFunder ? (
-            <FunderDetailPanel
-              funder={oppFunder}
-              onCreateEngagement={handleCreateEngagement}
-              onOpportunityClick={handleOpportunityClickFromFunderPanel}
-              onBack={() => setViewFunderFromOpp(false)}
-            />
-          ) : (
-            <DetailPanel
-              opp={selectedOpp}
-              showPopover={showPopover}
-              onTrackClick={() => setShowPopover((v) => !v)}
-              onCancelPopover={() => setShowPopover(false)}
-              onSelectEngagement={handleSelectEngagement}
-              onViewFunderProfile={oppFunder ? () => setViewFunderFromOpp(true) : undefined}
-            />
-          )
-        ) : (
-          <FunderDetailPanel
-            funder={selectedFunder}
-            onCreateEngagement={handleCreateEngagement}
-            onOpportunityClick={handleOpportunityClickFromFunderPanel}
-          />
-        )}
+        </ContentContainer>
       </div>
 
-      {/* ── Not Relevant Modals ── */}
-      {notRelevantOppModalFor && (
-        <NotRelevantModal
-          onCancel={() => setNotRelevantOppModalFor(null)}
-          onConfirm={handleOppNotRelevantConfirm}
+      {selectedOppId && (
+        <OpportunityPeekPanel
+          key={selectedOppId}
+          oppId={selectedOppId}
+          onClose={handleClose}
+          onHide={handleHideClick}
         />
       )}
-      {notRelevantFunderModalFor && (
-        <NotRelevantModal
-          onCancel={() => setNotRelevantFunderModalFor(null)}
-          onConfirm={handleFunderNotRelevantConfirm}
+      {selectedFunderId && !selectedOppId && (
+        <OpportunityPeekPanel
+          key={`funder-${selectedFunderId}`}
+          funderId={selectedFunderId}
+          onClose={handleClose}
         />
       )}
 
-      {/* Share modal */}
-      {shareOppId && (() => {
-        const opp = OPPORTUNITIES.find((o) => o.id === shareOppId)
-        return opp ? (
-          <ShareDiscoverModal
-            oppName={opp.grantName}
-            onClose={() => setShareOppId(null)}
-            onShare={(teammate) => { handleShareOpp(teammate); setShareOppId(null) }}
-          />
-        ) : null
-      })()}
-
-      {/* ── New Engagement Modal ── */}
-      <NewEngagementModal
-        open={showEngagementModal}
-        onClose={() => setShowEngagementModal(false)}
-        onCreate={handleEngagementCreated}
-        lockedFunderName={engagementModalFunderName}
+      <HideOpportunityDialog
+        opp={hideDialogOpp}
+        onConfirm={handleHideConfirm}
+        onCancel={() => setHideDialogOpp(null)}
+        onAddToPipeline={handleTrack}
       />
 
-      {/* ── Toast ── */}
-      {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
+      {toast && (
+        <UndoToast
+          oppName={toast.oppName}
+          onUndo={handleHideUndo}
+          onDismiss={dismissToast}
+        />
+      )}
     </div>
+  )
+}
+
+// ── Page export (Suspense required for useSearchParams) ────────────────────
+
+export default function DiscoverPageWrapper() {
+  return (
+    <Suspense>
+      <DiscoverPage />
+    </Suspense>
   )
 }
