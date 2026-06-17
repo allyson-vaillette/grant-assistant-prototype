@@ -248,7 +248,7 @@ function CatalogueCard({ opp, onOppClick, onTrack, onHide }: {
 
       {/* Structured match reasons list */}
       {matchReasons.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 10 }}>
           {matchReasons.map((reason, i) => (
             <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
               <span className="material-symbols-outlined" style={{ fontSize: 13, color: "#3c5e4c", flexShrink: 0, lineHeight: "17px", userSelect: "none" }}>check</span>

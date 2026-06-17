@@ -830,6 +830,11 @@ export const MATCHES: Match[] = [
         "Scale ambition: proposals should include a concrete target (number of new foster homes, animals placed) to be competitive.",
       ],
     },
+    matchReasons: [
+      { label: "Focus Areas", value: "Animal Welfare, Foster Programs" },
+      { label: "Eligible Project Location", value: "National" },
+      { value: "History of funding foster and rescue networks" },
+    ],
   },
   {
     id: "match-8",
@@ -848,6 +853,11 @@ export const MATCHES: Match[] = [
         "Grant ceiling is $12K — plan for this as supplemental funding rather than a primary source.",
       ],
     },
+    matchReasons: [
+      { label: "Focus Areas", value: "Spay/Neuter, Community Cats" },
+      { label: "Eligible Project Location", value: "National" },
+      { value: "History of funding TNR and community cat programs" },
+    ],
   },
   {
     id: "match-9",
@@ -974,6 +984,11 @@ export const MATCHES: Match[] = [
         "Documentation depth: ASPCA expects outcome data (kittens received, weaned, placed) — make sure your records are clean and queryable before applying.",
       ],
     },
+    matchReasons: [
+      { label: "Focus Areas", value: "Cat & Kitten Programs, Animal Welfare" },
+      { label: "Eligible Project Location", value: "National" },
+      { value: "History of funding neonatal kitten care programs" },
+    ],
   },
 ]
 
