@@ -820,6 +820,7 @@ export const MATCHES: Match[] = [
     opportunityId: "opp-7",
     matchStrength: "strong",
     matchScore: 5,
+    isNew: true,
     reasons: {
       positive: [
         "Foster network expansion is one of your core strategic priorities — a direct fit.",
@@ -843,6 +844,7 @@ export const MATCHES: Match[] = [
     opportunityId: "opp-8",
     matchStrength: "strong",
     matchScore: 5,
+    isNew: true,
     reasons: {
       positive: [
         "TNR is one of your primary programs — this grant was designed for organizations like yours.",
@@ -974,6 +976,7 @@ export const MATCHES: Match[] = [
     opportunityId: "opp-15",
     matchStrength: "strong",
     matchScore: 5,
+    isNew: true,
     reasons: {
       positive: [
         "Neonatal kitten care is central to Whisker Haven's work — your nursery program is exactly what this grant funds.",

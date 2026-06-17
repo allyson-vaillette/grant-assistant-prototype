@@ -320,6 +320,7 @@ export interface Match {
   opportunityId?: string
   matchStrength: MatchStrength
   matchScore: number
+  isNew?: boolean
   reasons: {
     positive: string[]
     cautions: string[]

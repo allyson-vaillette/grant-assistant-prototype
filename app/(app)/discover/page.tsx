@@ -1041,9 +1041,12 @@ function DiscoverPage() {
     deadlineFilter   ? { key: "deadline", label: DEADLINE_LABELS[deadlineFilter],                    onRemove: () => setDeadlineFilter("") }  : null,
   ].filter((c): c is NonNullable<typeof c> => c !== null)
 
-  // Segment counts shown in Matches mode only
-  const segmentOppCount = primaryTab === "matches" ? STRONG_MATCHES.length : null
-  const segmentFunderCount = primaryTab === "matches" ? MATCHED_FUNDERS.length : null
+  const segmentOppCount = primaryTab === "matches" ? sortedMatchedOpps.length : sortedOpps.length
+  const segmentFunderCount = primaryTab === "matches" ? filteredMatchedFunders.length : sortedFunders.length
+  const newCount = [
+    ...sortedMatchedOpps.map(({ match }) => match),
+    ...filteredMatchedFunders.map(({ match }) => match),
+  ].filter(m => m.isNew).length
 
   return (
     <div style={{ height: "100%", position: "relative", overflow: "hidden", backgroundColor: "var(--canvas)" }}>
@@ -1066,7 +1069,7 @@ function DiscoverPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, marginTop: 4 }}>
               <ProgramPickerPill
                 activeProjectId={selectedProjectId ?? "proj-general"}
-                newCount={sortedMatchedOpps.length > 0 ? 3 : 0}
+                newCount={newCount}
               />
               {hiddenOppIds.size > 0 && (
                 <button
@@ -1115,9 +1118,9 @@ function DiscoverPage() {
                     <>
                       Matches
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 3, backgroundColor: "#f0f3f6", borderRadius: 10, padding: "1px 6px" }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: "#3c5e4c", lineHeight: 1 }}>{sortedMatchedOpps.length > 0 ? 3 : 0} New</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "#3c5e4c", lineHeight: 1 }}>{newCount} New</span>
                         <span style={{ fontSize: 10, color: "#b7c0ca", lineHeight: 1 }}>|</span>
-                        <span style={{ fontSize: 11, fontWeight: 400, color: "#738498", lineHeight: 1 }}>{sortedMatchedOpps.length} Total</span>
+                        <span style={{ fontSize: 11, fontWeight: 400, color: "#738498", lineHeight: 1 }}>{sortedMatchedOpps.length + filteredMatchedFunders.length} Total</span>
                       </span>
                     </>
                   ) : "Explore"}
