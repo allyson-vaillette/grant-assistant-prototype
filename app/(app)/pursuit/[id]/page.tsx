@@ -13,6 +13,8 @@ import {
 } from "@/lib/mock-data"
 import type { PipelineStatus, PipelinePhase, ArtifactStage, AttachmentCategory, Attachment, Task, Requirement, DraftSection, Artifact } from "@/lib/types"
 import { phaseFromStatus } from "@/lib/types"
+import { useRespondWizard } from "@/components/respond/wizard-provider"
+import { AiIcon } from "@/components/ai-icon"
 
 // ── Phase + status config ──────────────────────────────────────────────────
 
@@ -795,6 +797,7 @@ function SubmitDialog({
 // params.id is the opportunity ID
 export default function PursuitPage({ params }: { params: { id: string } }) {
   const router = useRouter()
+  const { openWizard } = useRespondWizard()
   const searchParams = useSearchParams()
   const draftParam = searchParams.get("draft")
   const [activeTab, setActiveTab] = useState<Tab>("requirements")
@@ -1268,6 +1271,24 @@ export default function PursuitPage({ params }: { params: { id: string } }) {
           )}
 
           <div style={{ flex: 1 }} />
+          {/* Respond flow entry — opens the guided creation wizard, then routes
+              to the /respond editor. Sits alongside the existing "New draft"
+              surface below; it does not replace it. */}
+          <button
+            type="button"
+            onClick={() => openWizard(params.id)}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              padding: "4px 12px", borderRadius: "var(--radius-button)",
+              border: "none", backgroundImage: "var(--gradient-ai-cta)",
+              fontSize: 12, fontWeight: 600, color: "#FFFFFF", cursor: "pointer",
+              transition: "filter 120ms",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.filter = "brightness(1.08)" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.filter = "none" }}
+          >
+            <AiIcon size={12} white /> Write with AI
+          </button>
           <button
             type="button"
             onClick={() => {

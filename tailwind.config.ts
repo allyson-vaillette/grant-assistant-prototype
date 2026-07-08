@@ -91,6 +91,19 @@ const config: Config = {
           DEFAULT: "var(--amber)",
           light:   "var(--amber-light)",
         },
+
+        /* Respond flow — AI signal (ported from the GA2 Respond prototype) */
+        ai: {
+          text: "var(--ai-text)",   /* #6B4F8A */
+          a:    "var(--ai-a)",      /* #4535A0 gradient start */
+          b:    "var(--ai-b)",      /* #0095D4 gradient end */
+        },
+      },
+
+      /* ── AI gradients (ported) ── */
+      backgroundImage: {
+        "ai-grad": "var(--ai-grad)",
+        "ai-soft": "var(--ai-soft)",  /* AI gradient at 7% opacity */
       },
 
       /* ── Border radius ── */
