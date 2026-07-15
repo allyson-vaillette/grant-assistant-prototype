@@ -10,7 +10,6 @@ import {
   TRACKED_FUNDERS, untrackFunder,
 } from "@/lib/mock-data"
 import { useScope } from "@/lib/scope-context"
-import { useRespondWizard } from "@/components/respond/wizard-provider"
 import type { PipelineOpportunity, PipelineStatus, PipelinePhase, TrackedFunder } from "@/lib/types"
 import { phaseFromStatus } from "@/lib/types"
 
@@ -206,7 +205,6 @@ function PursuitCard({
   onStatusChange: (id: string, s: PipelineStatus) => void
 }) {
   const router = useRouter()
-  const { openWizard } = useRespondWizard()
   const funder = getFunder(pip.funderId)
   const opp    = getOpportunity(pip.opportunityId)
 
@@ -267,7 +265,7 @@ function PursuitCard({
             type="button"
             onClick={(e) => {
               e.stopPropagation()
-              openWizard(pip.opportunityId)
+              router.push("/respond/new")
             }}
             style={{
               display: "inline-flex", alignItems: "center", gap: 5,

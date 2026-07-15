@@ -14,7 +14,6 @@ import {
   getPipelineForOpportunity, createPipelineOpportunity,
 } from "@/lib/mock-data"
 import { IncompleteProfileBanner } from "@/components/IncompleteProfileBanner"
-import { useRespondWizard } from "@/components/respond/wizard-provider"
 import { useScope } from "@/lib/scope-context"
 import { phaseFromStatus } from "@/lib/types"
 import type { PipelineOpportunity, Opportunity, Funder, PipelinePhase, Match, MatchStrength } from "@/lib/types"
@@ -1092,8 +1091,8 @@ function NeedsAttentionFeed({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
+  const router = useRouter()
   const { scopeLabel, selectedProjectId } = useScope()
-  const { openWizard } = useRespondWizard()
   const [toast, setToast] = useState<string | null>(null)
   const [showAddTask, setShowAddTask] = useState(false)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -1215,7 +1214,7 @@ export default function HomePage() {
           <QuickActionCard
             icon={<FilePlus size={16} />}
             label="Start new application"
-            onClick={() => openWizard("opp-1")}
+            onClick={() => router.push("/respond/new")}
           />
         </div>
 

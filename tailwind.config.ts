@@ -186,6 +186,12 @@ const config: Config = {
           from: { opacity: "1", maxHeight: "80px" },
           to:   { opacity: "0", maxHeight: "0px", paddingTop: "0", paddingBottom: "0" },
         },
+        /* Quill "composing" motion — gentle lift + breathe, no spin (respects
+           the design system's fades + ≤8px translate rule). */
+        "quill-bob": {
+          "0%, 100%": { transform: "translateY(0)",    opacity: "0.55" },
+          "50%":      { transform: "translateY(-3px)", opacity: "1"    },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -193,6 +199,7 @@ const config: Config = {
         "fade-in":        "fade-in 0.15s ease-out",
         "shimmer":        "shimmer 1.5s infinite linear",
         "slide-up":       "slide-up 0.2s ease-out",
+        "quill-bob":      "quill-bob 1.4s ease-in-out infinite",
       },
     },
   },
