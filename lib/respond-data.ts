@@ -208,6 +208,101 @@ export const CONTEXT_SOURCES: RespondContextSource[] = [
   },
 ]
 
+/**
+ * GAP-6 · Version history. History holds only applied changes — no pending
+ * suggestion, no gradient. AI-applied versions are marked with the quill
+ * (solid), never the gradient sparkle. Minor autosaves cluster under a
+ * checkpoint (children). Restore is non-destructive and adds a new version.
+ */
+export interface RespondVersionAuthor {
+  ini: string
+  color: string
+  name: string
+}
+export interface RespondVersion {
+  id: string
+  date: string
+  time: string
+  authors: RespondVersionAuthor[]
+  tag?: string
+  name?: string
+  /** Quill note shown on AI-applied versions (solid, never gradient). */
+  aiNote?: string
+  /** Edit count for the ‹ › stepper in the preview banner. */
+  edits?: number
+  preview: { base: string; added?: string }
+  /** Minor autosaves clustered under this checkpoint. */
+  children?: RespondVersion[]
+}
+
+const VH_TAYLOR: RespondVersionAuthor = { ini: "TS", color: "#7b5e7c", name: "Taylor S." }
+const VH_ERIN: RespondVersionAuthor = { ini: "ES", color: "#4a6080", name: "Erin S." }
+
+export const VERSIONS: RespondVersion[] = [
+  {
+    id: "v-cur",
+    date: "Today",
+    time: "2:14 PM",
+    authors: [VH_TAYLOR],
+    tag: "Current version",
+    edits: 1,
+    preview: {
+      base: "In 2025, the program completed 1,840 surgeries and administered over 3,100 vaccinations.",
+      added:
+        "Each stop is scheduled in partnership with neighborhood associations and school family resource centers, which manage sign-ups in three languages.",
+    },
+  },
+  {
+    id: "v-432",
+    date: "Yesterday",
+    time: "4:32 PM",
+    authors: [VH_ERIN, VH_TAYLOR],
+    aiNote: "1 AI edit applied",
+    edits: 2,
+    preview: {
+      base: "In 2025, the program completed 1,840 surgeries and administered over 3,100 vaccinations.",
+      added:
+        "Each stop is scheduled in partnership with neighborhood associations and school family resource centers, which manage sign-ups in three languages.",
+    },
+  },
+  {
+    id: "v-board",
+    date: "Yesterday",
+    time: "11:05 AM",
+    authors: [VH_TAYLOR],
+    name: "Board review draft",
+    preview: {
+      base: "In 2025, the program completed 1,840 surgeries and administered over 3,100 vaccinations.",
+    },
+  },
+  {
+    id: "v-cluster",
+    date: "Jul 14",
+    time: "9:41 AM",
+    authors: [VH_ERIN],
+    preview: { base: "The Spay Waggin is Whisker Haven Cat Rescue's mobile spay and neuter clinic." },
+    children: [
+      { id: "v-940", date: "Jul 14", time: "9:40 AM", authors: [VH_ERIN], preview: { base: "Autosave." } },
+      { id: "v-935", date: "Jul 14", time: "9:35 AM", authors: [VH_ERIN], preview: { base: "Autosave." } },
+    ],
+  },
+  {
+    id: "v-init",
+    date: "Jul 14",
+    time: "9:12 AM",
+    authors: [VH_TAYLOR],
+    tag: "Initial AI draft",
+    aiNote: "Drafted from RFP + sources",
+    edits: 3,
+    preview: {
+      base:
+        "The Spay Waggin is Whisker Haven Cat Rescue's mobile spay and neuter clinic, delivering no-cost sterilization and preventive care.",
+      added:
+        "Operating four days per week, the 26-foot clinic-on-wheels is staffed by one licensed veterinarian, two registered veterinary technicians, and a rotating team of trained volunteers.",
+    },
+  },
+]
+
 export interface RespondSnippet {
   id: string
   title: string
