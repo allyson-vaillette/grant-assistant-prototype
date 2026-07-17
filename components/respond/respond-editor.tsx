@@ -666,6 +666,10 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
               const wc = countOf(s.id, lim?.unit ?? "words")
               const over = !!lim && wc > lim.value
               const warn = !!lim && !over && wc >= lim.value * 0.85
+              // Emptiness is COMPUTED, not a one-time event — deleting all
+              // content restores the empty affordances (GAP-3).
+              const raw = contents[s.id]
+              const isEmpty = raw === null || (typeof raw === "string" && raw.trim() === "")
               return (
               <div
                 key={s.id}
@@ -890,49 +894,69 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
                       ))}
                     </div>
                   </>
-                ) : contents[s.id] !== null ? (
-                  <>
+                ) : drafting.has(s.id) ? (
+                  <div className="drafting">
+                    <span className="spin mini-spin" style={{ borderTopColor: "var(--ai-a)" }} />
+                    Drafting from your source material…
+                  </div>
+                ) : (
+                  <div className="empty-scaffold">
+                    {/* No card, no dashed border — an empty section is plain
+                        document space: a caret + ghost placeholder at body
+                        metrics, with the two actions left-aligned beneath. */}
+                    {isEmpty && !readOnly && (
+                      <div className="ghost-line" aria-hidden="true">
+                        <span className="ghost-caret" />
+                        <span className="ghost-text">Start typing, or take the first pass with AI…</span>
+                      </div>
+                    )}
                     <Body
                       id={s.id}
-                      text={contents[s.id] as string}
+                      text={(contents[s.id] as string) || ""}
                       version={versions[s.id] || 0}
                       readOnly={readOnly}
                       onEdit={onEdit}
                     />
-                    {aiDrafted.has(s.id) && (
-                      <span
-                        className="chip chip-ai ai-badge"
-                        style={{ background: "var(--ai-soft)", fontWeight: 500, fontSize: 10, padding: "4px 9px" }}
-                      >
-                        <AiIcon size={10} /> Drafted with AI · review before submitting
-                      </span>
-                    )}
-                  </>
-                ) : drafting.has(s.id) ? (
-                  <div className="empty-zone">
-                    <span className="drafting">
-                      <span className="spin mini-spin" style={{ borderTopColor: "var(--ai-a)" }} />
-                      Drafting from your source material…
-                    </span>
-                  </div>
-                ) : (
-                  <div className="empty-zone">
-                    <div className="p">Start typing, or take the first pass with AI.</div>
-                    {!readOnly && (
-                      <div style={{ display: "flex", gap: 10 }}>
-                        <button
-                          className="chip-btn ai"
-                          style={{ background: "var(--ai-soft)" }}
-                          onClick={() => draftSection(s.id)}
+                    {isEmpty ? (
+                      !readOnly && (
+                        <>
+                          <div className="empty-actions">
+                            <button
+                              className="chip-btn ai"
+                              style={{ background: "var(--ai-soft)" }}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                draftSection(s.id)
+                              }}
+                            >
+                              <AiIcon size={12} />
+                              Draft this section
+                            </button>
+                            <button
+                              className="chip-btn ghost"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setTab("snippets")
+                              }}
+                            >
+                              Insert snippet
+                            </button>
+                          </div>
+                          <div className="empty-caption">
+                            Uses the funder's instructions plus your selected source material
+                          </div>
+                        </>
+                      )
+                    ) : (
+                      aiDrafted.has(s.id) && (
+                        <span
+                          className="chip chip-ai ai-badge"
+                          style={{ background: "var(--ai-soft)", fontWeight: 500, fontSize: 10, padding: "4px 9px" }}
                         >
-                          <AiIcon size={12} />Draft this section
-                        </button>
-                        <button className="chip-btn ghost" onClick={() => setTab("snippets")}>
-                          Insert snippet
-                        </button>
-                      </div>
+                          <AiIcon size={10} /> Drafted with AI · review before submitting
+                        </span>
+                      )
                     )}
-                    <div className="meta">Uses the funder's instructions plus your selected source material</div>
                   </div>
                 )}
                 {over && !readOnly && (
