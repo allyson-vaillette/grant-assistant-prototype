@@ -303,6 +303,50 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
     // echoes into the assistant thread as the user's request.
   }
 
+  // ---- GAP-4: snippet insert aftermath (just-inserted tick + Blend pill) ----
+  const [justInserted, setJustInserted] = React.useState<string | null>(null)
+  React.useEffect(() => {
+    if (!justInserted) return
+    const clear = () => setJustInserted(null)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") clear()
+    }
+    const surface = document.querySelector(".respond-scope .surface")
+    // Let the insertion's own event loop settle, then arm the dismissers:
+    // next edit (any input), Esc, or scrolling the section away.
+    const t = setTimeout(() => {
+      document.addEventListener("input", clear, true)
+      document.addEventListener("keydown", onKey, true)
+      surface?.addEventListener("scroll", clear, { passive: true })
+    }, 50)
+    return () => {
+      clearTimeout(t)
+      document.removeEventListener("input", clear, true)
+      document.removeEventListener("keydown", onKey, true)
+      surface?.removeEventListener("scroll", clear)
+    }
+  }, [justInserted])
+  const blend = (id: string) => {
+    const s = SECTIONS.find((x) => x.id === id)!
+    setJustInserted(null)
+    setTab("assistant")
+    setMsgs((m) => [
+      ...m,
+      {
+        role: "user",
+        t: `Blend the inserted snippet into ${s.title} — smooth the transitions, fix redundancy, match tone`,
+      },
+      {
+        role: "ai",
+        t: `I'll blend it in and bring it back as one suggested edit — nothing changes until you apply it.`,
+        acts: [],
+      },
+    ])
+    say(`Blending into ${s.title} — arrives as one suggested edit`)
+    // TODO(suggestion-engine): same integration point as tighten()/runRewrite() —
+    // the output contract is one section-level suggested edit via the pessimistic flow.
+  }
+
   // ---- GAP-2: section-header Rewrite instructions popover ----
   const [rewriteSec, setRewriteSec] = React.useState<string | null>(null)
   const [rwText, setRwText] = React.useState("")
@@ -371,6 +415,7 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
     }
     setContents((c) => ({ ...c, [id]: c[id] ? c[id] + "\n\n" + snip.body : snip.body }))
     bump(id)
+    setJustInserted(id)
     say(`Inserted “${snip.title}” into ${SECTIONS.find((s) => s.id === id)!.title}`)
   }
   const goSec = (id: string) => {
@@ -910,13 +955,36 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
                         <span className="ghost-text">Start typing, or take the first pass with AI…</span>
                       </div>
                     )}
-                    <Body
-                      id={s.id}
-                      text={(contents[s.id] as string) || ""}
-                      version={versions[s.id] || 0}
-                      readOnly={readOnly}
-                      onEdit={onEdit}
-                    />
+                    {/* Tick is always rendered (opacity-toggled) so the Body's
+                        DOM position is stable and never remounts mid-edit. */}
+                    <div className="body-wrap">
+                      <span
+                        className={cx("inserted-tick", justInserted === s.id && "on")}
+                        aria-hidden="true"
+                      />
+                      <Body
+                        id={s.id}
+                        text={(contents[s.id] as string) || ""}
+                        version={versions[s.id] || 0}
+                        readOnly={readOnly}
+                        onEdit={onEdit}
+                      />
+                    </div>
+                    {justInserted === s.id && !readOnly && (
+                      <div className="blend-row">
+                        <button
+                          className="chip-btn ai"
+                          style={{ background: "var(--ai-soft)" }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            blend(s.id)
+                          }}
+                        >
+                          <AiIcon size={12} />
+                          Blend snippet into this section
+                        </button>
+                      </div>
+                    )}
                     {isEmpty ? (
                       !readOnly && (
                         <>
