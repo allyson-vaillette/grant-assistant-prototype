@@ -466,6 +466,11 @@
 
 .respond-scope .rail-r { width: 340px; flex: none; background: var(--paper); border-left: 1px solid var(--hair); display: flex; flex-direction: column; min-height: 0; }
 .respond-scope .rail-tabs { display: flex; gap: 20px; padding: 0 16px; border-bottom: 1px solid var(--hair); flex: none; }
+/* Rail tab panels are absolutely stacked with an inline display:flex; that
+   inline value overrides Radix's [hidden] attribute, so inactive panels stay
+   laid out and swallow pointer events from the panel below. Force hidden ones
+   out of layout (needs !important to beat the inline style). */
+.respond-scope .rail-r [role="tabpanel"][hidden] { display: none !important; }
 .respond-scope .rail-tab { padding: 12px 2px 10px; font-size: 13px; color: var(--muted); border-bottom: 2px solid transparent; background: none; }
 .respond-scope .rail-tab[data-state="active"] { color: var(--slate); font-weight: 600; border-bottom-color: var(--slate); }
 .respond-scope .rail-scrolly { flex: 1; overflow: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
@@ -481,11 +486,46 @@
 .respond-scope .chat-input { display: flex; align-items: center; gap: 8px; background: var(--soft); border: 1px solid var(--hair-strong); border-radius: 10px; padding: 4px 6px 4px 12px; }
 .respond-scope .chat-input input { flex: 1; border: 0; background: none; font: inherit; font-size: 12px; outline: none; color: var(--ink); }
 .respond-scope .chat-input button { color: var(--slate); display: inline-flex; padding: 6px; }
-.respond-scope .ctx-card { background: var(--soft); border: 1px solid var(--hair); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
-.respond-scope .ctx-card h4 { font-size: 11px; font-weight: 600; }
-.respond-scope .ctx-file { display: flex; gap: 8px; align-items: center; font-size: 11px; }
-.respond-scope .ctx-file .fm { font-size: 9.5px; color: var(--faint); }
-.respond-scope .ctx-file .fm.busy { color: var(--amber-icon); }
+/* GAP-5 · Context tab as one flat list. Each row shows an AI plan sentence,
+   an optional quoted user note, a hover-× remove, and (on edit) the blast
+   radius + a review offer. No role taxonomy, no priority language. */
+.respond-scope .ctx-list { display: flex; flex-direction: column; gap: 8px; }
+.respond-scope .ctx-row { background: var(--surface); border: 1px solid var(--hair); border-radius: 9px; padding: 10px 12px; position: relative; display: flex; flex-direction: column; gap: 6px; }
+.respond-scope .ctx-l1 { display: flex; align-items: baseline; gap: 8px; padding-right: 18px; }
+.respond-scope .ctx-name { font-weight: 600; font-size: 12px; }
+.respond-scope .ctx-meta { font-size: 10px; color: var(--faint); }
+.respond-scope .ctx-x { position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; color: var(--faint); border-radius: 5px; opacity: 0; transition: opacity .12s ease; }
+.respond-scope .ctx-row:hover .ctx-x, .respond-scope .ctx-row:focus-within .ctx-x { opacity: 1; }
+.respond-scope .ctx-x:hover { background: var(--soft); color: var(--ink); }
+.respond-scope .ctx-plan { display: flex; align-items: flex-start; gap: 6px; font-size: 11px; line-height: 1.45; color: var(--chipgray-ink); }
+.respond-scope .ctx-plan.loading { color: var(--faint); }
+.respond-scope .ctx-plan.loading .quill, .respond-scope .ctx-plan.loading svg { opacity: .45; }
+.respond-scope .ctx-note { text-align: left; font-size: 11px; line-height: 1.4; color: var(--chipgray-ink); background: var(--soft); border-radius: 7px; padding: 6px 9px; }
+.respond-scope .ctx-note:hover { background: var(--wash); }
+.respond-scope .ctx-note-edit { width: 100%; font: inherit; font-size: 11px; padding: 7px 9px; resize: vertical; }
+.respond-scope .ctx-addnote { align-self: flex-start; font-size: 10.5px; font-weight: 500; color: var(--slate); opacity: 0; transition: opacity .12s ease; }
+.respond-scope .ctx-row:hover .ctx-addnote, .respond-scope .ctx-row:focus-within .ctx-addnote { opacity: 1; }
+.respond-scope .ctx-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 2px; }
+.respond-scope .sect-chip { font-size: 9px; font-weight: 500; color: var(--chipgray-ink); background: var(--chipgray); border-radius: 99px; padding: 2px 7px; }
+.respond-scope .ctx-chip-note { font-size: 9.5px; color: var(--faint); }
+.respond-scope .ctx-offer { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+.respond-scope .keep-asis { font-size: 11px; font-weight: 500; color: var(--muted); }
+.respond-scope .keep-asis.resolved { display: inline-flex; align-items: center; gap: 4px; color: var(--faint); }
+.respond-scope .ctx-confirm { border-top: 1px solid var(--hair); margin-top: 2px; padding-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+.respond-scope .ctx-confirm-t { font-size: 10.5px; line-height: 1.45; color: var(--slate); }
+.respond-scope .ctx-confirm-a { display: flex; gap: 8px; justify-content: flex-end; }
+/* Add-more-context: 3-way picker + inline paste / link forms */
+.respond-scope .ctx-add { margin-top: 4px; }
+.respond-scope .ctx-picker { border: 1px solid var(--hair-strong); border-radius: 10px; padding: 6px; display: flex; flex-direction: column; gap: 2px; background: var(--surface); box-shadow: var(--shadow-card); }
+.respond-scope .picker-item { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 8px 10px; border-radius: 7px; }
+.respond-scope .picker-item:hover { background: var(--soft); }
+.respond-scope .picker-item b { font-size: 12px; color: var(--ink); font-weight: 600; }
+.respond-scope .picker-item span { font-size: 10px; color: var(--faint); }
+.respond-scope .ctx-form { border: 1px solid var(--hair-strong); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--surface); box-shadow: var(--shadow-card); }
+.respond-scope .ctx-form-h { font-size: 12px; font-weight: 600; }
+.respond-scope .ctx-form .input { font-size: 12px; padding: 8px 10px; }
+.respond-scope .ctx-hint { font-size: 10px; color: var(--faint); line-height: 1.4; }
+.respond-scope .ctx-form-a { display: flex; gap: 8px; justify-content: flex-end; }
 .respond-scope .snip-card { border: 1px solid var(--hair-strong); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; }
 .respond-scope .snip-card h4 { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; }
 .respond-scope .snip-card .b { font-size: 10.5px; color: var(--chipgray-ink); line-height: 1.45; }

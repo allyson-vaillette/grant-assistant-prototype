@@ -151,6 +151,63 @@ export const SOURCES: RespondSource[] = [
   { id: "tnrbudget", name: "Community Cat TNR budget.xlsx", badge: "TNR", hi: false },
 ]
 
+/**
+ * GAP-5 · Context tab as ONE flat list (no role taxonomy, no priority copy).
+ * Each source carries an AI "plan" sentence (how it will be used) and an
+ * optional user note rendered as a quote. `affected` is the fixture blast
+ * radius surfaced when a source is edited.
+ */
+export interface RespondContextSource {
+  id: string
+  name: string
+  kind: "file" | "link" | "note"
+  meta: string
+  plan: string
+  note?: string
+  /** Section labels this source drafted into — the blast radius on edit. */
+  affected?: string[]
+  /** New plan sentence shown after the source is edited. */
+  editedPlan?: string
+}
+
+export const CONTEXT_SOURCES: RespondContextSource[] = [
+  {
+    id: "rfp",
+    name: "Petco-Love-Lost-and-Found-RFP-2026.pdf",
+    kind: "file",
+    meta: "File · 9 requirements extracted",
+    plan: "Answer every requirement and match the funder's scoring cues. This is the ask.",
+  },
+  {
+    id: "petco24",
+    name: "2024 Petco Love proposal",
+    kind: "file",
+    meta: "File · same funder · awarded $25,000",
+    plan: "Write in this voice and structure. Skipping its program details.",
+    note: "just match the tone, the details are outdated",
+    affected: ["§2 Statement of Need"],
+    editedPlan: "Re-read for voice and structure. Skipping its program details.",
+  },
+  {
+    id: "impact",
+    name: "2025 Impact Report.pdf",
+    kind: "file",
+    meta: "File",
+    plan: "Pull stats and outcomes. Won't copy its wording.",
+    affected: ["§1 Organization Background", "§3 Program Description"],
+    editedPlan: "Re-pull the latest stats and outcomes. Won't copy its wording.",
+  },
+  {
+    id: "spaywaggin",
+    name: "spaywaggin.org/impact",
+    kind: "link",
+    meta: "Link · fetched Jul 14 · 6 pages read",
+    plan: "Cite growth figures since 2024. Re-fetched only when you ask.",
+    affected: ["§4 Goals & Outcomes"],
+    editedPlan: "Cite the refreshed growth figures. Re-fetched only when you ask.",
+  },
+]
+
 export interface RespondSnippet {
   id: string
   title: string
