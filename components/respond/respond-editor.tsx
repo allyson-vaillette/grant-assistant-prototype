@@ -22,6 +22,20 @@ const cx = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).jo
 
 type TabKey = "assistant" | "context" | "snippets"
 type AttachState = { budgetX: boolean; c3: boolean; board: boolean }
+type LimitUnit = "words" | "characters"
+type SectionLimit = { value: number; unit: LimitUnit }
+
+/** Pre-fill limits from the RFP requirement strings (e.g. "…, 500 words max"). */
+const initialLimits = (): Record<string, SectionLimit | null> => {
+  const m: Record<string, SectionLimit | null> = {}
+  SECTIONS.forEach((s) => {
+    const mt = s.req.match(/(\d[\d,]*)\s*(word|character|char)/i)
+    m[s.id] = mt
+      ? { value: parseInt(mt[1].replace(/,/g, ""), 10), unit: /char/i.test(mt[2]) ? "characters" : "words" }
+      : null
+  })
+  return m
+}
 
 interface Setup {
   mode: "ai" | "self"
@@ -125,6 +139,13 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
   const [status, setStatus] = React.useState<"draft" | "submitted">("draft")
   const [title, setTitle] = React.useState(setup.name)
   const [active, setActive] = React.useState("program")
+  const [limits, setLimits] = React.useState<Record<string, SectionLimit | null>>(initialLimits)
+  const [editingLimit, setEditingLimit] = React.useState<string | null>(null)
+  const [draftLimit, setDraftLimit] = React.useState<{ value: string; unit: LimitUnit }>({
+    value: "",
+    unit: "words",
+  })
+  const limitInputRef = React.useRef<HTMLInputElement>(null)
   const [reqOpen, setReqOpen] = React.useState(false)
   const [tab, setTab] = React.useState<TabKey>("assistant")
   const [chips, setChips] = React.useState(["Warm, community voice", "Cite local data"])
@@ -206,15 +227,19 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
   }, [toast])
 
   const say = (t: string) => setToast(t)
-  const wordsOf = (id: string) => {
+  /** Full plain text of a section (handles the rich Program Description). */
+  const sectionText = (id: string): string => {
     if (id === "program" && contents.program === "rich") {
       const s = SECTIONS.find((x) => x.id === "program")!
-      const full =
+      return (
         s.p1! + s.p1mark! + s.p1b! + " " + s.p2a! + (sug === "applied" ? SUG.next : SUG.old) + s.p2b! + " " + s.p3!
-      return full.split(/\s+/).filter(Boolean).length
+      )
     }
-    return (contents[id] || "").split(/\s+/).filter(Boolean).length
+    return contents[id] || ""
   }
+  const wordsOf = (id: string) => sectionText(id).split(/\s+/).filter(Boolean).length
+  const countOf = (id: string, unit: LimitUnit) =>
+    unit === "characters" ? sectionText(id).length : wordsOf(id)
   const secMet = (id: string) =>
     id === "program" ? contents.program !== null : !!(contents[id] && contents[id]!.trim())
   const reqMet = (r: RespondReq) => (r.kind === "section" ? secMet(r.sec!) : attach[r.att!])
@@ -223,6 +248,60 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
 
   const onEdit = (id: string, text: string) => setContents((c) => ({ ...c, [id]: text }))
   const bump = (id: string) => setVersions((v) => ({ ...v, [id]: (v[id] || 0) + 1 }))
+
+  // ---- GAP-1: word/character limits (advisory — never block typing or export) ----
+  React.useEffect(() => {
+    if (editingLimit) {
+      limitInputRef.current?.focus()
+      limitInputRef.current?.select()
+    }
+  }, [editingLimit])
+  const startEditLimit = (id: string) => {
+    const lim = limits[id]
+    setDraftLimit({ value: lim ? String(lim.value) : "", unit: lim?.unit ?? "words" })
+    setEditingLimit(id)
+  }
+  const commitLimit = () => {
+    const id = editingLimit
+    if (!id) return
+    const v = parseInt(draftLimit.value, 10)
+    setLimits((l) => ({
+      ...l,
+      [id]: !isNaN(v) && v > 0 ? { value: v, unit: draftLimit.unit } : l[id],
+    }))
+    setEditingLimit(null)
+  }
+  const removeLimit = () => {
+    const id = editingLimit
+    if (!id) return
+    setLimits((l) => ({ ...l, [id]: null }))
+    setEditingLimit(null)
+  }
+  /** Strip a trailing "…, 500 words max" from the requirement once it's a control. */
+  const displayReq = (s: RespondSection) =>
+    limits[s.id]
+      ? s.req.replace(/,?\s*\d[\d,]*\s*(words?|characters?|chars?)\s*(max)?\.?$/i, "").trim() || s.req
+      : s.req
+  const tighten = (id: string) => {
+    const s = SECTIONS.find((x) => x.id === id)!
+    const lim = limits[id]
+    if (!lim) return
+    setTab("assistant")
+    setMsgs((m) => [
+      ...m,
+      { role: "user", t: `Tighten ${s.title} to fit the ${lim.value} ${lim.unit} limit` },
+      {
+        role: "ai",
+        t: `I'll tighten ${s.title} to fit ${lim.value} ${lim.unit}. It arrives as one suggested edit in the document — nothing changes until you apply it.`,
+        acts: [],
+      },
+    ])
+    say(`Tightening ${s.title} — arrives as one suggested edit`)
+    // TODO(suggestion-engine): route through the real pessimistic suggestion flow
+    // (setSug + the pop.kind==="sug" popover) once it accepts a target section +
+    // rewrite intent instead of the hardcoded §3 SUG fixture. For now the ask
+    // echoes into the assistant thread as the user's request.
+  }
 
   const draftSection = (id: string) => {
     setDrafting((d) => new Set(d).add(id))
@@ -533,7 +612,13 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
                 Final submitted version
               </span>
             )}
-            {SECTIONS.map((s) => (
+            {SECTIONS.map((s) => {
+              const lim = limits[s.id]
+              const isEditingLimit = editingLimit === s.id
+              const wc = countOf(s.id, lim?.unit ?? "words")
+              const over = !!lim && wc > lim.value
+              const warn = !!lim && !over && wc >= lim.value * 0.85
+              return (
               <div
                 key={s.id}
                 className="doc-sec"
@@ -542,15 +627,70 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
                 }}
                 onClick={() => setActive(s.id)}
               >
-                <div>
+                <div className="sec-head">
                   <div className="overline" style={{ color: "var(--faint)" }}>
                     SECTION {s.num} OF 7
                   </div>
                   <h3>{s.title}</h3>
                   <div className="smeta">
-                    {wordsOf(s.id)} words{" "}
+                    {isEditingLimit ? (
+                      <span
+                        className="limit-editor"
+                        onClick={(e) => e.stopPropagation()}
+                        onBlur={(e) => {
+                          if (!e.currentTarget.contains(e.relatedTarget as Node)) commitLimit()
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault()
+                            commitLimit()
+                          }
+                          if (e.key === "Escape") {
+                            e.preventDefault()
+                            setEditingLimit(null)
+                          }
+                        }}
+                      >
+                        <input
+                          ref={limitInputRef}
+                          type="number"
+                          min={1}
+                          value={draftLimit.value}
+                          aria-label="Word or character limit"
+                          onChange={(e) => setDraftLimit((d) => ({ ...d, value: e.target.value }))}
+                        />
+                        <select
+                          value={draftLimit.unit}
+                          aria-label="Limit unit"
+                          onChange={(e) => setDraftLimit((d) => ({ ...d, unit: e.target.value as LimitUnit }))}
+                        >
+                          <option value="words">words</option>
+                          <option value="characters">characters</option>
+                        </select>
+                        <button className="limit-remove" onClick={removeLimit}>
+                          Remove limit
+                        </button>
+                      </span>
+                    ) : (
+                      <>
+                        <span className={cx("wc", over && "over", warn && "warn")}>
+                          {lim ? `${wc} / ${lim.value} ${lim.unit}` : `${wc} words`}
+                        </span>
+                        {!readOnly && (
+                          <button
+                            className="edit-limit"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              startEditLimit(s.id)
+                            }}
+                          >
+                            {lim ? "Edit Limit" : "+ Set word or character limit"}
+                          </button>
+                        )}
+                      </>
+                    )}
                     <span style={{ width: 3, height: 3, borderRadius: 2, background: "#b4bdcd" }} /> Requirement:{" "}
-                    {s.req}
+                    {displayReq(s)}
                   </div>
                 </div>
                 {s.id === "program" && contents.program === "rich" ? (
@@ -656,8 +796,24 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
                     <div className="meta">Uses the funder's instructions plus your selected source material</div>
                   </div>
                 )}
+                {over && !readOnly && (
+                  <div className="tighten-row">
+                    <button
+                      className="chip-btn ai"
+                      style={{ background: "var(--ai-soft)" }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        tighten(s.id)
+                      }}
+                    >
+                      <AiIcon size={12} />
+                      Tighten to fit the {lim!.value} {lim!.unit} limit
+                    </button>
+                  </div>
+                )}
               </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 

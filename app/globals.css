@@ -397,6 +397,23 @@
 .respond-scope .doc-sec .smeta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--faint); }
 .respond-scope .doc-sec .body { font-size: 13px; line-height: 1.7; outline: none; white-space: pre-wrap; }
 .respond-scope .doc-sec .body:focus { box-shadow: -3px 0 0 0 var(--wash); }
+/* GAP-1 · word limit system. Count never hides; thresholds map to existing
+   semantic tokens (amber-ink ≥85%, red-ink over 100%). Advisory only. */
+.respond-scope .smeta .wc { color: var(--faint); }
+.respond-scope .smeta .wc.warn { color: var(--amber-ink); font-weight: 500; }
+.respond-scope .smeta .wc.over { color: var(--red-ink); font-weight: 500; }
+/* Edit Limit is hover-revealed AND focus-revealed — it stays in the tab order
+   (opacity, not display:none, so keyboard focus can still reach it). */
+.respond-scope .edit-limit { color: var(--slate); font-weight: 500; font-size: 11px; padding: 0; background: none; opacity: 0; transition: opacity .12s ease; }
+.respond-scope .sec-head:hover .edit-limit,
+.respond-scope .sec-head:focus-within .edit-limit,
+.respond-scope .edit-limit:focus-visible { opacity: 1; }
+.respond-scope .limit-editor { display: inline-flex; align-items: center; gap: 8px; }
+.respond-scope .limit-editor input { width: 64px; font: inherit; font-size: 12px; color: var(--ink); border: 1.5px solid var(--slate); border-radius: 6px; padding: 4px 8px; background: var(--paper); }
+.respond-scope .limit-editor input:focus { outline: none; }
+.respond-scope .limit-editor select { font: inherit; font-size: 12px; color: var(--ink); border: 1px solid var(--hair-strong); border-radius: 6px; padding: 4px 6px; background: var(--paper); }
+.respond-scope .limit-remove { color: var(--muted); font-weight: 500; font-size: 11px; padding: 0; background: none; }
+.respond-scope .tighten-row { align-self: flex-start; }
 .respond-scope .sug { background: none; padding: 0; font: inherit; color: var(--ai-text); text-decoration: underline dotted rgba(107, 79, 138, 0.8); text-underline-offset: 3px; cursor: pointer; }
 .respond-scope .sug-hint { align-self: flex-start; }
 .respond-scope .empty-zone { border: 1px dashed rgba(180, 189, 205, 0.6); background: var(--soft); border-radius: 10px; padding: 22px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
