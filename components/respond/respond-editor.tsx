@@ -303,6 +303,49 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
     // echoes into the assistant thread as the user's request.
   }
 
+  // ---- GAP-2: section-header Rewrite instructions popover ----
+  const [rewriteSec, setRewriteSec] = React.useState<string | null>(null)
+  const [rwText, setRwText] = React.useState("")
+  const rwTextRef = React.useRef<HTMLTextAreaElement>(null)
+  const openRewrite = (id: string) => {
+    setRwText("")
+    setRewriteSec(id)
+  }
+  React.useEffect(() => {
+    if (rewriteSec) rwTextRef.current?.focus()
+  }, [rewriteSec])
+  /** Quick-intent chips INSERT into the field (stackable, editable) — never fire. */
+  const rwChip = (text: string) => {
+    setRwText((v) => (v ? v.replace(/[.\s]*$/, "") + ". " : "") + text)
+    rwTextRef.current?.focus()
+  }
+  const runRewrite = () => {
+    const id = rewriteSec
+    if (!id) return
+    const s = SECTIONS.find((x) => x.id === id)!
+    const instr = rwText.trim()
+    setRewriteSec(null)
+    setRwText("")
+    setTab("assistant")
+    // Plain Rewrite = default redraft from the funder's ask + sources, keeping
+    // the user's content (snippets included) as material.
+    const ask = instr
+      ? `Rewrite ${s.title} — ${instr}`
+      : `Rewrite ${s.title} (default redraft from the funder's ask and my sources, keeping my content)`
+    setMsgs((m) => [
+      ...m,
+      { role: "user", t: ask },
+      {
+        role: "ai",
+        t: `I'll rewrite ${s.title} and bring it back as one suggested edit — nothing changes until you apply it.`,
+        acts: [],
+      },
+    ])
+    say(`Rewriting ${s.title} — arrives as one suggested edit`)
+    // TODO(suggestion-engine): same integration point as tighten() — the output
+    // contract is one section-level suggested edit through the pessimistic flow.
+  }
+
   const draftSection = (id: string) => {
     setDrafting((d) => new Set(d).add(id))
     setTimeout(() => {
@@ -402,18 +445,23 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
       say("Download is available in a full browser")
     }
   }
-  const copySection = async (s: RespondSection) => {
-    const body =
-      s.id === "program" && contents.program === "rich"
-        ? s.p1! + s.p1mark! + s.p1b! + "\n\n" + s.p2a! + (sug === "applied" ? SUG.next : SUG.old) + s.p2b! + "\n\n" + s.p3!
-        : contents[s.id] || ""
+  /**
+   * Copy a section's committed text to the clipboard. The pending suggestion,
+   * comment marks, and other working artifacts never make it out — sectionText
+   * returns only the applied prose. `portal` mode also ticks the checklist row.
+   */
+  const copySection = async (s: RespondSection, opts?: { portal?: boolean }) => {
     try {
-      await navigator.clipboard.writeText(body)
+      await navigator.clipboard.writeText(sectionText(s.id))
     } catch (e) {
       /* clipboard may be blocked */
     }
-    setCopied((c) => new Set(c).add(s.id))
-    say(`Copied “${s.title}”. Paste it into the portal.`)
+    if (opts?.portal) {
+      setCopied((c) => new Set(c).add(s.id))
+      say(`Copied “${s.title}”. Paste it into the portal.`)
+    } else {
+      say(`${s.title} copied`)
+    }
   }
 
   const openComments = COMMENTS.filter((c) => !resolved.has(c.id))
@@ -631,7 +679,98 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
                   <div className="overline" style={{ color: "var(--faint)" }}>
                     SECTION {s.num} OF 7
                   </div>
-                  <h3>{s.title}</h3>
+                  <div className="sec-titlerow">
+                    <h3>{s.title}</h3>
+                    {!readOnly && (
+                      <span className="header-actions">
+                        <button
+                          className="hdr-act"
+                          title="Copy section"
+                          aria-label={`Copy ${s.title}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            copySection(s)
+                          }}
+                        >
+                          <Icon name="copy" size={13} />
+                        </button>
+                        <button
+                          className="hdr-act"
+                          title="Rewrite section"
+                          aria-label={`Rewrite ${s.title}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (rewriteSec === s.id) setRewriteSec(null)
+                            else openRewrite(s.id)
+                          }}
+                        >
+                          <AiIcon size={13} />
+                        </button>
+                      </span>
+                    )}
+                    {rewriteSec === s.id && (
+                      <div
+                        className="pop rewrite-pop"
+                        role="dialog"
+                        aria-label={`Rewrite ${s.title}`}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") {
+                            e.preventDefault()
+                            setRewriteSec(null)
+                          }
+                        }}
+                      >
+                        <div className="pop-head">
+                          <AiIcon size={13} />
+                          Rewrite this section
+                        </div>
+                        <div className="hr" />
+                        <div className="pop-body">
+                          <textarea
+                            ref={rwTextRef}
+                            className="rw-input"
+                            placeholder="Tell it how — tone, structure, what to keep… (optional)"
+                            value={rwText}
+                            onChange={(e) => setRwText(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault()
+                                runRewrite()
+                              }
+                            }}
+                          />
+                          <div className="rw-chips">
+                            {["Smooth in my snippet", "More formal", "Tighten to the limit", "Lead with local data"].map(
+                              (c) => (
+                                <button key={c} className="rw-chip" onClick={() => rwChip(c)}>
+                                  {c}
+                                </button>
+                              )
+                            )}
+                          </div>
+                        </div>
+                        <div className="hr" />
+                        <div className="pop-foot">
+                          <span className="meta">Arrives as a suggested edit</span>
+                          <button
+                            className="btn btn-ghost"
+                            style={{ padding: "6px 12px", fontSize: 11 }}
+                            onClick={() => setRewriteSec(null)}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            className="btn btn-primary"
+                            style={{ padding: "6px 14px", fontSize: 11 }}
+                            onClick={runRewrite}
+                          >
+                            Rewrite
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <div className="smeta">
                     {isEditingLimit ? (
                       <span
@@ -831,7 +970,7 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
                   <div key={s.id} className={cx("check-row", copied.has(s.id) && "done")}>
                     <Checkbox className="r-cb mini" iconSize={10} checked={copied.has(s.id)} aria-hidden tabIndex={-1} />
                     <span className="n">{s.title}</span>
-                    <button className="copy-btn" onClick={() => copySection(s)}>
+                    <button className="copy-btn" onClick={() => copySection(s, { portal: true })}>
                       <Icon name="copy" size={11} />
                       {copied.has(s.id) ? "Copied" : "Copy"}
                     </button>
