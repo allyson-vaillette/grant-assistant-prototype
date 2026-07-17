@@ -15,9 +15,11 @@ import {
   SNIPPETS,
   COMMENTS,
   CONTEXT_SOURCES,
+  VERSIONS,
   type RespondReq,
   type RespondSection,
   type RespondContextSource,
+  type RespondVersion,
 } from "@/lib/respond-data"
 
 const cx = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(" ")
@@ -491,6 +493,190 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
     // pessimistic suggestion flow. Drafted text is never auto-rewritten.
   }
 
+  // ---- GAP-6: version history (overflow entry → takeover) ----
+  const [overflowOpen, setOverflowOpen] = React.useState(false)
+  const [historyOpen, setHistoryOpen] = React.useState(false)
+  const [versionList, setVersionList] = React.useState<RespondVersion[]>(VERSIONS)
+  const [vhSel, setVhSel] = React.useState("v-432")
+  const [vhFilter, setVhFilter] = React.useState<"all" | "named">("all")
+  const [vhFilterOpen, setVhFilterOpen] = React.useState(false)
+  const [vhHighlight, setVhHighlight] = React.useState(true)
+  const [vhExpanded, setVhExpanded] = React.useState<Set<string>>(new Set())
+  const [vhMenu, setVhMenu] = React.useState<string | null>(null)
+  const [vhStep, setVhStep] = React.useState(0)
+  const [vhNaming, setVhNaming] = React.useState<string | null>(null)
+  const [vhNameDraft, setVhNameDraft] = React.useState("")
+  const vhNameRef = React.useRef<HTMLInputElement>(null)
+
+  const flatVersions = React.useMemo(() => {
+    const out: RespondVersion[] = []
+    versionList.forEach((v) => {
+      out.push(v)
+      if (v.children && vhExpanded.has(v.id)) out.push(...v.children)
+    })
+    return out
+  }, [versionList, vhExpanded])
+  const selectedVersion =
+    flatVersions.find((v) => v.id === vhSel) ||
+    versionList.flatMap((v) => [v, ...(v.children ?? [])]).find((v) => v.id === vhSel) ||
+    versionList[0]
+
+  const openHistory = () => {
+    setOverflowOpen(false)
+    setHistoryOpen(true)
+    setVhStep(0)
+  }
+  const selectVersion = (v: RespondVersion) => {
+    setVhSel(v.id)
+    setVhStep(0)
+    setVhMenu(null)
+  }
+  const restoreVersion = (v: RespondVersion) => {
+    // Non-destructive: adds a new version at the top; history is never deleted.
+    const nv: RespondVersion = {
+      id: `v-restore-${versionList.length}-${v.id}`,
+      date: "Today",
+      time: "just now",
+      authors: [{ ini: "TS", color: "#7b5e7c", name: "Taylor S." }],
+      tag: "Current version",
+      name: v.name ? `Restored: ${v.name}` : undefined,
+      edits: v.edits,
+      preview: v.preview,
+    }
+    setVersionList((list) => [nv, ...list.map((x) => (x.tag === "Current version" ? { ...x, tag: undefined } : x))])
+    setVhSel(nv.id)
+    setVhMenu(null)
+    say("Restored — added as a new version at the top. History is unchanged.")
+  }
+  const startNameVersion = (v: RespondVersion) => {
+    setVhNameDraft(v.name ?? "")
+    setVhNaming(v.id)
+    setVhMenu(null)
+  }
+  React.useEffect(() => {
+    if (vhNaming) vhNameRef.current?.focus()
+  }, [vhNaming])
+  const saveVersionName = (id: string) => {
+    const name = vhNameDraft.trim()
+    setVersionList((list) =>
+      list.map((v) => (v.id === id ? { ...v, name: name || undefined } : v))
+    )
+    setVhNaming(null)
+    if (name) say(`Version named “${name}”`)
+  }
+  const visibleVersions =
+    vhFilter === "named" ? versionList.filter((v) => v.name) : versionList
+
+  const renderVersionRow = (v: RespondVersion, depth: number) => (
+    <div
+      key={v.id}
+      className={cx("vh-row", vhSel === v.id && "vh-sel")}
+      style={depth ? { marginLeft: 18 } : undefined}
+      onClick={() => selectVersion(v)}
+    >
+      <div className="vh-l1">
+        {v.children && (
+          <button
+            className="vh-cluster"
+            aria-label={vhExpanded.has(v.id) ? "Collapse autosaves" : "Expand autosaves"}
+            onClick={(e) => {
+              e.stopPropagation()
+              setVhExpanded((s) => {
+                const n = new Set(s)
+                n.has(v.id) ? n.delete(v.id) : n.add(v.id)
+                return n
+              })
+            }}
+          >
+            <Icon name={vhExpanded.has(v.id) ? "chevD" : "chevR"} size={13} />
+          </button>
+        )}
+        <b>{v.name || v.time}</b>
+        {v.tag && <span className="sect-chip">{v.tag}</span>}
+        <button
+          className="vh-dots"
+          aria-label="Version actions"
+          onClick={(e) => {
+            e.stopPropagation()
+            setVhMenu((m) => (m === v.id ? null : v.id))
+          }}
+        >
+          <Icon name="more" size={14} />
+        </button>
+        {vhMenu === v.id && (
+          <>
+            <div
+              style={{ position: "fixed", inset: 0, zIndex: 5 }}
+              onClick={(e) => {
+                e.stopPropagation()
+                setVhMenu(null)
+              }}
+            />
+            {/* Exactly two items — no "Make a copy"; duplication lives in the
+                proposal overflow. */}
+            <div className="vh-menu" role="menu">
+              <button
+                role="menuitem"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  restoreVersion(v)
+                }}
+              >
+                Restore this version
+              </button>
+              <button
+                role="menuitem"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  startNameVersion(v)
+                }}
+              >
+                Name this version
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+      {vhNaming === v.id ? (
+        <input
+          ref={vhNameRef}
+          className="input vh-name-input"
+          value={vhNameDraft}
+          placeholder="Name this version"
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => setVhNameDraft(e.target.value)}
+          onBlur={() => saveVersionName(v.id)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault()
+              saveVersionName(v.id)
+            }
+            if (e.key === "Escape") {
+              e.preventDefault()
+              setVhNaming(null)
+            }
+          }}
+        />
+      ) : (
+        <div className="vh-l2">
+          {v.authors.map((a, i) => (
+            <span key={i} className="ava vh-ava" style={{ background: a.color }}>
+              {a.ini}
+            </span>
+          ))}
+          {v.name ? `${v.time} · ` : ""}
+          {v.authors.map((a) => a.name).join(", ")}
+        </div>
+      )}
+      {v.aiNote && (
+        <div className="vh-l3">
+          <Icon name="quill" size={12} color="var(--ai-text)" />
+          {v.aiNote}
+        </div>
+      )}
+    </div>
+  )
+
   // ---- GAP-2: section-header Rewrite instructions popover ----
   const [rewriteSec, setRewriteSec] = React.useState<string | null>(null)
   const [rwText, setRwText] = React.useState("")
@@ -681,9 +867,38 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
           <Icon name="comment" size={13} />
           {openComments.length}
         </button>
-        <button className="icon-btn" aria-label="More">
-          <Icon name="more" size={18} />
-        </button>
+        <div className="overflow-anchor">
+          <button
+            className="icon-btn"
+            aria-label="More"
+            aria-haspopup="menu"
+            aria-expanded={overflowOpen}
+            onClick={() => setOverflowOpen((v) => !v)}
+          >
+            <Icon name="more" size={18} />
+          </button>
+          {overflowOpen && (
+            <>
+              <div style={{ position: "fixed", inset: 0, zIndex: 55 }} onClick={() => setOverflowOpen(false)} />
+              <div className="overflow-menu" role="menu">
+                <button role="menuitem" onClick={openHistory}>
+                  <Icon name="history" size={14} />
+                  Version history
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    setOverflowOpen(false)
+                    duplicate()
+                  }}
+                >
+                  <Icon name="copy" size={14} />
+                  Duplicate proposal
+                </button>
+              </div>
+            </>
+          )}
+        </div>
         {status === "draft" ? (
           <button
             className={cx("btn", openReqs.length ? "btn-disabled" : "btn-primary")}
@@ -1799,6 +2014,139 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
               <button className="btn btn-primary" onClick={() => { setGate(false); setReqOpen(true) }}>
                 Resolve open items
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GAP-6: version history takeover — read-only preview + versions panel */}
+      {historyOpen && (
+        <div className="vh-takeover">
+          <div className="topbar">
+            <button
+              className="btn btn-ghost"
+              style={{ padding: "6px 12px", fontSize: 11 }}
+              onClick={() => setHistoryOpen(false)}
+            >
+              <Icon name="chevL" size={14} />
+              Back to editor
+            </button>
+            <span className="vd" />
+            <div>
+              <div className="title">Version history</div>
+              <div className="sub">{title} · read-only preview</div>
+            </div>
+            <div className="grow" />
+            <button className="btn btn-primary" onClick={() => restoreVersion(selectedVersion)}>
+              Restore this version
+            </button>
+          </div>
+
+          <div className="cols">
+            <div className="surface">
+              <div className="vh-banner">
+                Viewing {selectedVersion.name || `${selectedVersion.date}, ${selectedVersion.time}`} · read-only
+                {(selectedVersion.edits ?? 0) > 0 && (
+                  <>
+                    {" · "}
+                    <b>
+                      {selectedVersion.edits} edit{selectedVersion.edits === 1 ? "" : "s"}
+                    </b>
+                    <button
+                      className="vh-step"
+                      aria-label="Previous edit"
+                      onClick={() => setVhStep((s) => Math.max(0, s - 1))}
+                    >
+                      ‹
+                    </button>
+                    <button
+                      className="vh-step"
+                      aria-label="Next edit"
+                      onClick={() => setVhStep((s) => Math.min((selectedVersion.edits ?? 1) - 1, s + 1))}
+                    >
+                      ›
+                    </button>
+                  </>
+                )}
+              </div>
+              <div className="doc vh-doc">
+                <div className="overline" style={{ color: "var(--faint)" }}>
+                  SECTION 3 OF 7
+                </div>
+                <h3>Program Description</h3>
+                <p className="body">{selectedVersion.preview.base}</p>
+                {vhHighlight && selectedVersion.preview.added && (
+                  <p className="body vh-added">{selectedVersion.preview.added}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="rail-r vh-panel">
+              <div className="vh-phead">
+                <b>Versions</b>
+                <div className="vh-filter-wrap">
+                  <button className="vh-filter" onClick={() => setVhFilterOpen((v) => !v)}>
+                    {vhFilter === "all" ? "All versions" : "Named only"} ▾
+                  </button>
+                  {vhFilterOpen && (
+                    <>
+                      <div style={{ position: "fixed", inset: 0, zIndex: 5 }} onClick={() => setVhFilterOpen(false)} />
+                      <div className="vh-filter-menu">
+                        <button
+                          onClick={() => {
+                            setVhFilter("all")
+                            setVhFilterOpen(false)
+                          }}
+                        >
+                          All versions
+                        </button>
+                        <button
+                          onClick={() => {
+                            setVhFilter("named")
+                            setVhFilterOpen(false)
+                          }}
+                        >
+                          Named only
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="hr" />
+              <div className="rail-scrolly vh-list">
+                {visibleVersions.map((v, i) => {
+                  const showDivider = i === 0 || visibleVersions[i - 1].date !== v.date
+                  return (
+                    <React.Fragment key={v.id}>
+                      {showDivider && <div className="vh-divider">{v.date}</div>}
+                      {renderVersionRow(v, 0)}
+                      {v.children &&
+                        vhExpanded.has(v.id) &&
+                        v.children.map((c) => renderVersionRow(c, 1))}
+                    </React.Fragment>
+                  )
+                })}
+                {!visibleVersions.length && (
+                  <div className="meta" style={{ textAlign: "center", padding: 16 }}>
+                    No named versions yet. Name a version from its ⋯ menu.
+                  </div>
+                )}
+              </div>
+              <div className="vh-foot">
+                <label className="vh-hl">
+                  <input
+                    type="checkbox"
+                    checked={vhHighlight}
+                    onChange={(e) => setVhHighlight(e.target.checked)}
+                  />
+                  Highlight changes
+                </label>
+                <div className="meta">
+                  Versions save automatically as you edit. Restoring never deletes history — it adds a new version at
+                  the top.
+                </div>
+              </div>
             </div>
           </div>
         </div>
