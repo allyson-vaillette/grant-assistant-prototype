@@ -14,8 +14,10 @@ import {
   ATTACHMENTS,
   SNIPPETS,
   COMMENTS,
+  CONTEXT_SOURCES,
   type RespondReq,
   type RespondSection,
+  type RespondContextSource,
 } from "@/lib/respond-data"
 
 const cx = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(" ")
@@ -24,6 +26,12 @@ type TabKey = "assistant" | "context" | "snippets"
 type AttachState = { budgetX: boolean; c3: boolean; board: boolean }
 type LimitUnit = "words" | "characters"
 type SectionLimit = { value: number; unit: LimitUnit }
+/** A context source plus its runtime UI state (loading / edited / resolved). */
+type CtxRow = RespondContextSource & {
+  planLoading?: boolean
+  edited?: boolean
+  offerResolved?: boolean
+}
 
 /** Pre-fill limits from the RFP requirement strings (e.g. "…, 500 words max"). */
 const initialLimits = (): Record<string, SectionLimit | null> => {
@@ -155,7 +163,6 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
   const [gate, setGate] = React.useState(false)
   const [copied, setCopied] = React.useState<Set<string>>(new Set())
   const [toast, setToast] = React.useState<string | null>(null)
-  const [ctxDone, setCtxDone] = React.useState(false)
   const [input, setInput] = React.useState("")
   const [msgs, setMsgs] = React.useState<{ role: "ai" | "user"; t: string; acts?: string[] }[]>(() =>
     setup.mode === "ai"
@@ -182,11 +189,6 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
   )
   const secRefs = React.useRef<Record<string, HTMLDivElement | null>>({})
   const readOnly = status === "submitted"
-
-  React.useEffect(() => {
-    const t = setTimeout(() => setCtxDone(true), 7000)
-    return () => clearTimeout(t)
-  }, [])
 
   const [selBar, setSelBar] = React.useState<{ x: number; y: number } | null>(null)
   React.useEffect(() => {
@@ -345,6 +347,148 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
     say(`Blending into ${s.title} — arrives as one suggested edit`)
     // TODO(suggestion-engine): same integration point as tighten()/runRewrite() —
     // the output contract is one section-level suggested edit via the pessimistic flow.
+  }
+
+  // ---- GAP-5: Context tab as one flat list + add/edit flows ----
+  const [sources, setSources] = React.useState<CtxRow[]>(() => CONTEXT_SOURCES.map((s) => ({ ...s })))
+  const [ctxAdd, setCtxAdd] = React.useState<null | "menu" | "paste" | "link">(null)
+  const [pasteText, setPasteText] = React.useState("")
+  const [pasteName, setPasteName] = React.useState("")
+  const [pasteNameTouched, setPasteNameTouched] = React.useState(false)
+  const [linkUrl, setLinkUrl] = React.useState("")
+  const [confirmRemove, setConfirmRemove] = React.useState<string | null>(null)
+  const [editingNote, setEditingNote] = React.useState<string | null>(null)
+  const [noteDraft, setNoteDraft] = React.useState("")
+  const pasteRef = React.useRef<HTMLTextAreaElement>(null)
+  const linkRef = React.useRef<HTMLInputElement>(null)
+  const noteRef = React.useRef<HTMLTextAreaElement>(null)
+  const patchSource = (id: string, patch: Partial<CtxRow>) =>
+    setSources((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+
+  const removeSource = (id: string) => {
+    const name = sources.find((r) => r.id === id)?.name ?? "source"
+    setSources((rows) => rows.filter((r) => r.id !== id))
+    setConfirmRemove(null)
+    // Forward-looking only — everything already written stays in the proposal.
+    say(`${name} removed — coverage re-evaluating`)
+  }
+
+  const openAdd = (kind: "paste" | "link") => {
+    setCtxAdd(kind)
+    setPasteText("")
+    setPasteName("")
+    setPasteNameTouched(false)
+    setLinkUrl("")
+  }
+  React.useEffect(() => {
+    if (ctxAdd === "paste") pasteRef.current?.focus()
+    if (ctxAdd === "link") linkRef.current?.focus()
+  }, [ctxAdd])
+  const onPasteChange = (v: string) => {
+    setPasteText(v)
+    // Auto-name from the content — editable, only until the user touches it.
+    if (!pasteNameTouched) {
+      const w = v.trim().split(/\s+/).filter(Boolean).slice(0, 4).join(" ")
+      setPasteName(w)
+    }
+  }
+  const addNote = () => {
+    const w = pasteText.split(/\s+/).filter(Boolean).length
+    if (!w) return
+    const id = `note-${sources.length}-${w}`
+    const name = pasteName.trim() || "Untitled note"
+    setCtxAdd(null)
+    setSources((rows) => [
+      { id, name, kind: "note", meta: `Note · ${w} words · pasted today`, plan: "Writing a plan for this source…", planLoading: true },
+      ...rows,
+    ])
+    // The plan is written after the row lands — reading happens in the list.
+    setTimeout(
+      () =>
+        patchSource(id, {
+          planLoading: false,
+          plan: "Pull the volunteer hours and training numbers as evidence.",
+        }),
+      1800
+    )
+  }
+  const addLink = () => {
+    const url = (linkUrl.trim() || "example.org").replace(/^https?:\/\//, "")
+    const id = `link-${sources.length}-${url.length}`
+    setCtxAdd(null) // Add closes immediately; the fetch + read happen in the list.
+    setSources((rows) => [
+      { id, name: url, kind: "link", meta: "Link · fetching…", plan: "Reading the page…", planLoading: true },
+      ...rows,
+    ])
+    setTimeout(() => {
+      patchSource(id, {
+        planLoading: false,
+        meta: "Link · fetched today · 4 pages read",
+        plan: "Cite this page's figures as evidence. Re-fetched only when you ask.",
+      })
+      say("Coverage re-evaluating")
+    }, 2200)
+  }
+
+  // Editing a source's note IS a content change to the source → run the flow.
+  const startEditNote = (id: string) => {
+    setNoteDraft(sources.find((r) => r.id === id)?.note ?? "")
+    setEditingNote(id)
+  }
+  React.useEffect(() => {
+    if (editingNote) noteRef.current?.focus()
+  }, [editingNote])
+  const saveNote = () => {
+    const id = editingNote
+    if (!id) return
+    const row = sources.find((r) => r.id === id)
+    const next = noteDraft.trim()
+    setEditingNote(null)
+    if (!row || next === (row.note ?? "")) return
+    patchSource(id, { note: next || undefined })
+    sourceEdited(id)
+  }
+  /**
+   * A source's content changed: announce it, refresh the plan, map the blast
+   * radius to §-chips, and OFFER a review — never auto-rewrite drafted text.
+   */
+  const sourceEdited = (id: string) => {
+    const row = sources.find((r) => r.id === id)
+    if (!row) return
+    patchSource(id, {
+      edited: true,
+      offerResolved: false,
+      planLoading: true,
+      meta: `${row.meta.split(" · ")[0]} · edited just now`,
+    })
+    setTimeout(() => patchSource(id, { planLoading: false, plan: row.editedPlan ?? row.plan }), 1500)
+    const chips = (row.affected ?? []).length
+    setMsgs((m) => [
+      ...m,
+      {
+        role: "ai",
+        t: `You updated ${row.name}. It shaped ${row.affected?.join(" and ") || "no drafted sections"}${
+          chips ? ` — want me to review ${chips === 1 ? "it" : "them"}?` : "."
+        }`,
+        acts: [],
+      },
+    ])
+    say(`${row.name} updated — ${chips} section${chips === 1 ? "" : "s"} may be affected`)
+  }
+  const reviewAffected = (row: CtxRow) => {
+    setTab("assistant")
+    setMsgs((m) => [
+      ...m,
+      { role: "user", t: `Review the ${row.affected?.length ?? 0} sections affected by ${row.name}` },
+      {
+        role: "ai",
+        t: `I'll go section by section — one suggested edit per affected passage, reviewable with the ‹ › stepper. Nothing changes until you apply each.`,
+        acts: [],
+      },
+    ])
+    say("One suggested edit per affected passage — standard ‹ › review")
+    // TODO(suggestion-engine): drive the cross-section ‹ › review through the
+    // pessimistic suggestion flow. Drafted text is never auto-rewritten.
   }
 
   // ---- GAP-2: section-header Rewrite instructions popover ----
@@ -1162,62 +1306,243 @@ function Editor({ setup, onExit }: { setup: Setup; onExit: () => void }) {
               <TabsContent value="context" style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column" }}>
                 <div className="rail-scrolly">
                   <div className="overline" style={{ letterSpacing: ".05em" }}>WHAT THE AI IS USING</div>
-                  <div className="ctx-card">
-                    <h4>Uploaded for this proposal</h4>
-                    <div className="ctx-file">
-                      <Icon name="doc" size={13} color="var(--muted)" />
-                      <span>
-                        {OPP.rfp}
-                        <span className="fm" style={{ display: "block" }}>9 requirements extracted</span>
-                      </span>
-                    </div>
-                    <div className="ctx-file">
-                      <Icon name="doc" size={13} color={ctxDone ? "var(--muted)" : "var(--amber-icon)"} />
-                      <span>
-                        2025-Impact-Report.pdf
-                        <span className={cx("fm", !ctxDone && "busy")} style={{ display: "block" }}>
-                          {ctxDone ? "Ready" : "Still processing… you can keep writing"}
-                        </span>
-                      </span>
-                    </div>
-                    <div className="meta">Uploads rank first when drafting.</div>
+                  {/* One flat list — no role taxonomy, no priority copy. */}
+                  <div className="ctx-list">
+                    {sources.map((r) => (
+                      <div key={r.id} className="ctx-row">
+                        <div className="ctx-l1">
+                          <span className="ctx-name">{r.name}</span>
+                          <span className="ctx-meta">{r.meta}</span>
+                          {!readOnly && (
+                            <button
+                              className="ctx-x"
+                              aria-label={`Remove ${r.name}`}
+                              title="Remove source"
+                              onClick={() => setConfirmRemove(r.id)}
+                            >
+                              <Icon name="close" size={12} />
+                            </button>
+                          )}
+                        </div>
+                        <div className={cx("ctx-plan", r.planLoading && "loading")}>
+                          <AiIcon size={11} />
+                          <span>{r.plan}</span>
+                        </div>
+
+                        {editingNote === r.id ? (
+                          <textarea
+                            ref={noteRef}
+                            className="input ctx-note-edit"
+                            rows={2}
+                            placeholder="How should the AI use this source?"
+                            value={noteDraft}
+                            onChange={(e) => setNoteDraft(e.target.value)}
+                            onBlur={saveNote}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault()
+                                saveNote()
+                              }
+                              if (e.key === "Escape") {
+                                e.preventDefault()
+                                setEditingNote(null)
+                              }
+                            }}
+                          />
+                        ) : r.note ? (
+                          <button
+                            className="ctx-note"
+                            title="Edit note"
+                            onClick={() => !readOnly && startEditNote(r.id)}
+                          >
+                            &ldquo;{r.note}&rdquo;
+                          </button>
+                        ) : (
+                          !readOnly && (
+                            <button className="ctx-addnote" onClick={() => startEditNote(r.id)}>
+                              + Add a note
+                            </button>
+                          )
+                        )}
+
+                        {r.edited && (r.affected?.length ?? 0) > 0 && (
+                          <>
+                            <div className="ctx-chips">
+                              {r.affected!.map((c) => (
+                                <span key={c} className="sect-chip">{c}</span>
+                              ))}
+                              <span className="ctx-chip-note">drafted from this source</span>
+                            </div>
+                            {r.offerResolved ? (
+                              <span className="keep-asis resolved">
+                                <Icon name="check" size={12} /> Kept as is
+                              </span>
+                            ) : (
+                              <div className="ctx-offer">
+                                <button
+                                  className="chip-btn ai"
+                                  style={{ background: "var(--ai-soft)" }}
+                                  onClick={() => reviewAffected(r)}
+                                >
+                                  <AiIcon size={12} /> Review affected sections ({r.affected!.length})
+                                </button>
+                                <button
+                                  className="keep-asis"
+                                  onClick={() => patchSource(r.id, { offerResolved: true })}
+                                >
+                                  Keep as is
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
+
+                        {confirmRemove === r.id && (
+                          <div className="ctx-confirm">
+                            <div className="ctx-confirm-t">
+                              Remove this source? Everything already written stays in your proposal — the
+                              assistant just stops using it going forward.
+                            </div>
+                            <div className="ctx-confirm-a">
+                              <button
+                                className="btn btn-ghost"
+                                style={{ padding: "5px 10px", fontSize: 11 }}
+                                onClick={() => setConfirmRemove(null)}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                className="btn"
+                                style={{ padding: "5px 10px", fontSize: 11, background: "var(--red-ink)", color: "#fff" }}
+                                onClick={() => removeSource(r.id)}
+                              >
+                                Remove source
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  <div className="ctx-card">
-                    <h4>Project · {OPP.initiative}</h4>
-                    <div className="ctx-file">
-                      <Icon name="doc" size={13} color="var(--muted)" />
-                      <span>
-                        Program goals & outcomes
-                        <span className="fm" style={{ display: "block" }}>6 outcomes available</span>
-                      </span>
+
+                  {!readOnly && (
+                    <div className="ctx-add">
+                      {ctxAdd === null && (
+                        <button
+                          className="btn btn-ghost"
+                          style={{ alignSelf: "flex-start", padding: "7px 12px", fontSize: 11 }}
+                          onClick={() => setCtxAdd("menu")}
+                        >
+                          <Icon name="add" size={13} color="var(--slate)" />
+                          Add more context
+                        </button>
+                      )}
+                      {ctxAdd === "menu" && (
+                        <div className="ctx-picker">
+                          <button
+                            className="picker-item"
+                            onClick={() => {
+                              setCtxAdd(null)
+                              say("Opens the file picker (PDF, DOCX, XLSX)")
+                            }}
+                          >
+                            <b>Upload files</b>
+                            <span>PDF, DOCX, XLSX</span>
+                          </button>
+                          <button className="picker-item" onClick={() => openAdd("paste")}>
+                            <b>Paste text</b>
+                            <span>notes, boilerplate, past answers</span>
+                          </button>
+                          <button className="picker-item" onClick={() => openAdd("link")}>
+                            <b>Add a link</b>
+                            <span>we fetch and read the page</span>
+                          </button>
+                        </div>
+                      )}
+                      {ctxAdd === "paste" && (
+                        <div className="ctx-form">
+                          <div className="ctx-form-h">Paste text</div>
+                          <textarea
+                            ref={pasteRef}
+                            className="input"
+                            rows={4}
+                            placeholder="Paste here — the field opens focused"
+                            value={pasteText}
+                            onChange={(e) => onPasteChange(e.target.value)}
+                          />
+                          <div className="ctx-hint">{pasteText.split(/\s+/).filter(Boolean).length} words</div>
+                          <input
+                            className="input"
+                            placeholder="Named from the text — edit if it's off"
+                            value={pasteName}
+                            onChange={(e) => {
+                              setPasteName(e.target.value)
+                              setPasteNameTouched(true)
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault()
+                                addNote()
+                              }
+                            }}
+                          />
+                          <div className="ctx-form-a">
+                            <button
+                              className="btn btn-ghost"
+                              style={{ padding: "6px 12px", fontSize: 11 }}
+                              onClick={() => setCtxAdd(null)}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              className="btn btn-primary"
+                              style={{ padding: "6px 12px", fontSize: 11 }}
+                              onClick={addNote}
+                            >
+                              Add to context
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {ctxAdd === "link" && (
+                        <div className="ctx-form">
+                          <div className="ctx-form-h">Add a link</div>
+                          <input
+                            ref={linkRef}
+                            className="input"
+                            placeholder="https://…"
+                            value={linkUrl}
+                            onChange={(e) => setLinkUrl(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault()
+                                addLink()
+                              }
+                            }}
+                          />
+                          <div className="ctx-hint">
+                            We fetch and read the page now. It&rsquo;s only re-fetched when you ask.
+                          </div>
+                          <div className="ctx-form-a">
+                            <button
+                              className="btn btn-ghost"
+                              style={{ padding: "6px 12px", fontSize: 11 }}
+                              onClick={() => setCtxAdd(null)}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              className="btn btn-primary"
+                              style={{ padding: "6px 12px", fontSize: 11 }}
+                              onClick={addLink}
+                            >
+                              Add link
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div className="ctx-file">
-                      <Icon name="doc" size={13} color="var(--muted)" />
-                      <span>
-                        TNR budget 2026.xlsx
-                        <span className="fm" style={{ display: "block" }}>Line items available</span>
-                      </span>
-                    </div>
-                  </div>
-                  <div className="ctx-card">
-                    <h4>Organization profile</h4>
-                    <div className="ctx-file">
-                      <Icon name="org" size={13} color="var(--muted)" />
-                      <span>
-                        {OPP.org}
-                        <span className="fm" style={{ display: "block" }}>Mission, EIN, service area, staffing</span>
-                      </span>
-                    </div>
-                    <div className="meta">Always included, lowest priority.</div>
-                  </div>
-                  <button
-                    className="btn btn-ghost"
-                    style={{ alignSelf: "flex-start", padding: "7px 12px", fontSize: 11 }}
-                    onClick={() => say("Would open the upload / library picker")}
-                  >
-                    <Icon name="upload" size={13} color="var(--slate)" />
-                    Add more context
-                  </button>
+                  )}
                 </div>
               </TabsContent>
 
